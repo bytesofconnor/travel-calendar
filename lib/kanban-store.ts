@@ -2,135 +2,188 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
 export type Author = "brenda" | "connor"
-export type Priority = 1 | 2 | 3 | 4 | 5 | null
 
-export interface Link {
-  id: string
-  label: string
-  url: string
-}
-
-export interface PlannerCard {
+export interface TripItem {
   id: string
   title: string
-  notes: string
-  priority: Priority
-  author: Author | null
-  links: Link[]
-  columnId: string
+  notes?: string
+  link?: { label: string; url: string }
+  startDate: string
+  endDate: string
+  author?: Author
+  color: "violet" | "blue" | "emerald" | "amber" | "rose"
 }
 
-export interface Column {
-  id: string
-  title: string
-  dateRange: string
+interface TripStore {
+  items: TripItem[]
+  currentWeekStart: string
+  addItem: (item: Omit<TripItem, "id">) => void
+  updateItem: (id: string, updates: Partial<TripItem>) => void
+  deleteItem: (id: string) => void
+  setCurrentWeek: (date: string) => void
+  nextWeek: () => void
+  prevWeek: () => void
 }
 
-interface KanbanState {
-  columns: Column[]
-  cards: PlannerCard[]
-  addCard: (card: Omit<PlannerCard, "id">) => void
-  updateCard: (id: string, updates: Partial<Omit<PlannerCard, "id">>) => void
-  deleteCard: (id: string) => void
-  moveCard: (cardId: string, targetColumnId: string, targetIndex: number) => void
+const TRIP_START = "2026-04-27"
+const TRIP_END = "2026-06-30"
+
+function getWeekStart(dateStr: string): string {
+  const date = new Date(dateStr + "T12:00:00")
+  const day = date.getDay()
+  const diff = date.getDate() - day
+  const weekStart = new Date(date)
+  weekStart.setDate(diff)
+  return weekStart.toISOString().split("T")[0]
 }
 
-const defaultColumns: Column[] = [
-  { id: "apr-27", title: "Apr 27 - May 3", dateRange: "Week 1" },
-  { id: "may-4", title: "May 4 - 10", dateRange: "Week 2" },
-  { id: "may-11", title: "May 11 - 17", dateRange: "Week 3" },
-  { id: "may-18", title: "May 18 - 24", dateRange: "Week 4" },
-  { id: "may-25", title: "May 25 - 31", dateRange: "Week 5" },
-  { id: "jun-1", title: "Jun 1 - 7", dateRange: "Week 6" },
-  { id: "jun-8", title: "Jun 8 - 14", dateRange: "Week 7" },
-  { id: "jun-15", title: "Jun 15 - 21", dateRange: "Week 8" },
-  { id: "jun-22", title: "Jun 22 - 28", dateRange: "Week 9" },
-  { id: "jun-29", title: "Jun 29 - 30", dateRange: "Final" },
-]
+function addDays(dateStr: string, days: number): string {
+  const date = new Date(dateStr + "T12:00:00")
+  date.setDate(date.getDate() + days)
+  return date.toISOString().split("T")[0]
+}
 
-const defaultCards: PlannerCard[] = [
+const defaultItems: TripItem[] = [
   {
     id: "1",
-    title: "Book flights",
-    notes: "Look at LATAM and Avianca for Lima-Cusco leg",
-    priority: 1,
+    title: "Flight to Lima",
+    notes: "LATAM Airlines, arrives 11pm",
+    startDate: "2026-05-01",
+    endDate: "2026-05-01",
     author: "connor",
-    links: [{ id: "l1", label: "Google Flights", url: "https://www.google.com/flights" }],
-    columnId: "apr-27",
+    color: "blue",
+    link: { label: "Booking", url: "https://www.latam.com" }
   },
   {
     id: "2",
-    title: "Get travel insurance",
-    notes: "Must cover high altitude trekking",
-    priority: 2,
+    title: "Lima Airbnb",
+    notes: "Miraflores district",
+    startDate: "2026-05-01",
+    endDate: "2026-05-03",
     author: "brenda",
-    links: [],
-    columnId: "apr-27",
+    color: "violet",
+    link: { label: "Airbnb", url: "https://www.airbnb.com" }
   },
   {
     id: "3",
-    title: "Machu Picchu tickets",
-    notes: "Book for sunrise slot if possible",
-    priority: 1,
-    author: null,
-    links: [{ id: "l2", label: "Official Site", url: "https://www.machupicchu.gob.pe" }],
-    columnId: "may-4",
+    title: "Cusco Acclimatization",
+    notes: "Take it easy, drink coca tea",
+    startDate: "2026-05-04",
+    endDate: "2026-05-05",
+    author: "connor",
+    color: "emerald",
+  },
+  {
+    id: "4",
+    title: "Inca Trail Trek",
+    notes: "4 days to Machu Picchu",
+    startDate: "2026-05-06",
+    endDate: "2026-05-09",
+    author: "brenda",
+    color: "amber",
+    link: { label: "Tour", url: "https://www.incatrailpermits.com" }
   },
 ]
 
-export const useKanbanStore = create<KanbanState>()(
+export const useTripStore = create<TripStore>()(
   persist(
-    (set) => ({
-      columns: defaultColumns,
-      cards: defaultCards,
-      addCard: (card) =>
+    (set, get) => ({
+      items: defaultItems,
+      currentWeekStart: getWeekStart(TRIP_START),
+
+      addItem: (item) =>
         set((state) => ({
-          cards: [...state.cards, { ...card, id: crypto.randomUUID() }],
+          items: [...state.items, { ...item, id: crypto.randomUUID() }],
         })),
-      updateCard: (id, updates) =>
+
+      updateItem: (id, updates) =>
         set((state) => ({
-          cards: state.cards.map((card) =>
-            card.id === id ? { ...card, ...updates } : card
+          items: state.items.map((item) =>
+            item.id === id ? { ...item, ...updates } : item
           ),
         })),
-      deleteCard: (id) =>
+
+      deleteItem: (id) =>
         set((state) => ({
-          cards: state.cards.filter((card) => card.id !== id),
+          items: state.items.filter((item) => item.id !== id),
         })),
-      moveCard: (cardId, targetColumnId, targetIndex) =>
-        set((state) => {
-          const cardIndex = state.cards.findIndex((c) => c.id === cardId)
-          if (cardIndex === -1) return state
 
-          const card = state.cards[cardIndex]
-          const newCards = state.cards.filter((c) => c.id !== cardId)
-          const updatedCard = { ...card, columnId: targetColumnId }
+      setCurrentWeek: (date) =>
+        set({ currentWeekStart: getWeekStart(date) }),
 
-          const cardsInTargetColumn = newCards.filter(
-            (c) => c.columnId === targetColumnId
-          )
-          const cardsNotInTargetColumn = newCards.filter(
-            (c) => c.columnId !== targetColumnId
-          )
+      nextWeek: () => {
+        const current = get().currentWeekStart
+        const next = addDays(current, 7)
+        const tripEndWeek = getWeekStart(TRIP_END)
+        if (next <= tripEndWeek) {
+          set({ currentWeekStart: next })
+        }
+      },
 
-          cardsInTargetColumn.splice(targetIndex, 0, updatedCard)
-
-          return {
-            cards: [
-              ...cardsNotInTargetColumn,
-              ...cardsInTargetColumn,
-              ...state.cards.filter(
-                (c) => c.columnId !== targetColumnId && c.id !== cardId
-              ),
-            ].filter(
-              (card, index, self) =>
-                index === self.findIndex((c) => c.id === card.id)
-            ),
-          }
-        }),
+      prevWeek: () => {
+        const current = get().currentWeekStart
+        const prev = addDays(current, -7)
+        const tripStartWeek = getWeekStart(TRIP_START)
+        if (prev >= tripStartWeek) {
+          set({ currentWeekStart: prev })
+        }
+      },
     }),
     {
-      name: "peru-weekly-planner-v1",
+      name: "peru-trip-v5",
     }
   )
 )
+
+export function getWeeksInRange(): { start: string; label: string }[] {
+  const weeks: { start: string; label: string }[] = []
+  let current = getWeekStart(TRIP_START)
+  const endWeek = getWeekStart(TRIP_END)
+  
+  while (current <= endWeek) {
+    const end = addDays(current, 6)
+    const startDate = new Date(current + "T12:00:00")
+    const endDate = new Date(end + "T12:00:00")
+    
+    const startMonth = startDate.toLocaleDateString("en-US", { month: "short" })
+    const endMonth = endDate.toLocaleDateString("en-US", { month: "short" })
+    const startDay = startDate.getDate()
+    const endDay = endDate.getDate()
+    
+    const label = startMonth === endMonth 
+      ? `${startMonth} ${startDay}-${endDay}`
+      : `${startMonth} ${startDay} - ${endMonth} ${endDay}`
+    
+    weeks.push({ start: current, label })
+    current = addDays(current, 7)
+  }
+  
+  return weeks
+}
+
+export function getDaysInWeek(weekStart: string): { date: string; dayName: string; dayNum: number; month: string }[] {
+  const days: { date: string; dayName: string; dayNum: number; month: string }[] = []
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  
+  for (let i = 0; i < 7; i++) {
+    const date = addDays(weekStart, i)
+    const d = new Date(date + "T12:00:00")
+    days.push({
+      date,
+      dayName: dayNames[d.getDay()],
+      dayNum: d.getDate(),
+      month: d.toLocaleDateString("en-US", { month: "short" })
+    })
+  }
+  
+  return days
+}
+
+export function getItemsForWeek(items: TripItem[], weekStart: string): TripItem[] {
+  const weekEnd = addDays(weekStart, 6)
+  return items.filter(item => {
+    return item.startDate <= weekEnd && item.endDate >= weekStart
+  })
+}
+
+export { addDays }
