@@ -2,23 +2,20 @@
 
 import { useTripStore, getDaysInWeek, getItemsForWeek, type TripItem, addDays } from "@/lib/kanban-store"
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ItemDialog } from "./item-dialog"
 import { TripItemCard } from "./trip-item-card"
-
-const colorClasses = {
-  violet: "bg-violet-500/20 border-violet-500/40 text-violet-200",
-  blue: "bg-blue-500/20 border-blue-500/40 text-blue-200",
-  emerald: "bg-emerald-500/20 border-emerald-500/40 text-emerald-200",
-  amber: "bg-amber-500/20 border-amber-500/40 text-amber-200",
-  rose: "bg-rose-500/20 border-rose-500/40 text-rose-200",
-}
 
 export function WeekView() {
   const { items, currentWeekStart, nextWeek, prevWeek } = useTripStore()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [editingItem, setEditingItem] = useState<TripItem | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const days = getDaysInWeek(currentWeekStart)
   const weekItems = getItemsForWeek(items, currentWeekStart)
@@ -99,6 +96,14 @@ export function WeekView() {
   }
 
   const itemRows = getItemRows()
+
+  if (!mounted) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-full flex-col">
