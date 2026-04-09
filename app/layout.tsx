@@ -7,8 +7,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Peru Trip Planner',
-  description: 'Plan your perfect Peru adventure',
+  title: 'Peru & Bolivia 2026',
+  description: 'Plan your perfect South America adventure',
   generator: 'v0.app',
   icons: {
     icon: [

@@ -1,13 +1,13 @@
 "use client"
 
-import { useTripStore, getDaysInWeek, getItemsForWeek, type TripItem, addDays } from "@/lib/kanban-store"
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
+import { useTripStore, getDaysInWeek, getItemsForWeek, type TripItem, addDays, generateICS } from "@/lib/kanban-store"
+import { ChevronLeft, ChevronRight, Plus, Calendar, CalendarDays, Download } from "lucide-react"
 import { useState, useEffect } from "react"
 import { ItemDialog } from "./item-dialog"
 import { TripItemCard } from "./trip-item-card"
 
 export function WeekView() {
-  const { items, currentWeekStart, nextWeek, prevWeek } = useTripStore()
+  const { items, currentWeekStart, nextWeek, prevWeek, setViewMode } = useTripStore()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [editingItem, setEditingItem] = useState<TripItem | null>(null)
@@ -23,8 +23,8 @@ export function WeekView() {
 
   const startDate = new Date(currentWeekStart + "T12:00:00")
   const endDate = new Date(weekEnd + "T12:00:00")
-  const weekLabel = startDate.toLocaleDateString("en-US", { month: "long", day: "numeric" }) +
-    " - " + endDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+  const weekLabel = startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+    " - " + endDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })
 
   const handleAddItem = (date: string) => {
     setSelectedDate(date)
@@ -36,6 +36,17 @@ export function WeekView() {
     setEditingItem(item)
     setSelectedDate(null)
     setDialogOpen(true)
+  }
+
+  const handleExportCalendar = () => {
+    const ics = generateICS(items)
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "peru-bolivia-2026.ics"
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   // Calculate item positioning for multi-day spans
@@ -108,23 +119,43 @@ export function WeekView() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-border px-4 py-3 md:px-6">
+      <header className="flex items-center justify-between border-b border-border px-4 py-3">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight md:text-xl">Peru 2026</h1>
-          <p className="text-sm text-muted-foreground">{weekLabel}</p>
+          <h1 className="text-base font-semibold tracking-tight md:text-lg">Peru & Bolivia 2026</h1>
+          <p className="text-xs text-muted-foreground md:text-sm">{weekLabel}</p>
         </div>
         <div className="flex items-center gap-1">
+          {/* View switcher */}
+          <button
+            onClick={() => setViewMode("month")}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground md:h-9 md:w-9"
+            title="Month view"
+          >
+            <CalendarDays className="h-4 w-4 md:h-5 md:w-5" />
+          </button>
+          
+          {/* Export button */}
+          <button
+            onClick={handleExportCalendar}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground md:h-9 md:w-9"
+            title="Export to Calendar"
+          >
+            <Download className="h-4 w-4 md:h-5 md:w-5" />
+          </button>
+          
+          <div className="mx-1 h-4 w-px bg-border" />
+          
           <button
             onClick={prevWeek}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground md:h-9 md:w-9"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
           </button>
           <button
             onClick={nextWeek}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground md:h-9 md:w-9"
           >
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
           </button>
         </div>
       </header>
@@ -134,11 +165,11 @@ export function WeekView() {
         {days.map((day) => (
           <div
             key={day.date}
-            className="flex flex-col items-center border-r border-border py-3 last:border-r-0"
+            className="flex flex-col items-center border-r border-border py-2 last:border-r-0 md:py-3"
           >
-            <span className="text-xs font-medium text-muted-foreground">{day.dayName}</span>
-            <span className="mt-0.5 text-lg font-semibold">{day.dayNum}</span>
-            <span className="text-[10px] text-muted-foreground">{day.month}</span>
+            <span className="text-[10px] font-medium text-muted-foreground md:text-xs">{day.dayName}</span>
+            <span className="text-sm font-semibold md:mt-0.5 md:text-lg">{day.dayNum}</span>
+            <span className="text-[9px] text-muted-foreground md:text-[10px]">{day.month}</span>
           </div>
         ))}
       </div>
@@ -153,15 +184,15 @@ export function WeekView() {
         </div>
 
         {/* Items */}
-        <div className="relative p-2 md:p-3">
+        <div className="relative p-1.5 md:p-3">
           {itemRows.length === 0 ? (
-            <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+            <div className="flex h-24 items-center justify-center text-xs text-muted-foreground md:h-32 md:text-sm">
               No plans yet. Tap a day to add something.
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5 md:gap-2">
               {itemRows.map((row, rowIndex) => (
-                <div key={rowIndex} className="relative grid h-auto min-h-[60px] grid-cols-7 gap-1 md:min-h-[72px] md:gap-2">
+                <div key={rowIndex} className="relative grid h-auto min-h-[52px] grid-cols-7 gap-0.5 md:min-h-[68px] md:gap-1">
                   {row.map((item) => {
                     const { startDayIndex, span } = getItemStyle(item)
                     return (
@@ -184,14 +215,14 @@ export function WeekView() {
         </div>
 
         {/* Add buttons row */}
-        <div className="grid grid-cols-7 gap-1 px-2 pb-4 md:px-3">
+        <div className="grid grid-cols-7 gap-0.5 px-1.5 pb-3 md:gap-1 md:px-3 md:pb-4">
           {days.map((day) => (
             <button
               key={day.date}
               onClick={() => handleAddItem(day.date)}
-              className="flex h-9 items-center justify-center rounded-md border border-dashed border-border/60 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-secondary/50 hover:text-foreground"
+              className="flex h-8 items-center justify-center rounded-md border border-dashed border-border/60 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-secondary/50 hover:text-foreground md:h-9"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
             </button>
           ))}
         </div>

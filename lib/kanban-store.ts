@@ -3,6 +3,43 @@ import { persist } from "zustand/middleware"
 
 export type Author = "brenda" | "connor"
 
+export type Location = 
+  | "lima"
+  | "cusco" 
+  | "sacred-valley"
+  | "machu-picchu"
+  | "arequipa"
+  | "colca-canyon"
+  | "huacachina"
+  | "puno"
+  | "lake-titicaca"
+  | "la-paz"
+  | "uyuni"
+  | "sucre"
+  | "copacabana"
+  | "travel"
+
+export const LOCATIONS: { id: Location; name: string; color: string; bgClass: string; borderClass: string }[] = [
+  { id: "lima", name: "Lima", color: "#3b82f6", bgClass: "bg-blue-500", borderClass: "border-blue-500/40" },
+  { id: "cusco", name: "Cusco", color: "#8b5cf6", bgClass: "bg-violet-500", borderClass: "border-violet-500/40" },
+  { id: "sacred-valley", name: "Sacred Valley", color: "#10b981", bgClass: "bg-emerald-500", borderClass: "border-emerald-500/40" },
+  { id: "machu-picchu", name: "Machu Picchu", color: "#f59e0b", bgClass: "bg-amber-500", borderClass: "border-amber-500/40" },
+  { id: "arequipa", name: "Arequipa", color: "#ec4899", bgClass: "bg-pink-500", borderClass: "border-pink-500/40" },
+  { id: "colca-canyon", name: "Colca Canyon", color: "#f97316", bgClass: "bg-orange-500", borderClass: "border-orange-500/40" },
+  { id: "huacachina", name: "Huacachina", color: "#eab308", bgClass: "bg-yellow-500", borderClass: "border-yellow-500/40" },
+  { id: "puno", name: "Puno", color: "#06b6d4", bgClass: "bg-cyan-500", borderClass: "border-cyan-500/40" },
+  { id: "lake-titicaca", name: "Lake Titicaca", color: "#0ea5e9", bgClass: "bg-sky-500", borderClass: "border-sky-500/40" },
+  { id: "la-paz", name: "La Paz", color: "#ef4444", bgClass: "bg-red-500", borderClass: "border-red-500/40" },
+  { id: "uyuni", name: "Uyuni Salt Flats", color: "#f5f5f4", bgClass: "bg-stone-200", borderClass: "border-stone-400/40" },
+  { id: "sucre", name: "Sucre", color: "#a855f7", bgClass: "bg-purple-500", borderClass: "border-purple-500/40" },
+  { id: "copacabana", name: "Copacabana", color: "#14b8a6", bgClass: "bg-teal-500", borderClass: "border-teal-500/40" },
+  { id: "travel", name: "Travel/Transit", color: "#6b7280", bgClass: "bg-gray-500", borderClass: "border-gray-500/40" },
+]
+
+export function getLocationById(id: Location) {
+  return LOCATIONS.find(l => l.id === id) || LOCATIONS[0]
+}
+
 export interface TripItem {
   id: string
   title: string
@@ -11,18 +48,27 @@ export interface TripItem {
   startDate: string
   endDate: string
   author?: Author
-  color: "violet" | "blue" | "emerald" | "amber" | "rose"
+  location: Location
+  locationTo?: Location // For travel between places
 }
+
+export type ViewMode = "week" | "month"
 
 interface TripStore {
   items: TripItem[]
   currentWeekStart: string
+  currentMonth: string
+  viewMode: ViewMode
   addItem: (item: Omit<TripItem, "id">) => void
   updateItem: (id: string, updates: Partial<TripItem>) => void
   deleteItem: (id: string) => void
   setCurrentWeek: (date: string) => void
+  setCurrentMonth: (month: string) => void
+  setViewMode: (mode: ViewMode) => void
   nextWeek: () => void
   prevWeek: () => void
+  nextMonth: () => void
+  prevMonth: () => void
 }
 
 const TRIP_START = "2026-04-27"
@@ -37,21 +83,26 @@ function getWeekStart(dateStr: string): string {
   return weekStart.toISOString().split("T")[0]
 }
 
-function addDays(dateStr: string, days: number): string {
+export function addDays(dateStr: string, days: number): string {
   const date = new Date(dateStr + "T12:00:00")
   date.setDate(date.getDate() + days)
   return date.toISOString().split("T")[0]
 }
 
+function getMonthStart(dateStr: string): string {
+  const date = new Date(dateStr + "T12:00:00")
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+}
+
 const defaultItems: TripItem[] = [
   {
     id: "1",
-    title: "Flight to Lima",
+    title: "Fly to Lima",
     notes: "LATAM Airlines, arrives 11pm",
     startDate: "2026-05-01",
     endDate: "2026-05-01",
     author: "connor",
-    color: "blue",
+    location: "lima",
     link: { label: "Booking", url: "https://www.latam.com" }
   },
   {
@@ -61,26 +112,36 @@ const defaultItems: TripItem[] = [
     startDate: "2026-05-01",
     endDate: "2026-05-03",
     author: "brenda",
-    color: "violet",
+    location: "lima",
     link: { label: "Airbnb", url: "https://www.airbnb.com" }
   },
   {
     id: "3",
+    title: "Lima to Cusco",
+    notes: "Morning flight",
+    startDate: "2026-05-04",
+    endDate: "2026-05-04",
+    author: "connor",
+    location: "lima",
+    locationTo: "cusco",
+  },
+  {
+    id: "4",
     title: "Cusco Acclimatization",
     notes: "Take it easy, drink coca tea",
     startDate: "2026-05-04",
     endDate: "2026-05-05",
     author: "connor",
-    color: "emerald",
+    location: "cusco",
   },
   {
-    id: "4",
+    id: "5",
     title: "Inca Trail Trek",
     notes: "4 days to Machu Picchu",
     startDate: "2026-05-06",
     endDate: "2026-05-09",
     author: "brenda",
-    color: "amber",
+    location: "machu-picchu",
     link: { label: "Tour", url: "https://www.incatrailpermits.com" }
   },
 ]
@@ -90,6 +151,8 @@ export const useTripStore = create<TripStore>()(
     (set, get) => ({
       items: defaultItems,
       currentWeekStart: getWeekStart(TRIP_START),
+      currentMonth: getMonthStart(TRIP_START),
+      viewMode: "week",
 
       addItem: (item) =>
         set((state) => ({
@@ -111,6 +174,12 @@ export const useTripStore = create<TripStore>()(
       setCurrentWeek: (date) =>
         set({ currentWeekStart: getWeekStart(date) }),
 
+      setCurrentMonth: (month) =>
+        set({ currentMonth: month }),
+
+      setViewMode: (mode) =>
+        set({ viewMode: mode }),
+
       nextWeek: () => {
         const current = get().currentWeekStart
         const next = addDays(current, 7)
@@ -128,38 +197,30 @@ export const useTripStore = create<TripStore>()(
           set({ currentWeekStart: prev })
         }
       },
+
+      nextMonth: () => {
+        const [year, month] = get().currentMonth.split("-").map(Number)
+        if (month === 12) {
+          set({ currentMonth: `${year + 1}-01` })
+        } else {
+          set({ currentMonth: `${year}-${String(month + 1).padStart(2, "0")}` })
+        }
+      },
+
+      prevMonth: () => {
+        const [year, month] = get().currentMonth.split("-").map(Number)
+        if (month === 1) {
+          set({ currentMonth: `${year - 1}-12` })
+        } else {
+          set({ currentMonth: `${year}-${String(month - 1).padStart(2, "0")}` })
+        }
+      },
     }),
     {
-      name: "peru-trip-v5",
+      name: "peru-bolivia-trip-v1",
     }
   )
 )
-
-export function getWeeksInRange(): { start: string; label: string }[] {
-  const weeks: { start: string; label: string }[] = []
-  let current = getWeekStart(TRIP_START)
-  const endWeek = getWeekStart(TRIP_END)
-  
-  while (current <= endWeek) {
-    const end = addDays(current, 6)
-    const startDate = new Date(current + "T12:00:00")
-    const endDate = new Date(end + "T12:00:00")
-    
-    const startMonth = startDate.toLocaleDateString("en-US", { month: "short" })
-    const endMonth = endDate.toLocaleDateString("en-US", { month: "short" })
-    const startDay = startDate.getDate()
-    const endDay = endDate.getDate()
-    
-    const label = startMonth === endMonth 
-      ? `${startMonth} ${startDay}-${endDay}`
-      : `${startMonth} ${startDay} - ${endMonth} ${endDay}`
-    
-    weeks.push({ start: current, label })
-    current = addDays(current, 7)
-  }
-  
-  return weeks
-}
 
 export function getDaysInWeek(weekStart: string): { date: string; dayName: string; dayNum: number; month: string }[] {
   const days: { date: string; dayName: string; dayNum: number; month: string }[] = []
@@ -179,6 +240,48 @@ export function getDaysInWeek(weekStart: string): { date: string; dayName: strin
   return days
 }
 
+export function getDaysInMonth(monthStr: string): { date: string; dayNum: number; isCurrentMonth: boolean }[] {
+  const [year, month] = monthStr.split("-").map(Number)
+  const firstDay = new Date(year, month - 1, 1)
+  const lastDay = new Date(year, month, 0)
+  const startPadding = firstDay.getDay()
+  
+  const days: { date: string; dayNum: number; isCurrentMonth: boolean }[] = []
+  
+  // Add previous month days
+  for (let i = startPadding - 1; i >= 0; i--) {
+    const d = new Date(year, month - 1, -i)
+    days.push({
+      date: d.toISOString().split("T")[0],
+      dayNum: d.getDate(),
+      isCurrentMonth: false
+    })
+  }
+  
+  // Add current month days
+  for (let i = 1; i <= lastDay.getDate(); i++) {
+    const d = new Date(year, month - 1, i)
+    days.push({
+      date: d.toISOString().split("T")[0],
+      dayNum: i,
+      isCurrentMonth: true
+    })
+  }
+  
+  // Add next month days to complete the grid
+  const remaining = 42 - days.length
+  for (let i = 1; i <= remaining; i++) {
+    const d = new Date(year, month, i)
+    days.push({
+      date: d.toISOString().split("T")[0],
+      dayNum: i,
+      isCurrentMonth: false
+    })
+  }
+  
+  return days
+}
+
 export function getItemsForWeek(items: TripItem[], weekStart: string): TripItem[] {
   const weekEnd = addDays(weekStart, 6)
   return items.filter(item => {
@@ -186,4 +289,44 @@ export function getItemsForWeek(items: TripItem[], weekStart: string): TripItem[
   })
 }
 
-export { addDays }
+export function getItemsForDate(items: TripItem[], date: string): TripItem[] {
+  return items.filter(item => {
+    return item.startDate <= date && item.endDate >= date
+  })
+}
+
+export function generateICS(items: TripItem[]): string {
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Peru Bolivia 2026//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+  ]
+
+  for (const item of items) {
+    const startDate = item.startDate.replace(/-/g, "")
+    const endDate = addDays(item.endDate, 1).replace(/-/g, "") // ICS end dates are exclusive
+    const location = getLocationById(item.location)
+    const locationName = item.locationTo 
+      ? `${location.name} to ${getLocationById(item.locationTo).name}`
+      : location.name
+
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:${item.id}@peru-bolivia-2026`,
+      `DTSTART;VALUE=DATE:${startDate}`,
+      `DTEND;VALUE=DATE:${endDate}`,
+      `SUMMARY:${item.title}`,
+      `LOCATION:${locationName}`,
+      item.notes ? `DESCRIPTION:${item.notes.replace(/\n/g, "\\n")}` : "",
+      item.link ? `URL:${item.link.url}` : "",
+      "END:VEVENT"
+    )
+  }
+
+  lines.push("END:VCALENDAR")
+  return lines.filter(Boolean).join("\r\n")
+}
+
+export { TRIP_START, TRIP_END }

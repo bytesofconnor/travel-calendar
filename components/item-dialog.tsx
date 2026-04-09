@@ -10,16 +10,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { useTripStore, type TripItem, type Author } from "@/lib/kanban-store"
-import { Trash2, Link as LinkIcon, X } from "lucide-react"
-
-const colors = [
-  { value: "violet", label: "Violet", class: "bg-violet-500" },
-  { value: "blue", label: "Blue", class: "bg-blue-500" },
-  { value: "emerald", label: "Green", class: "bg-emerald-500" },
-  { value: "amber", label: "Amber", class: "bg-amber-500" },
-  { value: "rose", label: "Rose", class: "bg-rose-500" },
-] as const
+import { useTripStore, LOCATIONS, type TripItem, type Author, type Location } from "@/lib/kanban-store"
+import { Trash2, Link as LinkIcon, X, Plane } from "lucide-react"
 
 interface ItemDialogProps {
   open: boolean
@@ -35,7 +27,9 @@ export function ItemDialog({ open, onOpenChange, defaultDate, editItem }: ItemDi
   const [notes, setNotes] = useState("")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
-  const [color, setColor] = useState<TripItem["color"]>("blue")
+  const [location, setLocation] = useState<Location>("cusco")
+  const [locationTo, setLocationTo] = useState<Location | undefined>(undefined)
+  const [isTravel, setIsTravel] = useState(false)
   const [author, setAuthor] = useState<Author | undefined>(undefined)
   const [linkLabel, setLinkLabel] = useState("")
   const [linkUrl, setLinkUrl] = useState("")
@@ -48,7 +42,9 @@ export function ItemDialog({ open, onOpenChange, defaultDate, editItem }: ItemDi
         setNotes(editItem.notes || "")
         setStartDate(editItem.startDate)
         setEndDate(editItem.endDate)
-        setColor(editItem.color)
+        setLocation(editItem.location)
+        setLocationTo(editItem.locationTo)
+        setIsTravel(!!editItem.locationTo)
         setAuthor(editItem.author)
         if (editItem.link) {
           setLinkLabel(editItem.link.label)
@@ -64,7 +60,9 @@ export function ItemDialog({ open, onOpenChange, defaultDate, editItem }: ItemDi
         setNotes("")
         setStartDate(defaultDate || "")
         setEndDate(defaultDate || "")
-        setColor("blue")
+        setLocation("cusco")
+        setLocationTo(undefined)
+        setIsTravel(false)
         setAuthor(undefined)
         setLinkLabel("")
         setLinkUrl("")
@@ -81,7 +79,8 @@ export function ItemDialog({ open, onOpenChange, defaultDate, editItem }: ItemDi
       notes: notes.trim() || undefined,
       startDate,
       endDate,
-      color,
+      location,
+      locationTo: isTravel ? locationTo : undefined,
       author,
       link: showLink && linkUrl.trim() 
         ? { label: linkLabel.trim() || "Link", url: linkUrl.trim() }
@@ -106,14 +105,14 @@ export function ItemDialog({ open, onOpenChange, defaultDate, editItem }: ItemDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md gap-0 overflow-hidden p-0">
+      <DialogContent className="max-h-[90vh] max-w-md gap-0 overflow-hidden p-0">
         <DialogHeader className="border-b border-border px-4 py-3">
           <DialogTitle className="text-base font-medium">
             {editItem ? "Edit Item" : "Add Item"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 p-4">
+        <div className="flex flex-col gap-4 overflow-y-auto p-4">
           {/* Title */}
           <Input
             placeholder="What's the plan?"
@@ -128,7 +127,7 @@ export function ItemDialog({ open, onOpenChange, defaultDate, editItem }: ItemDi
             placeholder="Add notes..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="min-h-[80px] resize-none border-0 bg-secondary/50 text-sm placeholder:text-muted-foreground focus-visible:ring-1"
+            className="min-h-[60px] resize-none border-0 bg-secondary/50 text-sm placeholder:text-muted-foreground focus-visible:ring-1"
           />
 
           {/* Dates */}
@@ -159,24 +158,80 @@ export function ItemDialog({ open, onOpenChange, defaultDate, editItem }: ItemDi
             </div>
           </div>
 
-          {/* Color */}
+          {/* Travel toggle */}
           <div>
-            <label className="mb-2 block text-xs font-medium text-muted-foreground">Color</label>
-            <div className="flex gap-2">
-              {colors.map((c) => (
+            <button
+              type="button"
+              onClick={() => {
+                setIsTravel(!isTravel)
+                if (!isTravel && !locationTo) {
+                  setLocationTo("cusco")
+                }
+              }}
+              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+                isTravel
+                  ? "bg-primary/10 text-primary"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Plane className="h-4 w-4" />
+              {isTravel ? "Travel between locations" : "Add travel/transit"}
+            </button>
+          </div>
+
+          {/* Location(s) */}
+          <div>
+            <label className="mb-2 block text-xs font-medium text-muted-foreground">
+              {isTravel ? "From" : "Location"}
+            </label>
+            <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-5">
+              {LOCATIONS.filter(l => l.id !== "travel").map((loc) => (
                 <button
-                  key={c.value}
+                  key={loc.id}
                   type="button"
-                  onClick={() => setColor(c.value)}
-                  className={`h-7 w-7 rounded-full transition-all ${c.class} ${
-                    color === c.value 
-                      ? "ring-2 ring-foreground ring-offset-2 ring-offset-background" 
-                      : "opacity-50 hover:opacity-75"
+                  onClick={() => setLocation(loc.id)}
+                  className={`flex flex-col items-center gap-1 rounded-lg p-2 text-center transition-all ${
+                    location === loc.id 
+                      ? "bg-secondary ring-2 ring-primary ring-offset-1 ring-offset-background" 
+                      : "bg-secondary/50 hover:bg-secondary"
                   }`}
-                />
+                >
+                  <div 
+                    className="h-5 w-5 rounded-full"
+                    style={{ backgroundColor: loc.color }}
+                  />
+                  <span className="text-[9px] leading-tight text-foreground">{loc.name}</span>
+                </button>
               ))}
             </div>
           </div>
+
+          {/* Destination (for travel) */}
+          {isTravel && (
+            <div>
+              <label className="mb-2 block text-xs font-medium text-muted-foreground">To</label>
+              <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-5">
+                {LOCATIONS.filter(l => l.id !== "travel" && l.id !== location).map((loc) => (
+                  <button
+                    key={loc.id}
+                    type="button"
+                    onClick={() => setLocationTo(loc.id)}
+                    className={`flex flex-col items-center gap-1 rounded-lg p-2 text-center transition-all ${
+                      locationTo === loc.id 
+                        ? "bg-secondary ring-2 ring-primary ring-offset-1 ring-offset-background" 
+                        : "bg-secondary/50 hover:bg-secondary"
+                    }`}
+                  >
+                    <div 
+                      className="h-5 w-5 rounded-full"
+                      style={{ backgroundColor: loc.color }}
+                    />
+                    <span className="text-[9px] leading-tight text-foreground">{loc.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Author */}
           <div>

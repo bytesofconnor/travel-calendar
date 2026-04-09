@@ -1,15 +1,8 @@
 "use client"
 
 import type { TripItem } from "@/lib/kanban-store"
+import { getLocationById } from "@/lib/kanban-store"
 import { ExternalLink } from "lucide-react"
-
-const colorClasses = {
-  violet: "bg-violet-500/15 border-violet-500/30 hover:bg-violet-500/25",
-  blue: "bg-blue-500/15 border-blue-500/30 hover:bg-blue-500/25",
-  emerald: "bg-emerald-500/15 border-emerald-500/30 hover:bg-emerald-500/25",
-  amber: "bg-amber-500/15 border-amber-500/30 hover:bg-amber-500/25",
-  rose: "bg-rose-500/15 border-rose-500/30 hover:bg-rose-500/25",
-}
 
 const authorColors = {
   brenda: "bg-rose-500",
@@ -19,20 +12,34 @@ const authorColors = {
 interface TripItemCardProps {
   item: TripItem
   onEdit: () => void
+  compact?: boolean
 }
 
-export function TripItemCard({ item, onEdit }: TripItemCardProps) {
+export function TripItemCard({ item, onEdit, compact = false }: TripItemCardProps) {
+  const location = getLocationById(item.location)
+  const locationTo = item.locationTo ? getLocationById(item.locationTo) : null
+
   return (
     <button
       onClick={onEdit}
-      className={`flex h-full w-full flex-col justify-between rounded-lg border p-2 text-left transition-colors md:p-2.5 ${colorClasses[item.color]}`}
+      className={`flex h-full w-full flex-col justify-between overflow-hidden rounded-lg border text-left transition-all hover:brightness-110 ${
+        compact ? "p-1.5" : "p-2 md:p-2.5"
+      }`}
+      style={{
+        borderColor: locationTo ? `${location.color}66` : `${location.color}66`,
+        background: locationTo 
+          ? `linear-gradient(135deg, ${location.color}25 0%, ${location.color}25 50%, ${locationTo.color}25 50%, ${locationTo.color}25 100%)`
+          : `${location.color}20`,
+      }}
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-1">
-          <h3 className="truncate text-xs font-medium leading-tight text-foreground md:text-sm">
+          <h3 className={`truncate font-medium leading-tight text-foreground ${
+            compact ? "text-[10px]" : "text-xs md:text-sm"
+          }`}>
             {item.title}
           </h3>
-          {item.link && (
+          {item.link && !compact && (
             <a
               href={item.link.url}
               target="_blank"
@@ -44,19 +51,43 @@ export function TripItemCard({ item, onEdit }: TripItemCardProps) {
             </a>
           )}
         </div>
-        {item.notes && (
+        {item.notes && !compact && (
           <p className="mt-0.5 line-clamp-2 text-[10px] leading-tight text-muted-foreground md:text-xs">
             {item.notes}
           </p>
         )}
       </div>
-      {item.author && (
-        <div className="mt-1.5 flex items-center gap-1">
-          <div className={`h-4 w-4 shrink-0 rounded-full ${authorColors[item.author]} flex items-center justify-center`}>
-            <span className="text-[9px] font-medium text-white">
-              {item.author === "brenda" ? "B" : "C"}
+      
+      {!compact && (
+        <div className="mt-1.5 flex items-center justify-between gap-1">
+          {/* Location badge(s) */}
+          <div className="flex items-center gap-1 overflow-hidden">
+            <div 
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: location.color }}
+            />
+            {locationTo && (
+              <>
+                <span className="text-[9px] text-muted-foreground">to</span>
+                <div 
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: locationTo.color }}
+                />
+              </>
+            )}
+            <span className="truncate text-[9px] text-muted-foreground">
+              {locationTo ? `${location.name} → ${locationTo.name}` : location.name}
             </span>
           </div>
+          
+          {/* Author badge */}
+          {item.author && (
+            <div className={`h-4 w-4 shrink-0 rounded-full ${authorColors[item.author]} flex items-center justify-center`}>
+              <span className="text-[9px] font-medium text-white">
+                {item.author === "brenda" ? "B" : "C"}
+              </span>
+            </div>
+          )}
         </div>
       )}
     </button>
