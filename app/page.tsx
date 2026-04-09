@@ -24,8 +24,20 @@ export default function Page() {
   }
 
   return (
-    <main className="flex h-svh flex-col overflow-hidden">
-      {viewMode === "week" ? <WeekView /> : <MonthView />}
-    </main>
+    <>
+      <div
+        className="fixed inset-0 z-0 pointer-events-none"
+        style={{
+          backgroundImage: "url('/bg.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          filter: "grayscale(100%)",
+          opacity: 0.09,
+        }}
+      />
+      <main className="relative z-10 flex h-svh flex-col overflow-hidden">
+        {viewMode === "week" ? <WeekView /> : <MonthView />}
+      </main>
+    </>
   )
 }
