@@ -59,7 +59,7 @@ export function KanbanColumn({
   }
 
   return (
-    <div className="flex h-full w-80 shrink-0 flex-col">
+    <div className="flex h-full min-w-0 flex-col">
       <div className="mb-3 flex items-center justify-between">
         {isEditing ? (
           <Input

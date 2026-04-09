@@ -175,7 +175,7 @@ export function KanbanBoard() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-x-auto overflow-y-hidden p-6">
+      <main className="flex-1 overflow-hidden p-6">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -183,7 +183,12 @@ export function KanbanBoard() {
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex h-full gap-6">
+          <div 
+            className="grid h-full gap-4"
+            style={{ 
+              gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` 
+            }}
+          >
             {columns.map((column) => (
               <KanbanColumn
                 key={column.id}
@@ -196,14 +201,6 @@ export function KanbanBoard() {
                 onDeleteColumn={() => deleteColumn(column.id)}
               />
             ))}
-
-            <button
-              onClick={handleAddColumn}
-              className="flex h-12 w-80 shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 text-sm font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/50 hover:text-foreground"
-            >
-              <Plus className="h-4 w-4" />
-              Add another list
-            </button>
           </div>
 
           <DragOverlay>
