@@ -14,7 +14,7 @@ import {
   type DragOverEvent,
 } from "@dnd-kit/core"
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable"
-import { Plus, Search, Plane } from "lucide-react"
+import { Plus, Search, Mountain } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { KanbanColumn } from "@/components/kanban-column"
@@ -149,11 +149,11 @@ export function KanbanBoard() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-foreground">
-              <Plane className="h-5 w-5 text-background" />
+              <Mountain className="h-5 w-5 text-background" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold tracking-tight">Wanderlust</h1>
-              <p className="text-sm text-muted-foreground">Plan your perfect journey</p>
+              <h1 className="text-xl font-semibold tracking-tight">Peru Adventure</h1>
+              <p className="text-sm text-muted-foreground">Machu Picchu & Beyond</p>
             </div>
           </div>
 
@@ -161,7 +161,7 @@ export function KanbanBoard() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search trips..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-64 pl-9"

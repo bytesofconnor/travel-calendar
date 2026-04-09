@@ -37,59 +37,86 @@ interface KanbanState {
 }
 
 const defaultColumns: Column[] = [
-  { id: "ideas", title: "Ideas" },
-  { id: "planning", title: "Planning" },
+  { id: "research", title: "Research" },
+  { id: "to-book", title: "To Book" },
   { id: "booked", title: "Booked" },
-  { id: "completed", title: "Completed" },
+  { id: "packing", title: "Packing" },
 ]
 
 const defaultCards: TravelCard[] = [
   {
     id: "1",
-    title: "Tokyo Adventure",
-    description: "Cherry blossom season in Japan. Visit temples, try authentic ramen, explore Shibuya.",
+    title: "Machu Picchu Tickets",
+    description: "Book entry tickets in advance. Consider sunrise slot for fewer crowds.",
     color: "coral",
     links: [
-      { id: "l1", label: "Japan Guide", url: "https://www.japan-guide.com" },
+      { id: "l1", label: "Official Tickets", url: "https://www.machupicchu.gob.pe" },
     ],
-    columnId: "ideas",
+    columnId: "research",
   },
   {
     id: "2",
-    title: "Iceland Road Trip",
-    description: "Ring road adventure. Northern lights, waterfalls, hot springs.",
-    color: "sky",
-    links: [],
-    columnId: "ideas",
+    title: "Inca Trail Permits",
+    description: "4-day trek to Machu Picchu. Permits sell out months in advance - book early!",
+    color: "sage",
+    links: [
+      { id: "l2", label: "Permit Info", url: "https://www.incatrailpermits.com" },
+    ],
+    columnId: "research",
   },
   {
     id: "3",
-    title: "Paris Weekend",
-    description: "Romantic getaway. Eiffel Tower, Louvre, croissants.",
-    color: "lavender",
+    title: "Lima to Cusco Flight",
+    description: "Arrive in Lima, fly to Cusco. LATAM or Avianca recommended.",
+    color: "sky",
     links: [
-      { id: "l2", label: "Hotel Booking", url: "https://www.booking.com" },
+      { id: "l3", label: "Google Flights", url: "https://www.google.com/flights" },
     ],
-    columnId: "planning",
+    columnId: "to-book",
   },
   {
     id: "4",
-    title: "Bali Retreat",
-    description: "Wellness and relaxation. Yoga, rice terraces, beach sunsets.",
-    color: "sage",
+    title: "Cusco Accommodation",
+    description: "Stay in San Blas neighborhood. Great for acclimatization before trekking.",
+    color: "lavender",
     links: [
-      { id: "l3", label: "Flight Details", url: "https://www.google.com/flights" },
-      { id: "l4", label: "Villa Rental", url: "https://www.airbnb.com" },
+      { id: "l4", label: "Booking.com", url: "https://www.booking.com" },
     ],
-    columnId: "booked",
+    columnId: "to-book",
   },
   {
     id: "5",
-    title: "New York City",
-    description: "Broadway shows, Central Park, amazing food scene.",
+    title: "Rainbow Mountain Day Trip",
+    description: "Vinicunca - starts very early, high altitude (5,200m). Book a tour.",
+    color: "coral",
+    links: [],
+    columnId: "research",
+  },
+  {
+    id: "6",
+    title: "Sacred Valley Tour",
+    description: "Ollantaytambo, Pisac, Moray. Can do as day trip from Cusco.",
     color: "sand",
     links: [],
-    columnId: "completed",
+    columnId: "research",
+  },
+  {
+    id: "7",
+    title: "Altitude Sickness Meds",
+    description: "Get acetazolamide prescription. Also bring coca tea/candy.",
+    color: "sage",
+    links: [],
+    columnId: "packing",
+  },
+  {
+    id: "8",
+    title: "Travel Insurance",
+    description: "Make sure it covers high altitude trekking and emergency evacuation.",
+    color: "sky",
+    links: [
+      { id: "l5", label: "World Nomads", url: "https://www.worldnomads.com" },
+    ],
+    columnId: "to-book",
   },
 ]
 
@@ -172,7 +199,7 @@ export const useKanbanStore = create<KanbanState>()(
         }),
     }),
     {
-      name: "travel-kanban-storage",
+      name: "peru-trip-planner-v2",
     }
   )
 )
