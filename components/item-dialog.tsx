@@ -105,14 +105,14 @@ export function ItemDialog({ open, onOpenChange, defaultDate, editItem }: ItemDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-md flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="shrink-0 border-b border-border px-4 py-3">
+      <DialogContent className="max-h-[90vh] max-w-md gap-0 overflow-y-auto p-0">
+        <DialogHeader className="border-b border-border px-4 py-3">
           <DialogTitle className="text-base font-medium">
             {editItem ? "Edit Item" : "Add Item"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+        <div className="flex flex-col gap-4 p-4">
           {/* Title */}
           <Input
             placeholder="What's the plan?"
@@ -127,7 +127,7 @@ export function ItemDialog({ open, onOpenChange, defaultDate, editItem }: ItemDi
             placeholder="Add notes..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="min-h-[60px] resize-none border-0 bg-secondary/50 text-sm placeholder:text-muted-foreground focus-visible:ring-1"
+            className="min-h-[100px] resize-none border-0 bg-secondary/50 text-sm placeholder:text-muted-foreground focus-visible:ring-1"
           />
 
           {/* Dates */}
@@ -307,7 +307,7 @@ export function ItemDialog({ open, onOpenChange, defaultDate, editItem }: ItemDi
         </div>
 
         {/* Footer */}
-        <div className="flex shrink-0 items-center justify-between border-t border-border px-4 py-3">
+        <div className="flex items-center justify-between border-t border-border px-4 py-3">
           {editItem ? (
             <Button
               variant="ghost"
