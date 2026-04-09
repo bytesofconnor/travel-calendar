@@ -28,6 +28,8 @@ export type Location =
   | "tiwanaku"
   | "coroico"
   | "trinidad"
+  | "medellin"
+  | "cartagena"
   | "washington-dc"
   | "minnesota"
   | "travel"
