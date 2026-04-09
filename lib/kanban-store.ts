@@ -1,7 +1,8 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
-export type CardColor = "coral" | "sand" | "sage" | "sky" | "lavender"
+export type Author = "brenda" | "connor"
+export type Priority = 1 | 2 | 3 | 4 | 5 | null
 
 export interface Link {
   id: string
@@ -9,11 +10,12 @@ export interface Link {
   url: string
 }
 
-export interface TravelCard {
+export interface PlannerCard {
   id: string
   title: string
-  description: string
-  color: CardColor
+  notes: string
+  priority: Priority
+  author: Author | null
   links: Link[]
   columnId: string
 }
@@ -21,102 +23,58 @@ export interface TravelCard {
 export interface Column {
   id: string
   title: string
+  dateRange: string
 }
 
 interface KanbanState {
   columns: Column[]
-  cards: TravelCard[]
-  addColumn: (title: string) => void
-  updateColumn: (id: string, title: string) => void
-  deleteColumn: (id: string) => void
-  addCard: (card: Omit<TravelCard, "id">) => void
-  updateCard: (id: string, updates: Partial<Omit<TravelCard, "id">>) => void
+  cards: PlannerCard[]
+  addCard: (card: Omit<PlannerCard, "id">) => void
+  updateCard: (id: string, updates: Partial<Omit<PlannerCard, "id">>) => void
   deleteCard: (id: string) => void
   moveCard: (cardId: string, targetColumnId: string, targetIndex: number) => void
-  reorderColumns: (activeId: string, overId: string) => void
 }
 
 const defaultColumns: Column[] = [
-  { id: "research", title: "Research" },
-  { id: "to-book", title: "To Book" },
-  { id: "booked", title: "Booked" },
-  { id: "packing", title: "Packing" },
+  { id: "apr-27", title: "Apr 27 - May 3", dateRange: "Week 1" },
+  { id: "may-4", title: "May 4 - 10", dateRange: "Week 2" },
+  { id: "may-11", title: "May 11 - 17", dateRange: "Week 3" },
+  { id: "may-18", title: "May 18 - 24", dateRange: "Week 4" },
+  { id: "may-25", title: "May 25 - 31", dateRange: "Week 5" },
+  { id: "jun-1", title: "Jun 1 - 7", dateRange: "Week 6" },
+  { id: "jun-8", title: "Jun 8 - 14", dateRange: "Week 7" },
+  { id: "jun-15", title: "Jun 15 - 21", dateRange: "Week 8" },
+  { id: "jun-22", title: "Jun 22 - 28", dateRange: "Week 9" },
+  { id: "jun-29", title: "Jun 29 - 30", dateRange: "Final" },
 ]
 
-const defaultCards: TravelCard[] = [
+const defaultCards: PlannerCard[] = [
   {
     id: "1",
-    title: "Machu Picchu Tickets",
-    description: "Book entry tickets in advance. Consider sunrise slot for fewer crowds.",
-    color: "coral",
-    links: [
-      { id: "l1", label: "Official Tickets", url: "https://www.machupicchu.gob.pe" },
-    ],
-    columnId: "research",
+    title: "Book flights",
+    notes: "Look at LATAM and Avianca for Lima-Cusco leg",
+    priority: 1,
+    author: "connor",
+    links: [{ id: "l1", label: "Google Flights", url: "https://www.google.com/flights" }],
+    columnId: "apr-27",
   },
   {
     id: "2",
-    title: "Inca Trail Permits",
-    description: "4-day trek to Machu Picchu. Permits sell out months in advance - book early!",
-    color: "sage",
-    links: [
-      { id: "l2", label: "Permit Info", url: "https://www.incatrailpermits.com" },
-    ],
-    columnId: "research",
+    title: "Get travel insurance",
+    notes: "Must cover high altitude trekking",
+    priority: 2,
+    author: "brenda",
+    links: [],
+    columnId: "apr-27",
   },
   {
     id: "3",
-    title: "Lima to Cusco Flight",
-    description: "Arrive in Lima, fly to Cusco. LATAM or Avianca recommended.",
-    color: "sky",
-    links: [
-      { id: "l3", label: "Google Flights", url: "https://www.google.com/flights" },
-    ],
-    columnId: "to-book",
-  },
-  {
-    id: "4",
-    title: "Cusco Accommodation",
-    description: "Stay in San Blas neighborhood. Great for acclimatization before trekking.",
-    color: "lavender",
-    links: [
-      { id: "l4", label: "Booking.com", url: "https://www.booking.com" },
-    ],
-    columnId: "to-book",
-  },
-  {
-    id: "5",
-    title: "Rainbow Mountain Day Trip",
-    description: "Vinicunca - starts very early, high altitude (5,200m). Book a tour.",
-    color: "coral",
-    links: [],
-    columnId: "research",
-  },
-  {
-    id: "6",
-    title: "Sacred Valley Tour",
-    description: "Ollantaytambo, Pisac, Moray. Can do as day trip from Cusco.",
-    color: "sand",
-    links: [],
-    columnId: "research",
-  },
-  {
-    id: "7",
-    title: "Altitude Sickness Meds",
-    description: "Get acetazolamide prescription. Also bring coca tea/candy.",
-    color: "sage",
-    links: [],
-    columnId: "packing",
-  },
-  {
-    id: "8",
-    title: "Travel Insurance",
-    description: "Make sure it covers high altitude trekking and emergency evacuation.",
-    color: "sky",
-    links: [
-      { id: "l5", label: "World Nomads", url: "https://www.worldnomads.com" },
-    ],
-    columnId: "to-book",
+    title: "Machu Picchu tickets",
+    notes: "Book for sunrise slot if possible",
+    priority: 1,
+    author: null,
+    links: [{ id: "l2", label: "Official Site", url: "https://www.machupicchu.gob.pe" }],
+    columnId: "may-4",
   },
 ]
 
@@ -125,21 +83,6 @@ export const useKanbanStore = create<KanbanState>()(
     (set) => ({
       columns: defaultColumns,
       cards: defaultCards,
-      addColumn: (title) =>
-        set((state) => ({
-          columns: [...state.columns, { id: crypto.randomUUID(), title }],
-        })),
-      updateColumn: (id, title) =>
-        set((state) => ({
-          columns: state.columns.map((col) =>
-            col.id === id ? { ...col, title } : col
-          ),
-        })),
-      deleteColumn: (id) =>
-        set((state) => ({
-          columns: state.columns.filter((col) => col.id !== id),
-          cards: state.cards.filter((card) => card.columnId !== id),
-        })),
       addCard: (card) =>
         set((state) => ({
           cards: [...state.cards, { ...card, id: crypto.randomUUID() }],
@@ -185,21 +128,9 @@ export const useKanbanStore = create<KanbanState>()(
             ),
           }
         }),
-      reorderColumns: (activeId, overId) =>
-        set((state) => {
-          const activeIndex = state.columns.findIndex((c) => c.id === activeId)
-          const overIndex = state.columns.findIndex((c) => c.id === overId)
-          if (activeIndex === -1 || overIndex === -1) return state
-
-          const newColumns = [...state.columns]
-          const [removed] = newColumns.splice(activeIndex, 1)
-          newColumns.splice(overIndex, 0, removed)
-
-          return { columns: newColumns }
-        }),
     }),
     {
-      name: "peru-trip-planner-v2",
+      name: "peru-weekly-planner-v1",
     }
   )
 )

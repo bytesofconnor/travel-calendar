@@ -3,28 +3,25 @@
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, ExternalLink, Pencil, Trash2 } from "lucide-react"
-import type { TravelCard as TravelCardType } from "@/lib/kanban-store"
+import type { PlannerCard } from "@/lib/kanban-store"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
-const colorClasses: Record<TravelCardType["color"], string> = {
-  coral: "bg-red-50 border-red-200/60 hover:border-red-300",
-  sand: "bg-amber-50 border-amber-200/60 hover:border-amber-300",
-  sage: "bg-emerald-50 border-emerald-200/60 hover:border-emerald-300",
-  sky: "bg-sky-50 border-sky-200/60 hover:border-sky-300",
-  lavender: "bg-violet-50 border-violet-200/60 hover:border-violet-300",
+const priorityColors: Record<number, string> = {
+  1: "border-l-red-400",
+  2: "border-l-orange-400",
+  3: "border-l-yellow-400",
+  4: "border-l-sky-400",
+  5: "border-l-slate-300",
 }
 
-const colorAccents: Record<TravelCardType["color"], string> = {
-  coral: "bg-red-400",
-  sand: "bg-amber-400",
-  sage: "bg-emerald-400",
-  sky: "bg-sky-400",
-  lavender: "bg-violet-400",
+const authorInitials: Record<string, { label: string; bg: string }> = {
+  brenda: { label: "B", bg: "bg-rose-100 text-rose-700" },
+  connor: { label: "C", bg: "bg-sky-100 text-sky-700" },
 }
 
 interface TravelCardProps {
-  card: TravelCardType
+  card: PlannerCard
   onEdit: () => void
   onDelete: () => void
 }
@@ -55,18 +52,11 @@ export function TravelCard({ card, onEdit, onDelete }: TravelCardProps) {
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group relative rounded-lg border p-4 transition-all duration-200",
-        colorClasses[card.color],
+        "group relative rounded-lg border border-border/60 bg-card p-3 transition-all duration-200 hover:border-border",
+        card.priority && `border-l-[3px] ${priorityColors[card.priority]}`,
         isDragging && "opacity-50 shadow-lg ring-2 ring-ring/20"
       )}
     >
-      <div
-        className={cn(
-          "absolute left-0 top-0 h-full w-1 rounded-l-lg",
-          colorAccents[card.color]
-        )}
-      />
-
       <div className="flex items-start gap-2">
         <button
           {...attributes}
@@ -77,27 +67,41 @@ export function TravelCard({ card, onEdit, onDelete }: TravelCardProps) {
         </button>
 
         <div className="min-w-0 flex-1">
-          <h3 className="font-medium text-foreground leading-tight text-balance">
-            {card.title}
-          </h3>
-          {card.description && (
-            <p className="mt-1.5 text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-              {card.description}
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-medium text-foreground leading-tight text-sm">
+              {card.title}
+            </h3>
+            {card.author && (
+              <span
+                className={cn(
+                  "shrink-0 flex h-5 w-5 items-center justify-center rounded-full text-xs font-medium",
+                  authorInitials[card.author].bg
+                )}
+                title={card.author === "brenda" ? "Brenda" : "Connor"}
+              >
+                {authorInitials[card.author].label}
+              </span>
+            )}
+          </div>
+
+          {card.notes && (
+            <p className="mt-1 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+              {card.notes}
             </p>
           )}
 
           {card.links.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
+            <div className="mt-2 flex flex-wrap gap-1">
               {card.links.map((link) => (
                 <a
                   key={link.id}
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-md bg-background/80 px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                  className="inline-flex items-center gap-1 rounded bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <ExternalLink className="h-3 w-3" />
+                  <ExternalLink className="h-2.5 w-2.5" />
                   {link.label}
                 </a>
               ))}
@@ -105,28 +109,28 @@ export function TravelCard({ card, onEdit, onDelete }: TravelCardProps) {
           )}
         </div>
 
-        <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-6 w-6"
             onClick={(e) => {
               e.stopPropagation()
               onEdit()
             }}
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <Pencil className="h-3 w-3" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-destructive hover:text-destructive"
+            className="h-6 w-6 text-destructive hover:text-destructive"
             onClick={(e) => {
               e.stopPropagation()
               onDelete()
             }}
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-3 w-3" />
           </Button>
         </div>
       </div>
@@ -134,29 +138,35 @@ export function TravelCard({ card, onEdit, onDelete }: TravelCardProps) {
   )
 }
 
-export function TravelCardDragOverlay({ card }: { card: TravelCardType }) {
+export function TravelCardDragOverlay({ card }: { card: PlannerCard }) {
   return (
     <div
       className={cn(
-        "relative rounded-lg border p-4 shadow-xl",
-        colorClasses[card.color]
+        "relative rounded-lg border border-border/60 bg-card p-3 shadow-xl",
+        card.priority && `border-l-[3px] ${priorityColors[card.priority]}`
       )}
     >
-      <div
-        className={cn(
-          "absolute left-0 top-0 h-full w-1 rounded-l-lg",
-          colorAccents[card.color]
-        )}
-      />
       <div className="flex items-start gap-2">
         <GripVertical className="mt-0.5 h-4 w-4 text-muted-foreground opacity-60" />
         <div className="min-w-0 flex-1">
-          <h3 className="font-medium text-foreground leading-tight">
-            {card.title}
-          </h3>
-          {card.description && (
-            <p className="mt-1.5 text-sm text-muted-foreground line-clamp-2">
-              {card.description}
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-medium text-foreground leading-tight text-sm">
+              {card.title}
+            </h3>
+            {card.author && (
+              <span
+                className={cn(
+                  "shrink-0 flex h-5 w-5 items-center justify-center rounded-full text-xs font-medium",
+                  authorInitials[card.author].bg
+                )}
+              >
+                {authorInitials[card.author].label}
+              </span>
+            )}
+          </div>
+          {card.notes && (
+            <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+              {card.notes}
             </p>
           )}
         </div>

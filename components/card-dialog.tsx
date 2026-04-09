@@ -12,23 +12,28 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import type { TravelCard, CardColor, Link } from "@/lib/kanban-store"
+import type { PlannerCard, Author, Priority, Link } from "@/lib/kanban-store"
 import { cn } from "@/lib/utils"
 
-const colorOptions: { value: CardColor; label: string; class: string }[] = [
-  { value: "coral", label: "Coral", class: "bg-red-400" },
-  { value: "sand", label: "Sand", class: "bg-amber-400" },
-  { value: "sage", label: "Sage", class: "bg-emerald-400" },
-  { value: "sky", label: "Sky", class: "bg-sky-400" },
-  { value: "lavender", label: "Lavender", class: "bg-violet-400" },
+const priorityOptions: { value: Priority; label: string }[] = [
+  { value: 1, label: "1" },
+  { value: 2, label: "2" },
+  { value: 3, label: "3" },
+  { value: 4, label: "4" },
+  { value: 5, label: "5" },
+]
+
+const authorOptions: { value: Author; label: string }[] = [
+  { value: "brenda", label: "Brenda" },
+  { value: "connor", label: "Connor" },
 ]
 
 interface CardDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  card?: TravelCard
+  card?: PlannerCard
   columnId: string
-  onSave: (card: Omit<TravelCard, "id">) => void
+  onSave: (card: Omit<PlannerCard, "id">) => void
 }
 
 export function CardDialog({
@@ -39,8 +44,9 @@ export function CardDialog({
   onSave,
 }: CardDialogProps) {
   const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [color, setColor] = useState<CardColor>("coral")
+  const [notes, setNotes] = useState("")
+  const [priority, setPriority] = useState<Priority>(null)
+  const [author, setAuthor] = useState<Author | null>(null)
   const [links, setLinks] = useState<Link[]>([])
   const [newLinkLabel, setNewLinkLabel] = useState("")
   const [newLinkUrl, setNewLinkUrl] = useState("")
@@ -48,13 +54,15 @@ export function CardDialog({
   useEffect(() => {
     if (card) {
       setTitle(card.title)
-      setDescription(card.description)
-      setColor(card.color)
+      setNotes(card.notes)
+      setPriority(card.priority)
+      setAuthor(card.author)
       setLinks(card.links)
     } else {
       setTitle("")
-      setDescription("")
-      setColor("coral")
+      setNotes("")
+      setPriority(null)
+      setAuthor(null)
       setLinks([])
     }
     setNewLinkLabel("")
@@ -81,8 +89,9 @@ export function CardDialog({
     if (!title.trim()) return
     onSave({
       title: title.trim(),
-      description: description.trim(),
-      color,
+      notes: notes.trim(),
+      priority,
+      author,
       links,
       columnId,
     })
@@ -93,15 +102,15 @@ export function CardDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{card ? "Edit Trip" : "Add New Trip"}</DialogTitle>
+          <DialogTitle>{card ? "Edit Item" : "Add Item"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 pt-2">
+        <div className="space-y-4 pt-2">
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
             <Input
               id="title"
-              placeholder="Where are you going?"
+              placeholder="What needs to be done?"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               autoFocus
@@ -109,61 +118,84 @@ export function CardDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="notes">Notes</Label>
             <Textarea
-              id="description"
-              placeholder="Add notes, ideas, or details..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
+              id="notes"
+              placeholder="Add any details..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              className="resize-none"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Color</Label>
-            <div className="flex gap-2">
-              {colorOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setColor(option.value)}
-                  className={cn(
-                    "h-8 w-8 rounded-full transition-all",
-                    option.class,
-                    color === option.value
-                      ? "ring-2 ring-foreground ring-offset-2"
-                      : "hover:scale-110"
-                  )}
-                  title={option.label}
-                />
-              ))}
+          <div className="flex gap-6">
+            <div className="space-y-2">
+              <Label>Priority</Label>
+              <div className="flex gap-1">
+                {priorityOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setPriority(priority === option.value ? null : option.value)}
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-md text-sm font-medium transition-all",
+                      priority === option.value
+                        ? "bg-foreground text-background"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Added by</Label>
+              <div className="flex gap-1">
+                {authorOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setAuthor(author === option.value ? null : option.value)}
+                    className={cn(
+                      "flex h-8 items-center justify-center rounded-md px-3 text-sm font-medium transition-all",
+                      author === option.value
+                        ? option.value === "brenda"
+                          ? "bg-rose-100 text-rose-700"
+                          : "bg-sky-100 text-sky-700"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             <Label>Links</Label>
             
             {links.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {links.map((link) => (
                   <div
                     key={link.id}
-                    className="flex items-center gap-2 rounded-md bg-muted px-3 py-2"
+                    className="flex items-center gap-2 rounded-md bg-muted px-2.5 py-1.5"
                   >
-                    <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{link.label}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {link.url}
-                      </p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 shrink-0"
+                      className="h-6 w-6 shrink-0"
                       onClick={() => handleRemoveLink(link.id)}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 ))}
@@ -206,7 +238,7 @@ export function CardDialog({
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={!title.trim()}>
-              {card ? "Save Changes" : "Add Trip"}
+              {card ? "Save" : "Add"}
             </Button>
           </div>
         </div>

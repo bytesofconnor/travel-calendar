@@ -14,34 +14,30 @@ import {
   type DragOverEvent,
 } from "@dnd-kit/core"
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable"
-import { Plus, Search, Mountain } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Search, Mountain } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { KanbanColumn } from "@/components/kanban-column"
 import { TravelCardDragOverlay } from "@/components/travel-card"
 import { CardDialog } from "@/components/card-dialog"
 import {
   useKanbanStore,
-  type TravelCard,
+  type PlannerCard,
 } from "@/lib/kanban-store"
 
 export function KanbanBoard() {
   const {
     columns,
     cards,
-    addColumn,
-    updateColumn,
-    deleteColumn,
     addCard,
     updateCard,
     deleteCard,
     moveCard,
   } = useKanbanStore()
 
-  const [activeCard, setActiveCard] = useState<TravelCard | null>(null)
+  const [activeCard, setActiveCard] = useState<PlannerCard | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingCard, setEditingCard] = useState<TravelCard | undefined>()
+  const [editingCard, setEditingCard] = useState<PlannerCard | undefined>()
   const [targetColumnId, setTargetColumnId] = useState<string>("")
 
   const sensors = useSensors(
@@ -61,7 +57,7 @@ export function KanbanBoard() {
     return cards.filter(
       (card) =>
         card.title.toLowerCase().includes(query) ||
-        card.description.toLowerCase().includes(query)
+        card.notes.toLowerCase().includes(query)
     )
   }, [cards, searchQuery])
 
@@ -125,22 +121,18 @@ export function KanbanBoard() {
     setDialogOpen(true)
   }
 
-  const handleEditCard = (card: TravelCard) => {
+  const handleEditCard = (card: PlannerCard) => {
     setEditingCard(card)
     setTargetColumnId(card.columnId)
     setDialogOpen(true)
   }
 
-  const handleSaveCard = (cardData: Omit<TravelCard, "id">) => {
+  const handleSaveCard = (cardData: Omit<PlannerCard, "id">) => {
     if (editingCard) {
       updateCard(editingCard.id, cardData)
     } else {
       addCard(cardData)
     }
-  }
-
-  const handleAddColumn = () => {
-    addColumn("New List")
   }
 
   return (
@@ -153,29 +145,35 @@ export function KanbanBoard() {
             </div>
             <div>
               <h1 className="text-xl font-semibold tracking-tight">Peru Adventure</h1>
-              <p className="text-sm text-muted-foreground">Machu Picchu & Beyond</p>
+              <p className="text-sm text-muted-foreground">April - June 2026</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span className="h-4 w-4 rounded-full bg-rose-100 flex items-center justify-center text-[10px] font-medium text-rose-700">B</span>
+                Brenda
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-4 w-4 rounded-full bg-sky-100 flex items-center justify-center text-[10px] font-medium text-sky-700">C</span>
+                Connor
+              </span>
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-64 pl-9"
+                className="w-48 pl-9"
               />
             </div>
-            <Button onClick={handleAddColumn} variant="outline" size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Add List
-            </Button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 overflow-hidden p-6">
+      <main className="flex-1 overflow-hidden p-4">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -184,7 +182,7 @@ export function KanbanBoard() {
           onDragEnd={handleDragEnd}
         >
           <div 
-            className="grid h-full gap-4"
+            className="grid h-full gap-3"
             style={{ 
               gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` 
             }}
@@ -197,8 +195,6 @@ export function KanbanBoard() {
                 onAddCard={() => handleAddCard(column.id)}
                 onEditCard={handleEditCard}
                 onDeleteCard={deleteCard}
-                onUpdateColumn={(title) => updateColumn(column.id, title)}
-                onDeleteColumn={() => deleteColumn(column.id)}
               />
             ))}
           </div>
