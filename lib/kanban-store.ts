@@ -17,6 +17,19 @@ export type Location =
   | "uyuni"
   | "sucre"
   | "copacabana"
+  | "santa-cruz"
+  | "cochabamba"
+  | "potosi"
+  | "oruro"
+  | "rurrenabaque"
+  | "tupiza"
+  | "tarija"
+  | "samaipata"
+  | "tiwanaku"
+  | "coroico"
+  | "trinidad"
+  | "washington-dc"
+  | "minnesota"
   | "travel"
 
 export const LOCATIONS: { id: Location; name: string; color: string; bgClass: string; borderClass: string }[] = [
@@ -33,6 +46,19 @@ export const LOCATIONS: { id: Location; name: string; color: string; bgClass: st
   { id: "uyuni", name: "Uyuni Salt Flats", color: "#f5f5f4", bgClass: "bg-stone-200", borderClass: "border-stone-400/40" },
   { id: "sucre", name: "Sucre", color: "#a855f7", bgClass: "bg-purple-500", borderClass: "border-purple-500/40" },
   { id: "copacabana", name: "Copacabana", color: "#14b8a6", bgClass: "bg-teal-500", borderClass: "border-teal-500/40" },
+  { id: "santa-cruz", name: "Santa Cruz", color: "#16a34a", bgClass: "bg-green-600", borderClass: "border-green-600/40" },
+  { id: "cochabamba", name: "Cochabamba", color: "#d97706", bgClass: "bg-amber-600", borderClass: "border-amber-600/40" },
+  { id: "potosi", name: "Potosí", color: "#b45309", bgClass: "bg-amber-700", borderClass: "border-amber-700/40" },
+  { id: "oruro", name: "Oruro", color: "#be185d", bgClass: "bg-pink-700", borderClass: "border-pink-700/40" },
+  { id: "rurrenabaque", name: "Rurrenabaque", color: "#15803d", bgClass: "bg-green-700", borderClass: "border-green-700/40" },
+  { id: "tupiza", name: "Tupiza", color: "#b91c1c", bgClass: "bg-red-700", borderClass: "border-red-700/40" },
+  { id: "tarija", name: "Tarija", color: "#a16207", bgClass: "bg-yellow-700", borderClass: "border-yellow-700/40" },
+  { id: "samaipata", name: "Samaipata", color: "#0f766e", bgClass: "bg-teal-700", borderClass: "border-teal-700/40" },
+  { id: "tiwanaku", name: "Tiwanaku", color: "#1d4ed8", bgClass: "bg-blue-700", borderClass: "border-blue-700/40" },
+  { id: "coroico", name: "Coroico", color: "#4d7c0f", bgClass: "bg-lime-700", borderClass: "border-lime-700/40" },
+  { id: "trinidad", name: "Trinidad", color: "#c2410c", bgClass: "bg-orange-700", borderClass: "border-orange-700/40" },
+  { id: "washington-dc", name: "Washington DC", color: "#dc2626", bgClass: "bg-red-600", borderClass: "border-red-600/40" },
+  { id: "minnesota", name: "Minnesota", color: "#7c3aed", bgClass: "bg-violet-700", borderClass: "border-violet-700/40" },
   { id: "travel", name: "Travel/Transit", color: "#6b7280", bgClass: "bg-gray-500", borderClass: "border-gray-500/40" },
 ]
 
