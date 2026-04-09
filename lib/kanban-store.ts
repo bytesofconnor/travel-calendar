@@ -59,6 +59,8 @@ export const LOCATIONS: { id: Location; name: string; color: string; bgClass: st
   { id: "tiwanaku", name: "Tiwanaku", color: "#1d4ed8", bgClass: "bg-blue-700", borderClass: "border-blue-700/40" },
   { id: "coroico", name: "Coroico", color: "#4d7c0f", bgClass: "bg-lime-700", borderClass: "border-lime-700/40" },
   { id: "trinidad", name: "Trinidad", color: "#c2410c", bgClass: "bg-orange-700", borderClass: "border-orange-700/40" },
+  { id: "medellin", name: "Medellín", color: "#7c3aed", bgClass: "bg-violet-600", borderClass: "border-violet-600/40" },
+  { id: "cartagena", name: "Cartagena", color: "#db2777", bgClass: "bg-pink-600", borderClass: "border-pink-600/40" },
   { id: "washington-dc", name: "Washington DC", color: "#dc2626", bgClass: "bg-red-600", borderClass: "border-red-600/40" },
   { id: "minnesota", name: "Minnesota", color: "#7c3aed", bgClass: "bg-violet-700", borderClass: "border-violet-700/40" },
   { id: "travel", name: "Travel/Transit", color: "#6b7280", bgClass: "bg-gray-500", borderClass: "border-gray-500/40" },
