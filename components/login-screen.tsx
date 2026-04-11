@@ -6,22 +6,22 @@ import { Input } from "@/components/ui/input"
 
 // Curated Unsplash travel & couples photos — stable CDN URLs, no API key needed
 const PHOTOS = [
-  { id: "1476514525535-07fb3b4ae5f1", alt: "Mountain lake reflection" },
+  { id: "1476514525535-07fb3b4ae5f1", alt: "Mountain lake" },
   { id: "1469854523086-cc02fe5d8800", alt: "Road trip" },
-  { id: "1507608616759-54f48f0af0ee", alt: "Couple with map" },
-  { id: "1488646953014-85cb44e25828", alt: "Tropical beach" },
-  { id: "1506905925346-21bda4d32df4", alt: "Mountain summit" },
-  { id: "1500259571355-332da5cb07aa", alt: "Couple at sunset" },
   { id: "1436491865332-7a61a109cc05", alt: "Airplane at sunset" },
-  { id: "1548438294-1ad5d5f4f063", alt: "Italian street" },
-  { id: "1502791451862-7ad6838b4640", alt: "Couple hiking" },
-  { id: "1530258096857-bb2b5f23b4e7", alt: "Travel together" },
-  { id: "1527631746610-bfbe8aca5d64", alt: "Packing for adventure" },
-  { id: "1551882547-ff40c63fe5fa", alt: "Backpacker viewpoint" },
-  { id: "1523906834658-6b7b728fa03e", alt: "Dinner abroad" },
-  { id: "1500917293891-ef795e70e1f6", alt: "City couple" },
-  { id: "1491553895911-0055eca6402d", alt: "Mountain trail" },
-  { id: "1533105079780-92b9be482077", alt: "Beach chairs" },
+  { id: "1506905925346-21bda4d32df4", alt: "Mountain summit" },
+  { id: "1530789253388-582c481ef5e7", alt: "Couple in mountains" },
+  { id: "1506197603052-3cc9c3a201bd", alt: "Santorini" },
+  { id: "1488646953014-85cb44e25828", alt: "Tropical coast" },
+  { id: "1519677100203-a0e668c92439", alt: "Venice canal" },
+  { id: "1502602155657-f6f5a8a7a2ba", alt: "Paris" },
+  { id: "1547981609-4b6bfe67ca0b", alt: "Amalfi coast" },
+  { id: "1499696010180-025ef6e1a8f9", alt: "Beach couple" },
+  { id: "1533105079780-92b9be482077", alt: "Resort pool" },
+  { id: "1507525428034-b723cf961d3e", alt: "Tropical beach" },
+  { id: "1528360983277-13d401cdc186", alt: "Travel adventure" },
+  { id: "1519681393784-d120267933ba", alt: "Mountain night sky" },
+  { id: "1554080353-a576cf803bda", alt: "Scenic landscape" },
 ]
 
 function photoUrl(id: string) {
@@ -78,8 +78,8 @@ export function LoginScreen({
         <div
           className="absolute inset-0"
           style={{
-            background: "hsl(var(--background) / 0.82)",
-            backdropFilter: "saturate(0.3) brightness(0.7)",
+            background: "hsl(var(--background) / 0.88)",
+            backdropFilter: "saturate(0.15) brightness(0.5)",
           }}
         />
       </div>
@@ -144,6 +144,19 @@ export function LoginScreen({
             No password needed. We&apos;ll email you a secure sign-in link.
           </p>
         </div>
+
+        {/* Byline */}
+        <p className="mt-5 text-center text-xs text-muted-foreground/40">
+          built by{" "}
+          <a
+            href="https://x.com/flowconnor"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-muted-foreground/70 transition-colors underline-offset-2 hover:underline"
+          >
+            @flowconnor
+          </a>
+        </p>
       </div>
     </div>
   )
