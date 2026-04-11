@@ -783,10 +783,10 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
           backgroundSize: "cover",
           backgroundPosition: "center",
           filter: trip.coverImageUrl ? "grayscale(15%)" : "grayscale(100%)",
-          opacity: trip.coverImageUrl ? 0.18 : 0.09,
+          opacity: trip.coverImageUrl ? 0.32 : 0.09,
         }}
       />
-      <div className="fixed inset-0 z-0 bg-background/82" />
+      <div className="fixed inset-0 z-0 bg-background/72" />
       <main className="relative z-10 flex h-svh flex-col overflow-hidden">
         <header className="sticky top-0 z-20 flex flex-col gap-4 border-b border-border bg-background/92 px-4 py-4 backdrop-blur">
           <div className="flex items-start justify-between gap-3">

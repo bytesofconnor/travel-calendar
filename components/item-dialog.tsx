@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Link as LinkIcon, Plane, Trash2, X } from "lucide-react"
+import { ChevronLeft, Link as LinkIcon, Plane, Trash2, X } from "lucide-react"
 
 import {
   Dialog,
@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { LOCATIONS, type Location, type TripItem, type TripItemInput } from "@/lib/kanban-store"
+import { COUNTRIES, getCountryForLocation, type Location, type TripItem, type TripItemInput } from "@/lib/kanban-store"
 
 interface ItemDialogProps {
   open: boolean
@@ -41,12 +41,16 @@ export function ItemDialog({
   const [notes, setNotes] = useState("")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
-  const [location, setLocation] = useState<Location>("cusco")
+  const [location, setLocation] = useState<Location>("")
   const [locationTo, setLocationTo] = useState<Location | undefined>(undefined)
   const [isTravel, setIsTravel] = useState(false)
   const [linkLabel, setLinkLabel] = useState("")
   const [linkUrl, setLinkUrl] = useState("")
   const [showLink, setShowLink] = useState(false)
+
+  // Country selection state — null means "show country picker"
+  const [locationCountry, setLocationCountry] = useState<string | null>(null)
+  const [locationToCountry, setLocationToCountry] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) {
@@ -61,6 +65,11 @@ export function ItemDialog({
       setLocation(editItem.location)
       setLocationTo(editItem.locationTo)
       setIsTravel(Boolean(editItem.locationTo))
+      // Auto-detect countries from existing location IDs
+      const fromCountry = getCountryForLocation(editItem.location)
+      setLocationCountry(fromCountry?.id ?? null)
+      const toCountry = editItem.locationTo ? getCountryForLocation(editItem.locationTo) : null
+      setLocationToCountry(toCountry?.id ?? null)
       if (editItem.link) {
         setLinkLabel(editItem.link.label)
         setLinkUrl(editItem.link.url)
@@ -77,16 +86,18 @@ export function ItemDialog({
     setNotes("")
     setStartDate(defaultDate ?? "")
     setEndDate(defaultDate ?? "")
-    setLocation("cusco")
+    setLocation("")
     setLocationTo(undefined)
     setIsTravel(false)
+    setLocationCountry(null)
+    setLocationToCountry(null)
     setLinkLabel("")
     setLinkUrl("")
     setShowLink(false)
   }, [defaultDate, editItem, open])
 
   async function handleSave() {
-    if (!title.trim() || !startDate || !endDate) {
+    if (!title.trim() || !startDate || !endDate || !location) {
       return
     }
 
@@ -116,6 +127,31 @@ export function ItemDialog({
     await onDelete(editItem.id)
     onOpenChange(false)
   }
+
+  function selectFromCountry(countryId: string) {
+    const country = COUNTRIES.find((c) => c.id === countryId)
+    if (!country) return
+    setLocationCountry(countryId)
+    // Auto-select the first location in that country if current location isn't in it
+    const currentInCountry = country.locations.some((l) => l.id === location)
+    if (!currentInCountry) {
+      setLocation(country.locations[0].id)
+    }
+  }
+
+  function selectToCountry(countryId: string) {
+    const country = COUNTRIES.find((c) => c.id === countryId)
+    if (!country) return
+    setLocationToCountry(countryId)
+    // Auto-select the first location in that country if current locationTo isn't in it
+    const currentInCountry = locationTo && country.locations.some((l) => l.id === locationTo)
+    if (!currentInCountry) {
+      setLocationTo(country.locations[0].id)
+    }
+  }
+
+  const fromCountryDef = COUNTRIES.find((c) => c.id === locationCountry)
+  const toCountryDef = COUNTRIES.find((c) => c.id === locationToCountry)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -181,8 +217,10 @@ export function ItemDialog({
               type="button"
               onClick={() => {
                 setIsTravel(!isTravel)
-                if (!isTravel && !locationTo) {
-                  setLocationTo("cusco")
+                if (!isTravel) {
+                  // Turning on travel: default "To" country to same as "From"
+                  setLocationToCountry(locationCountry)
+                  setLocationTo(undefined)
                 }
               }}
               className={`flex min-h-11 items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-colors ${
@@ -196,40 +234,47 @@ export function ItemDialog({
             </button>
           </div>
 
+          {/* FROM / LOCATION picker */}
           <div>
-            <label className="mb-2 block text-xs font-medium text-muted-foreground">
-              {isTravel ? "From" : "Location"}
-            </label>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-              {LOCATIONS.filter((item) => item.id !== "travel").map((item) => (
+            <div className="mb-2 flex items-center gap-2">
+              {locationCountry && (
                 <button
-                  key={item.id}
                   type="button"
-                  onClick={() => setLocation(item.id)}
-                  className={`flex min-h-[78px] flex-col items-center justify-center gap-1.5 rounded-xl p-2 text-center transition-all ${
-                    location === item.id
-                      ? "bg-secondary ring-2 ring-primary ring-offset-1 ring-offset-background"
-                      : "bg-secondary/50 hover:bg-secondary"
-                  }`}
+                  onClick={() => setLocationCountry(null)}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <div className="h-6 w-6 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-[10px] leading-tight text-foreground">{item.name}</span>
+                  <ChevronLeft className="h-3 w-3" />
+                  {fromCountryDef?.flag} {fromCountryDef?.name}
                 </button>
-              ))}
+              )}
+              <label className="block text-xs font-medium text-muted-foreground">
+                {locationCountry ? (isTravel ? "From" : "Location") : (isTravel ? "From — choose a country" : "Location — choose a country")}
+              </label>
             </div>
-          </div>
 
-          {isTravel && (
-            <div>
-              <label className="mb-2 block text-xs font-medium text-muted-foreground">To</label>
+            {locationCountry === null ? (
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {COUNTRIES.map((country) => (
+                  <button
+                    key={country.id}
+                    type="button"
+                    onClick={() => selectFromCountry(country.id)}
+                    className="flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl bg-secondary/50 p-2 text-center transition-all hover:bg-secondary"
+                  >
+                    <span className="text-2xl leading-none">{country.flag}</span>
+                    <span className="text-[10px] leading-tight text-foreground">{country.name}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-                {LOCATIONS.filter((item) => item.id !== "travel" && item.id !== location).map((item) => (
+                {(fromCountryDef?.locations ?? []).map((item) => (
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => setLocationTo(item.id)}
+                    onClick={() => setLocation(item.id)}
                     className={`flex min-h-[78px] flex-col items-center justify-center gap-1.5 rounded-xl p-2 text-center transition-all ${
-                      locationTo === item.id
+                      location === item.id
                         ? "bg-secondary ring-2 ring-primary ring-offset-1 ring-offset-background"
                         : "bg-secondary/50 hover:bg-secondary"
                     }`}
@@ -239,6 +284,63 @@ export function ItemDialog({
                   </button>
                 ))}
               </div>
+            )}
+          </div>
+
+          {/* TO picker (travel mode only) */}
+          {isTravel && (
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                {locationToCountry && (
+                  <button
+                    type="button"
+                    onClick={() => setLocationToCountry(null)}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                    {toCountryDef?.flag} {toCountryDef?.name}
+                  </button>
+                )}
+                <label className="block text-xs font-medium text-muted-foreground">
+                  {locationToCountry ? "To" : "To — choose a country"}
+                </label>
+              </div>
+
+              {locationToCountry === null ? (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {COUNTRIES.map((country) => (
+                    <button
+                      key={country.id}
+                      type="button"
+                      onClick={() => selectToCountry(country.id)}
+                      className="flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl bg-secondary/50 p-2 text-center transition-all hover:bg-secondary"
+                    >
+                      <span className="text-2xl leading-none">{country.flag}</span>
+                      <span className="text-[10px] leading-tight text-foreground">{country.name}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                  {(toCountryDef?.locations ?? [])
+                    .filter((item) => item.id !== location)
+                    .map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setLocationTo(item.id)}
+                        className={`flex min-h-[78px] flex-col items-center justify-center gap-1.5 rounded-xl p-2 text-center transition-all ${
+                          locationTo === item.id
+                            ? "bg-secondary ring-2 ring-primary ring-offset-1 ring-offset-background"
+                            : "bg-secondary/50 hover:bg-secondary"
+                        }`}
+                      >
+                        <div className="h-6 w-6 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span className="text-[10px] leading-tight text-foreground">{item.name}</span>
+                      </button>
+                    ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -305,7 +407,7 @@ export function ItemDialog({
             <Button
               size="sm"
               onClick={() => void handleSave()}
-              disabled={!title.trim() || !startDate || !endDate || isSaving || isDeleting}
+              disabled={!title.trim() || !startDate || !endDate || !location || isSaving || isDeleting}
               className="h-11 rounded-xl"
             >
               {isSaving ? "Saving..." : editItem ? "Save" : "Add"}
