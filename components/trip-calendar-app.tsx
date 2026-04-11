@@ -19,9 +19,10 @@ import {
   useCalendarStore,
 } from "@/lib/kanban-store"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
-import { isSupabaseConfigured } from "@/lib/supabase/env"
+import { isSupabaseConfigured, isPaywallEnabled, getPaymentLink } from "@/lib/supabase/env"
 import { MonthView } from "./month-view"
 import { WeekView } from "./week-view"
+import { PaywallScreen } from "./paywall-screen"
 
 interface TripCalendarAppProps {
   initialUser: {
@@ -171,6 +172,8 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
   const [mobileHeaderExpanded, setMobileHeaderExpanded] = useState(false)
   const [isRefreshingCover, setIsRefreshingCover] = useState(false)
   const [coverAttemptedTripId, setCoverAttemptedTripId] = useState<string | null>(null)
+  // null = checking, true = granted, false = needs payment
+  const [hasAccess, setHasAccess] = useState<boolean | null>(!isPaywallEnabled() ? true : null)
 
   const currentMember = members.find((member) => member.userId === user?.id)
 
@@ -199,6 +202,22 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
 
     return () => subscription.unsubscribe()
   }, [supabase])
+
+  // Check paywall access whenever the user changes
+  useEffect(() => {
+    if (!supabase || !user || !isPaywallEnabled()) {
+      return
+    }
+
+    supabase
+      .from("access")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }: { data: { user_id: string } | null }) => {
+        setHasAccess(Boolean(data))
+      })
+  }, [supabase, user?.id])
 
   useEffect(() => {
     if (!supabase || !user) {
@@ -771,6 +790,25 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
           {errorMessage && <p className="absolute bottom-6 text-sm text-rose-300">{errorMessage}</p>}
         </main>
       </>
+    )
+  }
+
+  // Paywall: null = still checking, false = no access
+  if (hasAccess === null) {
+    return (
+      <div className="flex h-svh items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (hasAccess === false && user) {
+    return (
+      <PaywallScreen
+        userId={user.id}
+        paymentLink={getPaymentLink(user.id)}
+        onAccessGranted={() => setHasAccess(true)}
+      />
     )
   }
 

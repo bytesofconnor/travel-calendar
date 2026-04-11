@@ -174,3 +174,16 @@ using (
 
 alter publication supabase_realtime add table public.trip_items;
 alter publication supabase_realtime add table public.trip_members;
+
+-- Lifetime access table (populated by Stripe webhook or bypass code)
+create table if not exists public.access (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  granted_at timestamptz not null default timezone('utc', now()),
+  method text not null check (method in ('stripe', 'code'))
+);
+
+alter table public.access enable row level security;
+
+create policy "Users can read own access"
+on public.access for select
+using (user_id = auth.uid());
