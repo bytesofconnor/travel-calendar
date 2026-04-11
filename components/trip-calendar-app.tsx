@@ -839,12 +839,11 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
               </select>
               <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             </label>
-            <div className="rounded-full bg-secondary px-4 py-2.5 text-base text-muted-foreground md:px-3 md:py-1.5 md:text-sm">
-              {currentMember?.displayName ?? guessDisplayName(user)}
-            </div>
-            <div className="rounded-full bg-secondary px-4 py-2.5 text-base text-muted-foreground md:px-3 md:py-1.5 md:text-sm">
-              {members.length} traveler{members.length === 1 ? "" : "s"}
-            </div>
+            {members.map((member) => (
+              <div key={member.userId} className={`rounded-full px-4 py-2.5 text-base md:px-3 md:py-1.5 md:text-sm ${member.userId === user?.id ? "bg-secondary text-foreground font-medium" : "bg-secondary/60 text-muted-foreground"}`}>
+                {member.displayName}
+              </div>
+            ))}
             <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center">
               <Button variant="secondary" size="sm" className="hidden h-12 rounded-2xl text-base md:flex md:h-9 md:text-sm" onClick={() => void handleCopyInvite()}>
                 <Copy className="mr-2 h-5 w-5 md:h-4 md:w-4" />
