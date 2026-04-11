@@ -187,3 +187,7 @@ alter table public.access enable row level security;
 create policy "Users can read own access"
 on public.access for select
 using (user_id = auth.uid());
+
+create policy "Users can insert own access"
+on public.access for insert
+with check (user_id = auth.uid());
