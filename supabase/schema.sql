@@ -173,3 +173,4 @@ using (
 );
 
 alter publication supabase_realtime add table public.trip_items;
+alter publication supabase_realtime add table public.trip_members;

@@ -57,9 +57,10 @@ export function WeekView({
   const todayDate = new Date().toISOString().slice(0, 10)
 
   useEffect(() => {
-    const nextMobileDate = days.find((day) => day.date === todayDate)?.date ?? currentWeekStart
+    const weekDays = getDaysInWeek(currentWeekStart)
+    const nextMobileDate = weekDays.find((day) => day.date === todayDate)?.date ?? currentWeekStart
     setMobileSelectedDate(nextMobileDate)
-  }, [currentWeekStart, todayDate, days])
+  }, [currentWeekStart, todayDate])
 
   function handleAddItem(date: string) {
     setSelectedDate(date)
