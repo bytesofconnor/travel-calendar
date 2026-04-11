@@ -23,6 +23,7 @@ import { isSupabaseConfigured, isPaywallEnabled, getPaymentLink } from "@/lib/su
 import { MonthView } from "./month-view"
 import { WeekView } from "./week-view"
 import { PaywallScreen } from "./paywall-screen"
+import { LoginScreen } from "./login-screen"
 
 interface TripCalendarAppProps {
   initialUser: {
@@ -651,57 +652,16 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
 
   if (!user) {
     return (
-      <>
-        <div
-          className="fixed inset-0 z-0 pointer-events-none"
-          style={{
-            backgroundImage: "url('/bg.jpg')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            filter: "grayscale(100%)",
-            opacity: 0.09,
-          }}
-        />
-        <main className="relative z-10 flex h-svh items-center justify-center p-6">
-          <div className="w-full max-w-lg rounded-3xl border border-border bg-card/80 p-6 shadow-2xl backdrop-blur">
-            <div className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Shared Trip Calendar</div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight">Plan the vacation together.</h1>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Sign in with a magic link, then create a trip or join your partner&apos;s invite.
-            </p>
-
-            <div className="mt-6 space-y-3">
-              <Input
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-              <Input
-                placeholder="Invite code (optional)"
-                value={joinInput}
-                onChange={(event) => setJoinInput(event.target.value.toLowerCase())}
-              />
-              <Button className="w-full" onClick={() => void handleSendMagicLink()} disabled={isSendingAuth || !email.trim()}>
-                {isSendingAuth ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending magic link
-                  </>
-                ) : (
-                  <>
-                    <Mail className="mr-2 h-4 w-4" />
-                    Email me a magic link
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {authMessage && <p className="mt-4 text-sm text-emerald-300">{authMessage}</p>}
-            {errorMessage && <p className="mt-4 text-sm text-rose-300">{errorMessage}</p>}
-          </div>
-        </main>
-      </>
+      <LoginScreen
+        email={email}
+        joinInput={joinInput}
+        isSendingAuth={isSendingAuth}
+        authMessage={authMessage}
+        errorMessage={errorMessage}
+        onEmailChange={setEmail}
+        onJoinInputChange={(v) => setJoinInput(v.toLowerCase())}
+        onSendMagicLink={() => void handleSendMagicLink()}
+      />
     )
   }
 
