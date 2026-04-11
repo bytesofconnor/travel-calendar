@@ -10,11 +10,11 @@ const PHOTOS = [
   { id: "1469854523086-cc02fe5d8800", alt: "Road trip" },
   { id: "1436491865332-7a61a109cc05", alt: "Airplane at sunset" },
   { id: "1506905925346-21bda4d32df4", alt: "Mountain summit" },
-  { id: "1530789253388-582c481ef5e7", alt: "Couple in mountains" },
+  { id: "1464822728305-614d83a595dc", alt: "Mountain trail" },
   { id: "1506197603052-3cc9c3a201bd", alt: "Santorini" },
   { id: "1488646953014-85cb44e25828", alt: "Tropical coast" },
   { id: "1519677100203-a0e668c92439", alt: "Venice canal" },
-  { id: "1502602155657-f6f5a8a7a2ba", alt: "Paris" },
+  { id: "1431274172761-fcdab704d114", alt: "Paris rooftops" },
   { id: "1547981609-4b6bfe67ca0b", alt: "Amalfi coast" },
   { id: "1499696010180-025ef6e1a8f9", alt: "Beach couple" },
   { id: "1533105079780-92b9be482077", alt: "Resort pool" },
@@ -146,13 +146,13 @@ export function LoginScreen({
         </div>
 
         {/* Byline */}
-        <p className="mt-5 text-center text-xs text-muted-foreground/40">
+        <p className="mt-5 text-center text-xs text-muted-foreground/70">
           built by{" "}
           <a
             href="https://x.com/flowconnor"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-muted-foreground/70 transition-colors underline-offset-2 hover:underline"
+            className="hover:text-foreground transition-colors underline-offset-2 hover:underline"
           >
             @flowconnor
           </a>
