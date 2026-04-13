@@ -32,22 +32,26 @@ interface LoginScreenProps {
   email: string
   joinInput: string
   isSendingAuth: boolean
+  isStartingDevBypass?: boolean
   authMessage: string
   errorMessage: string
   onEmailChange: (value: string) => void
   onJoinInputChange: (value: string) => void
   onSendMagicLink: () => void
+  onStartDevBypass?: () => void
 }
 
 export function LoginScreen({
   email,
   joinInput,
   isSendingAuth,
+  isStartingDevBypass = false,
   authMessage,
   errorMessage,
   onEmailChange,
   onJoinInputChange,
   onSendMagicLink,
+  onStartDevBypass,
 }: LoginScreenProps) {
   return (
     <div className="relative flex h-svh w-full items-center justify-center overflow-hidden">
@@ -131,6 +135,23 @@ export function LoginScreen({
                 </>
               )}
             </Button>
+            {onStartDevBypass && (
+              <Button
+                variant="secondary"
+                className="h-12 w-full rounded-xl text-base"
+                onClick={onStartDevBypass}
+                disabled={isStartingDevBypass}
+              >
+                {isStartingDevBypass ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Starting dev session…
+                  </>
+                ) : (
+                  "Continue as dev user"
+                )}
+              </Button>
+            )}
           </div>
 
           {authMessage && (

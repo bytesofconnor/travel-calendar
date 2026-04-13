@@ -1,29 +1,37 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { ChevronDown, ChevronUp, Copy, Image as ImageIcon, Loader2, LogOut, Mail, PlusCircle, RefreshCcw, Users } from "lucide-react"
-import type { AuthChangeEvent, Session } from "@supabase/supabase-js"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { ChevronDown, ChevronUp, Copy, Image as ImageIcon, Loader2, LogOut, PlusCircle, RefreshCcw, Users } from "lucide-react"
+import type { AuthChangeEvent, RealtimePostgresChangesPayload, Session } from "@supabase/supabase-js"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   DEFAULT_TRIP_END,
   DEFAULT_TRIP_NAME,
   DEFAULT_TRIP_START,
+  withNoteAuthorName,
+  withPackingAuthorNames,
   withAuthorNames,
   type Location,
   type Trip,
   type TripItem,
   type TripItemInput,
   type TripMember,
+  type TripNote,
+  type TripPackingItem,
+  type TripSection,
   useCalendarStore,
 } from "@/lib/kanban-store"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
-import { isSupabaseConfigured, isPaywallEnabled, getPaymentLink } from "@/lib/supabase/env"
+import { getPaymentLink, isDevAuthBypassEnabled, isPaywallEnabled, isSupabaseConfigured } from "@/lib/supabase/env"
 import { MonthView } from "./month-view"
 import { WeekView } from "./week-view"
 import { PaywallScreen } from "./paywall-screen"
 import { LoginScreen } from "./login-screen"
+import { TripNotesView } from "./trip-notes-view"
+import { TripPackingView } from "./trip-packing-view"
 
 interface TripCalendarAppProps {
   initialUser: {
@@ -72,6 +80,26 @@ type RawTripItemRow = {
   updated_at: string
 }
 
+type RawTripNoteRow = {
+  trip_id: string
+  content: string
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+type RawTripPackingItemRow = {
+  id: string
+  trip_id: string
+  label: string
+  is_checked: boolean
+  sort_order: number
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 function toTrip(row: RawTripRow): Trip {
   return {
     id: row.id,
@@ -110,6 +138,30 @@ function toTripItem(row: RawTripItemRow): TripItem {
     location: row.location,
     locationTo: row.location_to ?? undefined,
     createdBy: row.created_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+function toTripNote(row: RawTripNoteRow): TripNote {
+  return {
+    tripId: row.trip_id,
+    content: row.content,
+    updatedBy: row.updated_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+function toTripPackingItem(row: RawTripPackingItemRow): TripPackingItem {
+  return {
+    id: row.id,
+    tripId: row.trip_id,
+    label: row.label,
+    isChecked: row.is_checked,
+    sortOrder: row.sort_order,
+    createdBy: row.created_by,
+    updatedBy: row.updated_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -158,6 +210,12 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
   const [allTrips, setAllTrips] = useState<Trip[]>([])
   const [items, setItems] = useState<TripItem[]>([])
   const [members, setMembers] = useState<TripMember[]>([])
+  const [tripSection, setTripSection] = useState<TripSection>("calendar")
+  const [note, setNote] = useState<TripNote | null>(null)
+  const [noteDraft, setNoteDraft] = useState("")
+  const [noteDirty, setNoteDirty] = useState(false)
+  const [isSavingNote, setIsSavingNote] = useState(false)
+  const [packingItems, setPackingItems] = useState<TripPackingItem[]>([])
   const [email, setEmail] = useState(initialUser?.email ?? "")
   const [displayName, setDisplayName] = useState(guessDisplayName(initialUser))
   const [tripName, setTripName] = useState(DEFAULT_TRIP_NAME)
@@ -168,6 +226,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
   const [errorMessage, setErrorMessage] = useState("")
   const [isLoading, setIsLoading] = useState(Boolean(initialUser))
   const [isSendingAuth, setIsSendingAuth] = useState(false)
+  const [isStartingDevBypass, setIsStartingDevBypass] = useState(false)
   const [isMutating, setIsMutating] = useState(false)
   const [shareMessage, setShareMessage] = useState("")
   const [mobileHeaderExpanded, setMobileHeaderExpanded] = useState(false)
@@ -175,8 +234,18 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
   const [coverAttemptedTripId, setCoverAttemptedTripId] = useState<string | null>(null)
   // null = checking, true = granted, false = needs payment
   const [hasAccess, setHasAccess] = useState<boolean | null>(!isPaywallEnabled() ? true : null)
+  const noteDirtyRef = useRef(noteDirty)
+  const noteDraftRef = useRef(noteDraft)
 
   const currentMember = members.find((member) => member.userId === user?.id)
+
+  useEffect(() => {
+    noteDirtyRef.current = noteDirty
+  }, [noteDirty])
+
+  useEffect(() => {
+    noteDraftRef.current = noteDraft
+  }, [noteDraft])
 
   useEffect(() => {
     if (!supabase) {
@@ -191,6 +260,10 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
         setTrip(null)
         setItems([])
         setMembers([])
+        setNote(null)
+        setNoteDraft("")
+        setNoteDirty(false)
+        setPackingItems([])
         return
       }
 
@@ -242,14 +315,38 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
         "postgres_changes",
         { event: "*", schema: "public", table: "trip_items", filter: `trip_id=eq.${trip.id}` },
         () => {
-          void loadTripState(trip.id)
+          void loadTripState(trip.id, { preserveDirtyNoteDraft: true, showLoader: false })
         },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "trip_members", filter: `trip_id=eq.${trip.id}` },
         () => {
-          void loadTripState(trip.id)
+          void loadTripState(trip.id, { preserveDirtyNoteDraft: true, showLoader: false })
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "trip_notes", filter: `trip_id=eq.${trip.id}` },
+        (payload: RealtimePostgresChangesPayload<RawTripNoteRow>) => {
+          const nextRow = payload.new
+          if (!nextRow || !("trip_id" in nextRow)) {
+            return
+          }
+
+          const nextNote = withNoteAuthorName(toTripNote(nextRow as RawTripNoteRow), members)
+          setNote(nextNote)
+
+          if (!noteDirtyRef.current) {
+            setNoteDraft(nextNote.content)
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "trip_packing_items", filter: `trip_id=eq.${trip.id}` },
+        () => {
+          void loadTripState(trip.id, { preserveDirtyNoteDraft: true, showLoader: false })
         },
       )
       .subscribe()
@@ -257,7 +354,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [initializeForTrip, supabase, trip])
+  }, [initializeForTrip, members, supabase, trip])
 
   useEffect(() => {
     if (!trip || currentMember?.role !== "owner" || trip.coverImageUrl || coverAttemptedTripId === trip.id) {
@@ -267,6 +364,48 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
     setCoverAttemptedTripId(trip.id)
     void handleRefreshCover({ silent: true, tripId: trip.id })
   }, [coverAttemptedTripId, currentMember?.role, trip])
+
+  useEffect(() => {
+    if (!supabase || !trip || !user || !noteDirty) {
+      return
+    }
+
+    const timeout = window.setTimeout(async () => {
+      const contentToSave = noteDraftRef.current
+      setIsSavingNote(true)
+
+      const { data, error } = await supabase
+        .from("trip_notes")
+        .upsert(
+          {
+            trip_id: trip.id,
+            content: contentToSave,
+            updated_by: user.id,
+          },
+          { onConflict: "trip_id" },
+        )
+        .select("trip_id, content, updated_by, created_at, updated_at")
+        .single()
+
+      if (error) {
+        setErrorMessage(error.message)
+        setIsSavingNote(false)
+        return
+      }
+
+      const nextNote = withNoteAuthorName(toTripNote(data as RawTripNoteRow), members)
+      setNote(nextNote)
+      if (!noteDirtyRef.current || noteDraftRef.current === contentToSave) {
+        setNoteDraft(nextNote.content)
+      }
+      if (noteDraftRef.current === contentToSave) {
+        setNoteDirty(false)
+      }
+      setIsSavingNote(false)
+    }, 700)
+
+    return () => window.clearTimeout(timeout)
+  }, [members, noteDirty, supabase, trip, user])
 
   async function loadMemberships(preferredTripId?: string) {
     if (!supabase || !user) {
@@ -298,6 +437,10 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
       setTrip(null)
       setItems([])
       setMembers([])
+      setNote(null)
+      setNoteDraft("")
+      setNoteDirty(false)
+      setPackingItems([])
       setIsLoading(false)
       return
     }
@@ -328,35 +471,65 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
     await loadTripState(nextTripId)
   }
 
-  async function loadTripState(tripId: string) {
+  async function loadTripState(tripId: string, options?: { preserveDirtyNoteDraft?: boolean; showLoader?: boolean }) {
     if (!supabase) {
       return
     }
 
-    setIsLoading(true)
+    if (options?.showLoader !== false) {
+      setIsLoading(true)
+    }
     setErrorMessage("")
 
-    const [tripResult, membersResult, itemsResult] = await Promise.all([
+    const [tripResult, membersResult, itemsResult, noteResult, packingResult] = await Promise.all([
       supabase.from("trips").select("id, name, invite_code, start_date, end_date, created_by, created_at, cover_image_url, cover_image_photographer, cover_image_source_url, cover_image_query").eq("id", tripId).single(),
       supabase.from("trip_members").select("trip_id, user_id, role, display_name").eq("trip_id", tripId),
       supabase.from("trip_items").select("id, trip_id, title, notes, link_label, link_url, start_date, end_date, location, location_to, created_by, created_at, updated_at").eq("trip_id", tripId).order("start_date", { ascending: true }),
+      supabase.from("trip_notes").select("trip_id, content, updated_by, created_at, updated_at").eq("trip_id", tripId).maybeSingle(),
+      supabase
+        .from("trip_packing_items")
+        .select("id, trip_id, label, is_checked, sort_order, created_by, updated_by, created_at, updated_at")
+        .eq("trip_id", tripId)
+        .order("sort_order", { ascending: true }),
     ])
 
     if (tripResult.error) {
       setErrorMessage(tripResult.error.message)
-      setIsLoading(false)
+      if (options?.showLoader !== false) {
+        setIsLoading(false)
+      }
       return
     }
 
     if (membersResult.error) {
       setErrorMessage(membersResult.error.message)
-      setIsLoading(false)
+      if (options?.showLoader !== false) {
+        setIsLoading(false)
+      }
       return
     }
 
     if (itemsResult.error) {
       setErrorMessage(itemsResult.error.message)
-      setIsLoading(false)
+      if (options?.showLoader !== false) {
+        setIsLoading(false)
+      }
+      return
+    }
+
+    if (noteResult.error) {
+      setErrorMessage(noteResult.error.message)
+      if (options?.showLoader !== false) {
+        setIsLoading(false)
+      }
+      return
+    }
+
+    if (packingResult.error) {
+      setErrorMessage(packingResult.error.message)
+      if (options?.showLoader !== false) {
+        setIsLoading(false)
+      }
       return
     }
 
@@ -368,10 +541,21 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
       ((itemsResult.data ?? []) as RawTripItemRow[]).map((item) => toTripItem(item)),
       nextMembers,
     )
+    const nextNote = noteResult.data ? withNoteAuthorName(toTripNote(noteResult.data as RawTripNoteRow), nextMembers) : null
+    const nextPackingItems = withPackingAuthorNames(
+      ((packingResult.data ?? []) as RawTripPackingItemRow[]).map((item) => toTripPackingItem(item)),
+      nextMembers,
+    )
 
     setTrip(nextTrip)
     setMembers(nextMembers)
     setItems(nextItems)
+    setNote(nextNote)
+    if (!options?.preserveDirtyNoteDraft || !noteDirtyRef.current) {
+      setNoteDraft(nextNote?.content ?? "")
+      setNoteDirty(false)
+    }
+    setPackingItems(nextPackingItems)
     setTripName(nextTrip.name)
     setTripStart(nextTrip.startDate)
     setTripEnd(nextTrip.endDate)
@@ -379,7 +563,9 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
     if (typeof window !== "undefined") {
       window.localStorage.setItem("travel-calendar:last-trip-id", nextTrip.id)
     }
-    setIsLoading(false)
+    if (options?.showLoader !== false) {
+      setIsLoading(false)
+    }
   }
 
   async function handleSendMagicLink() {
@@ -409,6 +595,34 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
     }
 
     setIsSendingAuth(false)
+  }
+
+  async function handleStartDevBypass() {
+    if (!isDevAuthBypassEnabled()) {
+      return
+    }
+
+    setIsStartingDevBypass(true)
+    setAuthMessage("")
+    setErrorMessage("")
+
+    try {
+      const response = await fetch("/api/dev/auth", {
+        method: "POST",
+      })
+      const payload = (await response.json().catch(() => null)) as { actionLink?: string; error?: string } | null
+
+      if (!response.ok || !payload?.actionLink) {
+        setErrorMessage(payload?.error ?? "Unable to start the dev auth bypass.")
+        setIsStartingDevBypass(false)
+        return
+      }
+
+      window.location.assign(payload.actionLink)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to start the dev auth bypass.")
+      setIsStartingDevBypass(false)
+    }
   }
 
   async function handleCreateTrip() {
@@ -536,7 +750,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
       }
     }
 
-    await loadTripState(trip.id)
+    await loadTripState(trip.id, { showLoader: false })
     setIsMutating(false)
   }
 
@@ -555,7 +769,108 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
       return
     }
 
-    await loadTripState(trip.id)
+    await loadTripState(trip.id, { showLoader: false })
+    setIsMutating(false)
+  }
+
+  async function handleAddPackingItem(label: string) {
+    if (!supabase || !trip || !user) {
+      return
+    }
+
+    setIsMutating(true)
+    setErrorMessage("")
+
+    const nextSortOrder =
+      packingItems.reduce((highest, item) => Math.max(highest, item.sortOrder), -1) + 1
+
+    const { error } = await supabase.from("trip_packing_items").insert({
+      trip_id: trip.id,
+      label,
+      sort_order: nextSortOrder,
+      created_by: user.id,
+      updated_by: user.id,
+    })
+
+    if (error) {
+      setErrorMessage(error.message)
+      setIsMutating(false)
+      return
+    }
+
+    await loadTripState(trip.id, { showLoader: false })
+    setIsMutating(false)
+  }
+
+  async function handleTogglePackingItem(item: TripPackingItem, nextChecked: boolean) {
+    if (!supabase || !trip || !user) {
+      return
+    }
+
+    setIsMutating(true)
+    setErrorMessage("")
+
+    const { error } = await supabase
+      .from("trip_packing_items")
+      .update({
+        is_checked: nextChecked,
+        updated_by: user.id,
+      })
+      .eq("id", item.id)
+
+    if (error) {
+      setErrorMessage(error.message)
+      setIsMutating(false)
+      return
+    }
+
+    await loadTripState(trip.id, { showLoader: false })
+    setIsMutating(false)
+  }
+
+  async function handleRenamePackingItem(item: TripPackingItem, label: string) {
+    if (!supabase || !trip || !user) {
+      return
+    }
+
+    setIsMutating(true)
+    setErrorMessage("")
+
+    const { error } = await supabase
+      .from("trip_packing_items")
+      .update({
+        label,
+        updated_by: user.id,
+      })
+      .eq("id", item.id)
+
+    if (error) {
+      setErrorMessage(error.message)
+      setIsMutating(false)
+      return
+    }
+
+    await loadTripState(trip.id, { showLoader: false })
+    setIsMutating(false)
+  }
+
+  async function handleDeletePackingItem(item: TripPackingItem) {
+    if (!supabase || !trip) {
+      return
+    }
+
+    setIsMutating(true)
+    setErrorMessage("")
+
+    const { error } = await supabase.from("trip_packing_items").delete().eq("id", item.id)
+
+    if (error) {
+      setErrorMessage(error.message)
+      setIsMutating(false)
+      return
+    }
+
+    await loadTripState(trip.id, { showLoader: false })
     setIsMutating(false)
   }
 
@@ -598,7 +913,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
       }
 
       if (trip?.id === activeTripId) {
-        await loadTripState(activeTripId)
+        await loadTripState(activeTripId, { showLoader: false })
       } else {
         await loadMemberships(activeTripId)
       }
@@ -656,11 +971,13 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
         email={email}
         joinInput={joinInput}
         isSendingAuth={isSendingAuth}
+        isStartingDevBypass={isStartingDevBypass}
         authMessage={authMessage}
         errorMessage={errorMessage}
         onEmailChange={setEmail}
         onJoinInputChange={(v) => setJoinInput(v.toLowerCase())}
         onSendMagicLink={() => void handleSendMagicLink()}
+        onStartDevBypass={isDevAuthBypassEnabled() ? () => void handleStartDevBypass() : undefined}
       />
     )
   }
@@ -886,25 +1203,61 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
         {shareMessage && <div className="border-b border-border bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">{shareMessage}</div>}
         {errorMessage && <div className="border-b border-border bg-rose-500/10 px-4 py-2 text-sm text-rose-300">{errorMessage}</div>}
 
-        <div className="flex-1 overflow-hidden">
-          {viewMode === "week" ? (
-            <WeekView
-              items={items}
-              currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
-              isMutating={isMutating}
-              onSaveItem={handleSaveItem}
-              onDeleteItem={handleDeleteItem}
-            />
-          ) : (
-            <MonthView
-              items={items}
-              currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
-              isMutating={isMutating}
-              onSaveItem={handleSaveItem}
-              onDeleteItem={handleDeleteItem}
-            />
-          )}
-        </div>
+        <Tabs value={tripSection} onValueChange={(value) => setTripSection(value as TripSection)} className="flex min-h-0 flex-1 flex-col">
+          <div className="border-b border-border px-4 py-3 md:px-6">
+            <TabsList className="grid h-12 w-full max-w-md grid-cols-3 rounded-2xl bg-secondary/80 p-1 md:h-10">
+              <TabsTrigger value="calendar" className="rounded-xl text-base md:text-sm">Calendar</TabsTrigger>
+              <TabsTrigger value="notes" className="rounded-xl text-base md:text-sm">Notes</TabsTrigger>
+              <TabsTrigger value="packing" className="rounded-xl text-base md:text-sm">Packing</TabsTrigger>
+            </TabsList>
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <TabsContent value="calendar" className="h-full min-h-0">
+              {viewMode === "week" ? (
+                <WeekView
+                  items={items}
+                  currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
+                  isMutating={isMutating}
+                  onSaveItem={handleSaveItem}
+                  onDeleteItem={handleDeleteItem}
+                />
+              ) : (
+                <MonthView
+                  items={items}
+                  currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
+                  isMutating={isMutating}
+                  onSaveItem={handleSaveItem}
+                  onDeleteItem={handleDeleteItem}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="notes" className="h-full min-h-0">
+              <TripNotesView
+                note={note}
+                draft={noteDraft}
+                isDirty={noteDirty}
+                isSaving={isSavingNote}
+                onDraftChange={(value) => {
+                  setNoteDraft(value)
+                  setNoteDirty(true)
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent value="packing" className="h-full min-h-0">
+              <TripPackingView
+                items={packingItems}
+                isMutating={isMutating}
+                onAddItem={handleAddPackingItem}
+                onToggleItem={handleTogglePackingItem}
+                onRenameItem={handleRenamePackingItem}
+                onDeleteItem={handleDeletePackingItem}
+              />
+            </TabsContent>
+          </div>
+        </Tabs>
       </main>
     </>
   )

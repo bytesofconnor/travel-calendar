@@ -3,6 +3,7 @@ import { create } from "zustand"
 export type Location = string
 
 export type ViewMode = "week" | "month"
+export type TripSection = "calendar" | "notes" | "packing"
 
 export interface Trip {
   id: string
@@ -37,6 +38,28 @@ export interface TripItem {
   location: Location
   locationTo?: Location
   createdBy: string
+  createdAt: string
+  updatedAt: string
+  authorName?: string
+}
+
+export interface TripNote {
+  tripId: string
+  content: string
+  updatedBy?: string | null
+  updatedAt: string
+  createdAt: string
+  authorName?: string
+}
+
+export interface TripPackingItem {
+  id: string
+  tripId: string
+  label: string
+  isChecked: boolean
+  sortOrder: number
+  createdBy?: string | null
+  updatedBy?: string | null
   createdAt: string
   updatedAt: string
   authorName?: string
@@ -670,6 +693,43 @@ export function generateICS(items: TripItem[]): string {
   return lines.filter(Boolean).join("\r\n")
 }
 
+export function formatRelativeTime(value: string) {
+  const targetTime = new Date(value).getTime()
+  const diffMs = targetTime - Date.now()
+  const diffMinutes = Math.round(diffMs / (1000 * 60))
+  const absMinutes = Math.abs(diffMinutes)
+  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" })
+
+  if (absMinutes < 60) {
+    return rtf.format(diffMinutes, "minute")
+  }
+
+  const diffHours = Math.round(diffMinutes / 60)
+  const absHours = Math.abs(diffHours)
+  if (absHours < 24) {
+    return rtf.format(diffHours, "hour")
+  }
+
+  const diffDays = Math.round(diffHours / 24)
+  const absDays = Math.abs(diffDays)
+  if (absDays < 7) {
+    return rtf.format(diffDays, "day")
+  }
+
+  const diffWeeks = Math.round(diffDays / 7)
+  if (Math.abs(diffWeeks) < 5) {
+    return rtf.format(diffWeeks, "week")
+  }
+
+  const diffMonths = Math.round(diffDays / 30)
+  if (Math.abs(diffMonths) < 12) {
+    return rtf.format(diffMonths, "month")
+  }
+
+  const diffYears = Math.round(diffDays / 365)
+  return rtf.format(diffYears, "year")
+}
+
 export function mapMembersByUserId(members: TripMember[]) {
   return new Map(members.map((member) => [member.userId, member]))
 }
@@ -679,6 +739,22 @@ export function withAuthorNames(items: TripItem[], members: TripMember[]) {
   return items.map((item) => ({
     ...item,
     authorName: membersById.get(item.createdBy)?.displayName ?? item.authorName,
+  }))
+}
+
+export function withNoteAuthorName(note: TripNote, members: TripMember[]) {
+  const membersById = mapMembersByUserId(members)
+  return {
+    ...note,
+    authorName: note.updatedBy ? membersById.get(note.updatedBy)?.displayName ?? note.authorName : note.authorName,
+  }
+}
+
+export function withPackingAuthorNames(items: TripPackingItem[], members: TripMember[]) {
+  const membersById = mapMembersByUserId(members)
+  return items.map((item) => ({
+    ...item,
+    authorName: item.updatedBy ? membersById.get(item.updatedBy)?.displayName ?? item.authorName : item.authorName,
   }))
 }
 

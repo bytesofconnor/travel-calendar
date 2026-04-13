@@ -29,21 +29,28 @@ export default function OGImage() {
           }}
         />
 
-        {/* Map pin icon */}
         <div
           style={{
             width: 80,
             height: 80,
-            background: '#1a1a1a',
-            borderRadius: 20,
+            background: 'linear-gradient(180deg, #1f2937, #111827)',
+            borderRadius: 999,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 32,
-            fontSize: 44,
+            border: '4px solid rgba(255,255,255,0.12)',
           }}
         >
-          📍
+          <div
+            style={{
+              width: 22,
+              height: 22,
+              background: '#60a5fa',
+              borderRadius: 999,
+              boxShadow: '0 0 0 10px rgba(96,165,250,0.16)',
+            }}
+          />
         </div>
 
         {/* Label */}

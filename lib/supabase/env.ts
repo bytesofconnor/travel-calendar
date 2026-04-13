@@ -2,6 +2,13 @@ export function isSupabaseConfigured() {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
 }
 
+export function isDevAuthBypassEnabled() {
+  return (
+    process.env.NODE_ENV === "development" &&
+    (process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "true" || process.env.DEV_AUTH_BYPASS === "true")
+  )
+}
+
 export function isPexelsConfigured() {
   return Boolean(process.env.PEXELS_API_KEY)
 }
@@ -25,6 +32,16 @@ export function getPexelsApiKey() {
   }
 
   return apiKey
+}
+
+export function getDevAuthBypassEmail() {
+  const email = process.env.DEV_AUTH_BYPASS_EMAIL
+
+  if (!email) {
+    throw new Error("Missing DEV_AUTH_BYPASS_EMAIL.")
+  }
+
+  return email
 }
 
 export function getStripeEnv() {
