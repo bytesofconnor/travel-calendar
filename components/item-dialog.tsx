@@ -155,8 +155,8 @@ export function ItemDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[100svh] w-[calc(100vw-1rem)] max-w-lg gap-0 overflow-y-auto rounded-3xl p-0 sm:max-h-[90vh] sm:w-full">
-        <DialogHeader className="border-b border-border px-4 py-3">
+      <DialogContent className="flex max-h-[calc(100svh-1rem)] w-[calc(100vw-1rem)] max-w-lg flex-col gap-0 overflow-hidden rounded-3xl p-0 sm:my-4 sm:max-h-[calc(100vh-2rem)] sm:w-full lg:max-w-4xl">
+        <DialogHeader className="border-b border-border px-4 py-4">
           <DialogTitle className="text-base font-medium">
             {editItem ? "Edit Item" : "Add Item"}
           </DialogTitle>
@@ -169,7 +169,8 @@ export function ItemDialog({
           </div>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 p-4">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4">
+          <div className="flex flex-col gap-4 pb-4">
           <Input
             placeholder="What's the plan?"
             value={title}
@@ -234,85 +235,37 @@ export function ItemDialog({
             </button>
           </div>
 
-          {/* FROM / LOCATION picker */}
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              {locationCountry && (
-                <button
-                  type="button"
-                  onClick={() => setLocationCountry(null)}
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ChevronLeft className="h-3 w-3" />
-                  {fromCountryDef?.flag} {fromCountryDef?.name}
-                </button>
-              )}
-              <label className="block text-xs font-medium text-muted-foreground">
-                {locationCountry ? (isTravel ? "From" : "Location") : (isTravel ? "From — choose a country" : "Location — choose a country")}
-              </label>
-            </div>
-
-            {locationCountry === null ? (
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {COUNTRIES.map((country) => (
-                  <button
-                    key={country.id}
-                    type="button"
-                    onClick={() => selectFromCountry(country.id)}
-                    className="flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl bg-secondary/50 p-2 text-center transition-all hover:bg-secondary"
-                  >
-                    <span className="text-2xl leading-none">{country.flag}</span>
-                    <span className="text-[10px] leading-tight text-foreground">{country.name}</span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-                {(fromCountryDef?.locations ?? []).map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setLocation(item.id)}
-                    className={`flex min-h-[78px] flex-col items-center justify-center gap-1.5 rounded-xl p-2 text-center transition-all ${
-                      location === item.id
-                        ? "bg-secondary ring-2 ring-primary ring-offset-1 ring-offset-background"
-                        : "bg-secondary/50 hover:bg-secondary"
-                    }`}
-                  >
-                    <div className="h-6 w-6 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-[10px] leading-tight text-foreground">{item.name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* TO picker (travel mode only) */}
-          {isTravel && (
+          <div className={isTravel ? "grid gap-4 xl:grid-cols-2" : ""}>
             <div>
               <div className="mb-2 flex items-center gap-2">
-                {locationToCountry && (
+                {locationCountry && (
                   <button
                     type="button"
-                    onClick={() => setLocationToCountry(null)}
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setLocationCountry(null)}
+                    className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
                   >
                     <ChevronLeft className="h-3 w-3" />
-                    {toCountryDef?.flag} {toCountryDef?.name}
+                    {fromCountryDef?.flag} {fromCountryDef?.name}
                   </button>
                 )}
                 <label className="block text-xs font-medium text-muted-foreground">
-                  {locationToCountry ? "To" : "To — choose a country"}
+                  {locationCountry
+                    ? isTravel
+                      ? "From"
+                      : "Location"
+                    : isTravel
+                      ? "From — choose a country"
+                      : "Location — choose a country"}
                 </label>
               </div>
 
-              {locationToCountry === null ? (
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {locationCountry === null ? (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-3">
                   {COUNTRIES.map((country) => (
                     <button
                       key={country.id}
                       type="button"
-                      onClick={() => selectToCountry(country.id)}
+                      onClick={() => selectFromCountry(country.id)}
                       className="flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl bg-secondary/50 p-2 text-center transition-all hover:bg-secondary"
                     >
                       <span className="text-2xl leading-none">{country.flag}</span>
@@ -321,28 +274,82 @@ export function ItemDialog({
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-                  {(toCountryDef?.locations ?? [])
-                    .filter((item) => item.id !== location)
-                    .map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setLocationTo(item.id)}
-                        className={`flex min-h-[78px] flex-col items-center justify-center gap-1.5 rounded-xl p-2 text-center transition-all ${
-                          locationTo === item.id
-                            ? "bg-secondary ring-2 ring-primary ring-offset-1 ring-offset-background"
-                            : "bg-secondary/50 hover:bg-secondary"
-                        }`}
-                      >
-                        <div className="h-6 w-6 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="text-[10px] leading-tight text-foreground">{item.name}</span>
-                      </button>
-                    ))}
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-3">
+                  {(fromCountryDef?.locations ?? []).map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setLocation(item.id)}
+                      className={`flex min-h-[78px] flex-col items-center justify-center gap-1.5 rounded-xl p-2 text-center transition-all ${
+                        location === item.id
+                          ? "bg-secondary ring-2 ring-primary ring-offset-1 ring-offset-background"
+                          : "bg-secondary/50 hover:bg-secondary"
+                      }`}
+                    >
+                      <div className="h-6 w-6 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-[10px] leading-tight text-foreground">{item.name}</span>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
-          )}
+
+            {isTravel && (
+              <div>
+                <div className="mb-2 flex items-center gap-2">
+                  {locationToCountry && (
+                    <button
+                      type="button"
+                      onClick={() => setLocationToCountry(null)}
+                      className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                      {toCountryDef?.flag} {toCountryDef?.name}
+                    </button>
+                  )}
+                  <label className="block text-xs font-medium text-muted-foreground">
+                    {locationToCountry ? "To" : "To — choose a country"}
+                  </label>
+                </div>
+
+                {locationToCountry === null ? (
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-3">
+                    {COUNTRIES.map((country) => (
+                      <button
+                        key={country.id}
+                        type="button"
+                        onClick={() => selectToCountry(country.id)}
+                        className="flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl bg-secondary/50 p-2 text-center transition-all hover:bg-secondary"
+                      >
+                        <span className="text-2xl leading-none">{country.flag}</span>
+                        <span className="text-[10px] leading-tight text-foreground">{country.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-3">
+                    {(toCountryDef?.locations ?? [])
+                      .filter((item) => item.id !== location)
+                      .map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setLocationTo(item.id)}
+                          className={`flex min-h-[78px] flex-col items-center justify-center gap-1.5 rounded-xl p-2 text-center transition-all ${
+                            locationTo === item.id
+                              ? "bg-secondary ring-2 ring-primary ring-offset-1 ring-offset-background"
+                              : "bg-secondary/50 hover:bg-secondary"
+                          }`}
+                        >
+                          <div className="h-6 w-6 rounded-full" style={{ backgroundColor: item.color }} />
+                          <span className="text-[10px] leading-tight text-foreground">{item.name}</span>
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {showLink ? (
             <div className="space-y-2 rounded-lg bg-secondary/30 p-3">
@@ -384,8 +391,9 @@ export function ItemDialog({
             </button>
           )}
         </div>
+          </div>
 
-        <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="sticky bottom-0 flex flex-col gap-3 border-t border-border bg-background/96 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
           {editItem ? (
             <Button
               variant="ghost"

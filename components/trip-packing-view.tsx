@@ -83,26 +83,28 @@ export function TripPackingView({
   }
 
   return (
-    <section className="flex h-full flex-col overflow-hidden">
-      <div className="border-b border-border px-4 py-4 md:px-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="border-b border-border px-4 py-2 md:px-6 md:py-3">
+        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
-            <div className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Packing</div>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight md:text-2xl">Shared checklist</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
-              Keep the easy-to-forget trip essentials in one place and check them off together as the trip gets closer.
+            <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:text-sm md:tracking-[0.2em]">
+              Packing
+            </div>
+            <h2 className="mt-1 text-lg font-semibold tracking-tight md:text-xl">Shared checklist</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground md:text-sm">
+              Shared trip essentials, all in one checklist.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-            <span className="rounded-full bg-secondary px-3 py-1.5">{uncheckedCount} left</span>
-            <span className="rounded-full bg-secondary/70 px-3 py-1.5">{checkedCount} packed</span>
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground md:text-sm">
+            <span className="rounded-full border border-border/70 bg-secondary/55 px-3 py-1">{uncheckedCount} left</span>
+            <span className="rounded-full border border-border/70 bg-secondary/40 px-3 py-1">{checkedCount} packed</span>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-6">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-          <div className="rounded-[28px] border border-border/80 bg-black/25 p-3 backdrop-blur">
+      <div className="flex-1 min-h-0 overflow-hidden px-3 py-2.5 md:px-4 md:py-6">
+        <div className="flex h-full w-full max-w-5xl min-h-0 flex-col gap-4">
+          <div className="rounded-[20px] border border-border/80 bg-background/92 p-3 shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur">
             <div className="flex flex-col gap-3 sm:flex-row">
               <Input
                 value={newItemLabel}
@@ -114,108 +116,110 @@ export function TripPackingView({
                   }
                 }}
                 placeholder="Add sunscreen, adapters, camera batteries..."
-                className="h-12 rounded-2xl border-border/80 bg-background/50 text-base"
+                className="h-12 rounded-[16px] border-border/80 bg-background/50 text-base"
               />
-              <Button className="h-12 rounded-2xl px-5 text-base sm:w-auto" onClick={() => void handleAdd()} disabled={isMutating || !newItemLabel.trim()}>
+              <Button className="h-12 rounded-[16px] px-5 text-base sm:w-auto" onClick={() => void handleAdd()} disabled={isMutating || !newItemLabel.trim()}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add item
               </Button>
             </div>
           </div>
 
-          {sortedItems.length === 0 ? (
-            <div className="rounded-[28px] border border-dashed border-border/70 bg-black/20 px-6 py-16 text-center backdrop-blur">
-              <h3 className="text-2xl font-semibold tracking-tight">Nothing on the list yet</h3>
-              <p className="mt-3 text-base leading-7 text-muted-foreground">
-                Start with the essentials and let the list grow with the trip. It stays shared for everyone automatically.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-[28px] border border-border/80 bg-black/25 backdrop-blur">
-              <ul className="divide-y divide-border/70">
-                {sortedItems.map((item) => {
-                  const isEditing = editingItemId === item.id
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            {sortedItems.length === 0 ? (
+              <div className="rounded-[20px] border border-dashed border-border/70 bg-black/20 px-6 py-14 text-center backdrop-blur">
+                <h3 className="text-2xl font-semibold tracking-tight">Nothing on the list yet</h3>
+                <p className="mt-3 text-base leading-7 text-muted-foreground">
+                  Start with the essentials and let the list grow with the trip. It stays shared for everyone automatically.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-[20px] border border-border/80 bg-black/25 backdrop-blur">
+                <ul className="divide-y divide-border/70">
+                  {sortedItems.map((item) => {
+                    const isEditing = editingItemId === item.id
 
-                  return (
-                    <li
-                      key={item.id}
-                      className={`flex flex-col gap-3 px-4 py-4 transition-colors md:px-5 ${
-                        item.isChecked ? "bg-white/[0.02]" : "bg-transparent"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <Checkbox
-                          checked={item.isChecked}
-                          onCheckedChange={(checked) => void onToggleItem(item, checked === true)}
-                          className="mt-1 h-5 w-5 rounded-md"
-                        />
-                        <div className="min-w-0 flex-1">
-                          {isEditing ? (
-                            <Input
-                              value={editingValue}
-                              onChange={(event) => setEditingValue(event.target.value)}
-                              onBlur={() => void commitEditing(item)}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter") {
-                                  event.preventDefault()
-                                  void commitEditing(item)
-                                }
+                    return (
+                      <li
+                        key={item.id}
+                        className={`flex flex-col gap-3 px-4 py-4 transition-colors md:px-5 ${
+                          item.isChecked ? "bg-white/[0.02]" : "bg-transparent"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            checked={item.isChecked}
+                            onCheckedChange={(checked) => void onToggleItem(item, checked === true)}
+                            className="mt-1 h-5 w-5 rounded-md"
+                          />
+                          <div className="min-w-0 flex-1">
+                            {isEditing ? (
+                              <Input
+                                value={editingValue}
+                                onChange={(event) => setEditingValue(event.target.value)}
+                                onBlur={() => void commitEditing(item)}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    event.preventDefault()
+                                    void commitEditing(item)
+                                  }
 
-                                if (event.key === "Escape") {
-                                  event.preventDefault()
-                                  cancelEditing()
-                                }
-                              }}
-                              autoFocus
-                              className="h-11 rounded-2xl border-border/80 bg-background/50 text-base"
-                            />
-                          ) : (
-                            <>
-                              <button
-                                type="button"
-                                className={`text-left text-lg font-medium tracking-tight transition-colors ${
-                                  item.isChecked ? "text-muted-foreground line-through" : "text-foreground"
-                                }`}
-                                onClick={() => startEditing(item)}
-                              >
-                                {item.label}
-                              </button>
-                              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                {item.authorName && (
-                                  <span className="rounded-full border border-border/70 px-2 py-1">
-                                    {item.authorName}
-                                  </span>
-                                )}
-                                <span>Updated {formatRelativeTime(item.updatedAt)}</span>
-                              </div>
-                            </>
+                                  if (event.key === "Escape") {
+                                    event.preventDefault()
+                                    cancelEditing()
+                                  }
+                                }}
+                                autoFocus
+                                className="h-11 rounded-[16px] border-border/80 bg-background/50 text-base"
+                              />
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  className={`text-left text-lg font-medium tracking-tight transition-colors ${
+                                    item.isChecked ? "text-muted-foreground line-through" : "text-foreground"
+                                  }`}
+                                  onClick={() => startEditing(item)}
+                                >
+                                  {item.label}
+                                </button>
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                  {item.authorName && (
+                                    <span className="rounded-full border border-border/70 px-2 py-1">
+                                      {item.authorName}
+                                    </span>
+                                  )}
+                                  <span>Updated {formatRelativeTime(item.updatedAt)}</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          {!isEditing && (
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={() => startEditing(item)}>
+                                <Pencil className="h-4 w-4" />
+                                <span className="sr-only">Edit {item.label}</span>
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-rose-300 hover:text-rose-200" onClick={() => void onDeleteItem(item)}>
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">Delete {item.label}</span>
+                              </Button>
+                            </div>
+                          )}
+                          {isEditing && (
+                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={() => void commitEditing(item)}>
+                              <Check className="h-4 w-4" />
+                              <span className="sr-only">Save {item.label}</span>
+                            </Button>
                           )}
                         </div>
-                        {!isEditing && (
-                          <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={() => startEditing(item)}>
-                              <Pencil className="h-4 w-4" />
-                              <span className="sr-only">Edit {item.label}</span>
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-rose-300 hover:text-rose-200" onClick={() => void onDeleteItem(item)}>
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Delete {item.label}</span>
-                            </Button>
-                          </div>
-                        )}
-                        {isEditing && (
-                          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={() => void commitEditing(item)}>
-                            <Check className="h-4 w-4" />
-                            <span className="sr-only">Save {item.label}</span>
-                          </Button>
-                        )}
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </section>

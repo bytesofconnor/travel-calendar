@@ -75,10 +75,10 @@ export function MonthView({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-start justify-between gap-3 px-4 py-4 md:items-center">
+      <div className="flex items-start justify-between gap-3 px-4 py-3 md:items-center md:py-4">
         <div>
-          <h2 className="text-xl font-semibold">{monthLabel}</h2>
-          <p className="text-sm text-muted-foreground">Tap any date to jump into that week.</p>
+          <h2 className="text-lg font-semibold md:text-xl">{monthLabel}</h2>
+          <p className="text-xs text-muted-foreground md:text-sm">Tap any date to jump into that week.</p>
         </div>
         <div className="flex items-center gap-1 self-start md:self-auto">
           <button

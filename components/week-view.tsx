@@ -9,6 +9,7 @@ import {
   getItemsForDate,
   getDaysInWeek,
   getItemsForWeek,
+  getLocationById,
   getMonthStart,
   type TripItem,
   type TripItemInput,
@@ -144,6 +145,20 @@ export function WeekView({
     return rows
   }
 
+  function getDayAccentColors(dayDate: string) {
+    const dayItems = getItemsForDate(items, dayDate)
+    const colors = new Set<string>()
+
+    dayItems.forEach((item) => {
+      colors.add(getLocationById(item.location).color)
+      if (item.locationTo) {
+        colors.add(getLocationById(item.locationTo).color)
+      }
+    })
+
+    return Array.from(colors).slice(0, 3)
+  }
+
   const itemRows = getItemRows()
   const mobileSelectedDay = days.find((day) => day.date === mobileSelectedDate) ?? days[0]
   const mobileDayItems = getItemsForDate(items, mobileSelectedDay.date)
@@ -164,10 +179,10 @@ export function WeekView({
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-start justify-between gap-3 border-b border-border px-4 py-3 md:items-center">
+      <header className="flex items-start justify-between gap-3 border-b border-border px-4 py-2 md:items-center md:py-3">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight md:text-lg">Week View</h2>
-          <p className="text-sm text-muted-foreground">{weekLabel}</p>
+          <h2 className="text-lg font-semibold tracking-tight md:text-lg">Week View</h2>
+          <p className="text-xs text-muted-foreground md:text-sm">{weekLabel}</p>
         </div>
         <div className="flex items-center gap-1 self-start md:self-auto">
           <button
@@ -203,11 +218,11 @@ export function WeekView({
         </div>
       </header>
 
-      <div className="border-b border-border px-4 py-3 md:hidden">
+      <div className="border-b border-border px-4 py-1.5 md:hidden">
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => setMobileMode("day")}
-            className={`rounded-2xl px-4 py-2.5 text-sm font-medium transition-colors ${
+            className={`rounded-2xl px-4 py-2 text-sm font-medium transition-colors ${
               mobileMode === "day" ? "bg-secondary text-foreground" : "text-muted-foreground"
             }`}
           >
@@ -215,7 +230,7 @@ export function WeekView({
           </button>
           <button
             onClick={() => setMobileMode("agenda")}
-            className={`rounded-2xl px-4 py-2.5 text-sm font-medium transition-colors ${
+            className={`rounded-2xl px-4 py-2 text-sm font-medium transition-colors ${
               mobileMode === "agenda" ? "bg-secondary text-foreground" : "text-muted-foreground"
             }`}
           >
@@ -224,23 +239,37 @@ export function WeekView({
         </div>
       </div>
 
-      <div className="border-b border-border px-4 py-3 md:hidden">
-        <div className="grid grid-cols-7 gap-2">
+      <div className="border-b border-border px-4 py-1.5 md:hidden">
+        <div className="grid grid-cols-7 gap-1.5">
           {days.map((day) => {
             const isSelected = day.date === mobileSelectedDay.date
             const isToday = day.date === todayDate
+            const accentColors = getDayAccentColors(day.date)
 
             return (
               <button
                 key={day.date}
                 onClick={() => setMobileSelectedDate(day.date)}
-                className={`rounded-2xl px-1 py-2 text-center transition-colors ${
+                className={`rounded-[18px] px-1 py-1.5 text-center transition-colors ${
                   isSelected ? "bg-secondary text-foreground" : "text-muted-foreground"
                 }`}
               >
                 <div className="text-[11px] uppercase tracking-wide">{day.dayName}</div>
-                <div className={`mt-1 text-xl font-semibold ${isToday && !isSelected ? "text-primary" : ""}`}>{day.dayNum}</div>
+                <div className={`mt-0.5 text-[1.35rem] font-semibold ${isToday && !isSelected ? "text-primary" : ""}`}>{day.dayNum}</div>
                 <div className="text-[11px]">{day.month}</div>
+                <div className="mt-1 flex h-1.5 items-center justify-center gap-1">
+                  {accentColors.length > 0 ? (
+                    accentColors.map((color) => (
+                      <span
+                        key={`${day.date}-${color}`}
+                        className="h-1.5 w-1.5 rounded-full"
+                        style={{ backgroundColor: color, opacity: isSelected ? 1 : 0.85 }}
+                      />
+                    ))
+                  ) : (
+                    <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
+                  )}
+                </div>
               </button>
             )
           })}
@@ -248,7 +277,7 @@ export function WeekView({
       </div>
 
       <div className="relative flex-1 overflow-y-auto">
-        <div className="px-4 py-4 md:hidden">
+        <div className="px-4 py-3 md:hidden">
           {mobileMode === "day" ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between">

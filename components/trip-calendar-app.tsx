@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ChevronDown, ChevronUp, Copy, Image as ImageIcon, Loader2, LogOut, PlusCircle, RefreshCcw, Users } from "lucide-react"
+import { ChevronDown, ChevronUp, Copy, Image as ImageIcon, Loader2, LogOut, Pencil, PlusCircle, RefreshCcw, Users } from "lucide-react"
 import type { AuthChangeEvent, RealtimePostgresChangesPayload, Session } from "@supabase/supabase-js"
 
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -231,6 +232,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
   const [shareMessage, setShareMessage] = useState("")
   const [mobileHeaderExpanded, setMobileHeaderExpanded] = useState(false)
   const [isRefreshingCover, setIsRefreshingCover] = useState(false)
+  const [isEditingTripDetails, setIsEditingTripDetails] = useState(false)
   const [coverAttemptedTripId, setCoverAttemptedTripId] = useState<string | null>(null)
   // null = checking, true = granted, false = needs payment
   const [hasAccess, setHasAccess] = useState<boolean | null>(!isPaywallEnabled() ? true : null)
@@ -238,6 +240,21 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
   const noteDraftRef = useRef(noteDraft)
 
   const currentMember = members.find((member) => member.userId === user?.id)
+  const footerMeta =
+    tripSection === "notes"
+      ? {
+          left: "Shared with everyone on this trip",
+          right: noteDraft.trim().length > 0 ? `${noteDraft.trim().length} characters` : "Start typing anytime",
+        }
+      : tripSection === "packing"
+        ? {
+            left: `${packingItems.filter((item) => !item.isChecked).length} left to pack`,
+            right: `${packingItems.length} item${packingItems.length === 1 ? "" : "s"}`,
+          }
+        : {
+            left: `Shared with ${members.length} traveler${members.length === 1 ? "" : "s"}`,
+            right: `${items.length} plan${items.length === 1 ? "" : "s"}`,
+          }
 
   useEffect(() => {
     noteDirtyRef.current = noteDirty
@@ -927,6 +944,34 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
     }
   }
 
+  async function handleSaveTripDetails() {
+    if (!supabase || !trip || currentMember?.role !== "owner" || !tripName.trim() || !tripStart || !tripEnd) {
+      return
+    }
+
+    setIsMutating(true)
+    setErrorMessage("")
+
+    const { error } = await supabase
+      .from("trips")
+      .update({
+        name: tripName.trim(),
+        start_date: tripStart,
+        end_date: tripEnd,
+      })
+      .eq("id", trip.id)
+
+    if (error) {
+      setErrorMessage(error.message)
+      setIsMutating(false)
+      return
+    }
+
+    await loadTripState(trip.id, { showLoader: false })
+    setIsEditingTripDetails(false)
+    setIsMutating(false)
+  }
+
   async function handleSignOut() {
     if (!supabase) {
       return
@@ -1097,46 +1142,46 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
           backgroundImage: trip.coverImageUrl ? `url('${trip.coverImageUrl}')` : "url('/bg.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center",
-          filter: trip.coverImageUrl ? "grayscale(15%)" : "grayscale(100%)",
-          opacity: trip.coverImageUrl ? 0.32 : 0.09,
+          filter: trip.coverImageUrl ? "grayscale(10%)" : "grayscale(100%)",
+          opacity: trip.coverImageUrl ? 0.42 : 0.09,
         }}
       />
-      <div className="fixed inset-0 z-0 bg-background/72" />
+      <div className="fixed inset-0 z-0 bg-background/66" />
       <main className="relative z-10 flex h-svh flex-col overflow-hidden">
-        <header className="sticky top-0 z-20 flex flex-col gap-4 border-b border-border bg-background/92 px-4 py-4 backdrop-blur">
+        <header className="sticky top-0 z-20 flex flex-col gap-3 border-b border-border bg-background/92 px-4 py-3 backdrop-blur">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Shared Trip Calendar</div>
-              <h1 className="mt-1 text-3xl font-semibold tracking-tight md:text-2xl">{trip.name}</h1>
-              <p className="text-base text-muted-foreground md:text-sm">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:text-sm md:tracking-[0.2em]">
+                Shared Trip Calendar
+              </div>
+              <div className="mt-1 flex items-start gap-2">
+                <h1 className="min-w-0 text-[2.05rem] font-semibold leading-[0.96] tracking-tight md:text-[2.2rem]">
+                  {trip.name}
+                </h1>
+                {currentMember?.role === "owner" && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingTripDetails(true)}
+                    className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                    aria-label="Edit trip details"
+                    title="Edit trip details"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground md:mt-0 md:text-sm">
                 {trip.startDate} to {trip.endDate}
               </p>
             </div>
 
             <button
               onClick={() => setMobileHeaderExpanded((value) => !value)}
-              className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-border bg-secondary px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80 md:hidden"
+              className="flex h-10 shrink-0 items-center gap-2 rounded-2xl border border-border bg-secondary px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80 md:hidden"
             >
-              {mobileHeaderExpanded ? "Hide" : "Details"}
+              {mobileHeaderExpanded ? "Close" : "Menu"}
               {mobileHeaderExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 md:hidden">
-            <Button variant="secondary" size="sm" className="h-11 rounded-2xl text-base" onClick={() => void handleCopyInvite()}>
-              <Copy className="mr-2 h-5 w-5" />
-              Share
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-11 rounded-2xl text-base"
-              onClick={() => void (currentMember?.role === "owner" ? handleRefreshCover() : loadTripState(trip.id))}
-              disabled={isLoading || isMutating || isRefreshingCover}
-            >
-              {currentMember?.role === "owner" ? <ImageIcon className="mr-2 h-5 w-5" /> : <RefreshCcw className="mr-2 h-5 w-5" />}
-              {currentMember?.role === "owner" ? (isRefreshingCover ? "Refreshing..." : "New cover") : "Refresh"}
-            </Button>
           </div>
 
           <div className={`${mobileHeaderExpanded ? "flex" : "hidden"} flex-col gap-3 md:flex md:flex-row md:flex-wrap md:items-center`}>
@@ -1160,6 +1205,20 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
               </div>
             ))}
             <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center">
+              <Button variant="secondary" size="sm" className="h-11 rounded-2xl text-base md:hidden" onClick={() => void handleCopyInvite()}>
+                <Copy className="mr-2 h-5 w-5" />
+                Share
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-11 rounded-2xl text-base md:hidden"
+                onClick={() => void (currentMember?.role === "owner" ? handleRefreshCover() : loadTripState(trip.id, { showLoader: false }))}
+                disabled={isLoading || isMutating || isRefreshingCover}
+              >
+                {currentMember?.role === "owner" ? <ImageIcon className="mr-2 h-5 w-5" /> : <RefreshCcw className="mr-2 h-5 w-5" />}
+                {currentMember?.role === "owner" ? (isRefreshingCover ? "Refreshing..." : "New cover") : "Refresh"}
+              </Button>
               <Button variant="secondary" size="sm" className="hidden h-12 rounded-2xl text-base md:flex md:h-9 md:text-sm" onClick={() => void handleCopyInvite()}>
                 <Copy className="mr-2 h-5 w-5 md:h-4 md:w-4" />
                 Copy invite
@@ -1185,7 +1244,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
             </div>
           </div>
           {trip.coverImagePhotographer && trip.coverImageSourceUrl && (
-            <div className="text-xs text-muted-foreground">
+            <div className="text-[11px] leading-5 text-muted-foreground">
               Photo by{" "}
               <a
                 href={trip.coverImageSourceUrl}
@@ -1204,8 +1263,8 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
         {errorMessage && <div className="border-b border-border bg-rose-500/10 px-4 py-2 text-sm text-rose-300">{errorMessage}</div>}
 
         <Tabs value={tripSection} onValueChange={(value) => setTripSection(value as TripSection)} className="flex min-h-0 flex-1 flex-col">
-          <div className="border-b border-border px-4 py-3 md:px-6">
-            <TabsList className="grid h-12 w-full max-w-md grid-cols-3 rounded-2xl bg-secondary/80 p-1 md:h-10">
+          <div className="border-b border-border px-4 py-1.5 md:px-6 md:py-3">
+            <TabsList className="grid h-10 w-full max-w-md grid-cols-3 rounded-2xl bg-secondary/80 p-1 md:h-10">
               <TabsTrigger value="calendar" className="rounded-xl text-base md:text-sm">Calendar</TabsTrigger>
               <TabsTrigger value="notes" className="rounded-xl text-base md:text-sm">Notes</TabsTrigger>
               <TabsTrigger value="packing" className="rounded-xl text-base md:text-sm">Packing</TabsTrigger>
@@ -1257,8 +1316,88 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
               />
             </TabsContent>
           </div>
+
+          <footer className="border-t border-border/80 bg-background/70 px-4 py-3 backdrop-blur md:px-6">
+            <div className="mx-auto flex w-full items-center justify-between text-xs text-muted-foreground/80">
+              <span>{footerMeta.left}</span>
+              <span>{footerMeta.right}</span>
+            </div>
+          </footer>
         </Tabs>
       </main>
+
+      <Dialog open={isEditingTripDetails} onOpenChange={setIsEditingTripDetails}>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-md rounded-3xl p-0 overflow-hidden">
+          <DialogHeader className="border-b border-border px-5 py-4">
+            <DialogTitle className="text-base font-medium">Edit trip details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 px-5 py-5">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Trip name</label>
+              <Input
+                value={tripName}
+                onChange={(event) => setTripName(event.target.value)}
+                placeholder="Trip name"
+                className="h-11 border-0 bg-secondary/50 text-base"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Start date</label>
+                <Input
+                  type="date"
+                  value={tripStart}
+                  onChange={(event) => {
+                    setTripStart(event.target.value)
+                    if (!tripEnd || event.target.value > tripEnd) {
+                      setTripEnd(event.target.value)
+                    }
+                  }}
+                  className="h-11 border-0 bg-secondary/50 text-base"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">End date</label>
+                <Input
+                  type="date"
+                  value={tripEnd}
+                  min={tripStart}
+                  onChange={(event) => setTripEnd(event.target.value)}
+                  className="h-11 border-0 bg-secondary/50 text-base"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2 border-t border-border bg-background/96 px-5 py-4">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setTripName(trip.name)
+                setTripStart(trip.startDate)
+                setTripEnd(trip.endDate)
+                setIsEditingTripDetails(false)
+              }}
+              disabled={isMutating}
+              className="h-11 rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => void handleSaveTripDetails()}
+              disabled={
+                isMutating ||
+                !tripName.trim() ||
+                !tripStart ||
+                !tripEnd ||
+                (tripName.trim() === trip.name && tripStart === trip.startDate && tripEnd === trip.endDate)
+              }
+              className="h-11 rounded-xl"
+            >
+              {isMutating ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
