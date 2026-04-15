@@ -243,7 +243,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
   const footerMeta =
     tripSection === "notes"
       ? {
-          left: "Shared with everyone on this trip",
+          left: "Shared brainstorm for everyone on this trip",
           right: noteDraft.trim().length > 0 ? `${noteDraft.trim().length} characters` : "Start typing anytime",
         }
       : tripSection === "packing"
@@ -388,41 +388,52 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
     }
 
     const timeout = window.setTimeout(async () => {
-      const contentToSave = noteDraftRef.current
-      setIsSavingNote(true)
-
-      const { data, error } = await supabase
-        .from("trip_notes")
-        .upsert(
-          {
-            trip_id: trip.id,
-            content: contentToSave,
-            updated_by: user.id,
-          },
-          { onConflict: "trip_id" },
-        )
-        .select("trip_id, content, updated_by, created_at, updated_at")
-        .single()
-
-      if (error) {
-        setErrorMessage(error.message)
-        setIsSavingNote(false)
+      try {
+        await persistNoteDraft(noteDraftRef.current)
+      } catch {
         return
       }
-
-      const nextNote = withNoteAuthorName(toTripNote(data as RawTripNoteRow), members)
-      setNote(nextNote)
-      if (!noteDirtyRef.current || noteDraftRef.current === contentToSave) {
-        setNoteDraft(nextNote.content)
-      }
-      if (noteDraftRef.current === contentToSave) {
-        setNoteDirty(false)
-      }
-      setIsSavingNote(false)
     }, 700)
 
     return () => window.clearTimeout(timeout)
   }, [members, noteDirty, supabase, trip, user])
+
+  async function persistNoteDraft(contentToSave: string) {
+    if (!supabase || !trip || !user) {
+      throw new Error("Unable to save brainstorm notes right now.")
+    }
+
+    setIsSavingNote(true)
+
+    const { data, error } = await supabase
+      .from("trip_notes")
+      .upsert(
+        {
+          trip_id: trip.id,
+          content: contentToSave,
+          updated_by: user.id,
+        },
+        { onConflict: "trip_id" },
+      )
+      .select("trip_id, content, updated_by, created_at, updated_at")
+      .single()
+
+    if (error) {
+      setErrorMessage(error.message)
+      setIsSavingNote(false)
+      throw new Error(error.message)
+    }
+
+    const nextNote = withNoteAuthorName(toTripNote(data as RawTripNoteRow), members)
+    setNote(nextNote)
+    if (!noteDirtyRef.current || noteDraftRef.current === contentToSave) {
+      setNoteDraft(nextNote.content)
+    }
+    if (noteDraftRef.current === contentToSave) {
+      setNoteDirty(false)
+    }
+    setIsSavingNote(false)
+  }
 
   async function loadMemberships(preferredTripId?: string) {
     if (!supabase || !user) {
@@ -771,6 +782,20 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
     setIsMutating(false)
   }
 
+  async function handleSaveBrainstormContent(content: string) {
+    const contentToSave = content.trim() ? content : noteDraftRef.current
+
+    setNoteDraft(contentToSave)
+    noteDraftRef.current = contentToSave
+    setNoteDirty(true)
+    noteDirtyRef.current = true
+    setErrorMessage("")
+
+    await persistNoteDraft(contentToSave)
+    setShareMessage("Added to brainstorm.")
+    window.setTimeout(() => setShareMessage(""), 2000)
+  }
+
   async function handleDeleteItem(itemId: string) {
     if (!supabase || !trip) {
       return
@@ -816,6 +841,48 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
     }
 
     await loadTripState(trip.id, { showLoader: false })
+    setIsMutating(false)
+  }
+
+  async function handleAddPackingIdeas(labels: string[]) {
+    if (!supabase || !trip || !user) {
+      return
+    }
+
+    const normalizedExisting = new Set(packingItems.map((item) => item.label.trim().toLowerCase()))
+    const nextLabels = labels
+      .map((label) => label.trim())
+      .filter(Boolean)
+      .filter((label, index, array) => array.findIndex((candidate) => candidate.toLowerCase() === label.toLowerCase()) === index)
+      .filter((label) => !normalizedExisting.has(label.toLowerCase()))
+
+    if (nextLabels.length === 0) {
+      return
+    }
+
+    setIsMutating(true)
+    setErrorMessage("")
+
+    const startingSortOrder = packingItems.reduce((highest, item) => Math.max(highest, item.sortOrder), -1) + 1
+    const rows = nextLabels.map((label, index) => ({
+      trip_id: trip.id,
+      label,
+      sort_order: startingSortOrder + index,
+      created_by: user.id,
+      updated_by: user.id,
+    }))
+
+    const { error } = await supabase.from("trip_packing_items").insert(rows)
+
+    if (error) {
+      setErrorMessage(error.message)
+      setIsMutating(false)
+      return
+    }
+
+    await loadTripState(trip.id, { showLoader: false })
+    setShareMessage(`${nextLabels.length} packing idea${nextLabels.length === 1 ? "" : "s"} added.`)
+    window.setTimeout(() => setShareMessage(""), 2000)
     setIsMutating(false)
   }
 
@@ -1266,7 +1333,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
           <div className="border-b border-border px-4 py-1.5 md:px-6 md:py-3">
             <TabsList className="grid h-10 w-full max-w-md grid-cols-3 rounded-2xl bg-secondary/80 p-1 md:h-10">
               <TabsTrigger value="calendar" className="rounded-xl text-base md:text-sm">Calendar</TabsTrigger>
-              <TabsTrigger value="notes" className="rounded-xl text-base md:text-sm">Notes</TabsTrigger>
+              <TabsTrigger value="notes" className="rounded-xl text-base md:text-sm">Brainstorm</TabsTrigger>
               <TabsTrigger value="packing" className="rounded-xl text-base md:text-sm">Packing</TabsTrigger>
             </TabsList>
           </div>
@@ -1292,16 +1359,30 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
               )}
             </TabsContent>
 
-            <TabsContent value="notes" className="h-full min-h-0">
+            <TabsContent value="notes" forceMount className="h-full min-h-0">
               <TripNotesView
+                tripName={trip.name}
+                tripStart={trip.startDate}
+                tripEnd={trip.endDate}
                 note={note}
                 draft={noteDraft}
                 isDirty={noteDirty}
                 isSaving={isSavingNote}
+                items={items}
+                packingItems={packingItems}
                 onDraftChange={(value) => {
                   setNoteDraft(value)
                   setNoteDirty(true)
                 }}
+                onSaveToBrainstorm={handleSaveBrainstormContent}
+                onAddPackingIdeas={handleAddPackingIdeas}
+                onAddCalendarItem={async (input) => {
+                  await handleSaveItem(input)
+                  setShareMessage("Added to calendar.")
+                  window.setTimeout(() => setShareMessage(""), 2000)
+                }}
+                currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
+                isMutating={isMutating}
               />
             </TabsContent>
 

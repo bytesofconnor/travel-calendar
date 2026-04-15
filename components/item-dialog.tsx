@@ -19,6 +19,7 @@ interface ItemDialogProps {
   onOpenChange: (open: boolean) => void
   defaultDate: string | null
   editItem: TripItem | null
+  initialInput?: Partial<TripItemInput> | null
   currentUserName?: string
   isSaving?: boolean
   isDeleting?: boolean
@@ -31,6 +32,7 @@ export function ItemDialog({
   onOpenChange,
   defaultDate,
   editItem,
+  initialInput,
   currentUserName,
   isSaving = false,
   isDeleting = false,
@@ -83,18 +85,18 @@ export function ItemDialog({
     }
 
     setTitle("")
-    setNotes("")
-    setStartDate(defaultDate ?? "")
-    setEndDate(defaultDate ?? "")
-    setLocation("")
-    setLocationTo(undefined)
-    setIsTravel(false)
-    setLocationCountry(null)
-    setLocationToCountry(null)
-    setLinkLabel("")
-    setLinkUrl("")
-    setShowLink(false)
-  }, [defaultDate, editItem, open])
+    setNotes(initialInput?.notes ?? "")
+    setStartDate(initialInput?.startDate ?? defaultDate ?? "")
+    setEndDate(initialInput?.endDate ?? initialInput?.startDate ?? defaultDate ?? "")
+    setLocation(initialInput?.location ?? "")
+    setLocationTo(initialInput?.locationTo)
+    setIsTravel(Boolean(initialInput?.locationTo))
+    setLocationCountry(initialInput?.location ? getCountryForLocation(initialInput.location)?.id ?? null : null)
+    setLocationToCountry(initialInput?.locationTo ? getCountryForLocation(initialInput.locationTo)?.id ?? null : null)
+    setLinkLabel(initialInput?.link?.label ?? "")
+    setLinkUrl(initialInput?.link?.url ?? "")
+    setShowLink(Boolean(initialInput?.link?.url))
+  }, [defaultDate, editItem, initialInput, open])
 
   async function handleSave() {
     if (!title.trim() || !startDate || !endDate || !location) {
