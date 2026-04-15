@@ -102,8 +102,8 @@ export function TripPackingView({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden px-3 py-2.5 md:px-4 md:py-6">
-        <div className="flex h-full w-full max-w-5xl min-h-0 flex-col gap-4">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2.5 md:overflow-hidden md:px-4 md:py-6">
+        <div className="flex w-full min-h-full max-w-5xl flex-col gap-4 md:min-h-0 md:h-full">
           <div className="rounded-[20px] border border-border/80 bg-background/92 p-3 shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur">
             <div className="flex flex-col gap-3 sm:flex-row">
               <Input
@@ -125,7 +125,7 @@ export function TripPackingView({
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="overflow-visible md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
             {sortedItems.length === 0 ? (
               <div className="rounded-[20px] border border-dashed border-border/70 bg-black/20 px-6 py-14 text-center backdrop-blur">
                 <h3 className="text-2xl font-semibold tracking-tight">Nothing on the list yet</h3>
