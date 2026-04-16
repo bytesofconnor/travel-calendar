@@ -33,6 +33,7 @@ import { PaywallScreen } from "./paywall-screen"
 import { LoginScreen } from "./login-screen"
 import { TripNotesView } from "./trip-notes-view"
 import { TripPackingView } from "./trip-packing-view"
+import { TripCopilot } from "./trip-copilot"
 
 interface TripCalendarAppProps {
   initialUser: {
@@ -1338,36 +1339,90 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
             </TabsList>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <TabsContent value="calendar" className="h-full min-h-0">
-              {viewMode === "week" ? (
-                <WeekView
-                  items={items}
-                  currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
-                  isMutating={isMutating}
-                  onSaveItem={handleSaveItem}
-                  onDeleteItem={handleDeleteItem}
-                />
-              ) : (
-                <MonthView
-                  items={items}
-                  currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
-                  isMutating={isMutating}
-                  onSaveItem={handleSaveItem}
-                  onDeleteItem={handleDeleteItem}
-                />
-              )}
-            </TabsContent>
+          <div className="min-h-0 flex-1 overflow-hidden lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(320px,1fr)] lg:gap-6 lg:px-6 lg:py-6">
+            <div className="min-h-0 overflow-hidden">
+              {tripSection === "calendar" ? (
+                <TabsContent value="calendar" className="h-full min-h-0">
+                  {viewMode === "week" ? (
+                    <WeekView
+                      items={items}
+                      currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
+                      isMutating={isMutating}
+                      onSaveItem={handleSaveItem}
+                      onDeleteItem={handleDeleteItem}
+                    />
+                  ) : (
+                    <MonthView
+                      items={items}
+                      currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
+                      isMutating={isMutating}
+                      onSaveItem={handleSaveItem}
+                      onDeleteItem={handleDeleteItem}
+                    />
+                  )}
+                </TabsContent>
+              ) : null}
 
-            <TabsContent value="notes" forceMount className="h-full min-h-0">
-              <TripNotesView
+              {tripSection === "notes" ? (
+                <TabsContent value="notes" className="h-full min-h-0">
+                  <TripNotesView
+                    note={note}
+                    draft={noteDraft}
+                    isDirty={noteDirty}
+                    isSaving={isSavingNote}
+                    onDraftChange={(value) => {
+                      setNoteDraft(value)
+                      setNoteDirty(true)
+                    }}
+                    mobileCopilotTrigger={
+                      <TripCopilot
+                        mode="drawer-trigger"
+                        tripName={trip.name}
+                        tripStart={trip.startDate}
+                        tripEnd={trip.endDate}
+                        noteDraft={noteDraft}
+                        items={items}
+                        packingItems={packingItems}
+                        onDraftChange={(value) => {
+                          setNoteDraft(value)
+                          setNoteDirty(true)
+                        }}
+                        onSaveToBrainstorm={handleSaveBrainstormContent}
+                        onAddPackingIdeas={handleAddPackingIdeas}
+                        onAddCalendarItem={async (input) => {
+                          await handleSaveItem(input)
+                          setShareMessage("Added to calendar.")
+                          window.setTimeout(() => setShareMessage(""), 2000)
+                        }}
+                        currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
+                        isMutating={isMutating}
+                      />
+                    }
+                  />
+                </TabsContent>
+              ) : null}
+
+              {tripSection === "packing" ? (
+                <TabsContent value="packing" className="h-full min-h-0">
+                  <TripPackingView
+                    items={packingItems}
+                    isMutating={isMutating}
+                    onAddItem={handleAddPackingItem}
+                    onToggleItem={handleTogglePackingItem}
+                    onRenameItem={handleRenamePackingItem}
+                    onDeleteItem={handleDeletePackingItem}
+                  />
+                </TabsContent>
+              ) : null}
+            </div>
+
+            <aside className="hidden min-h-0 lg:flex lg:flex-col">
+              <TripCopilot
+                mode="panel"
                 tripName={trip.name}
                 tripStart={trip.startDate}
                 tripEnd={trip.endDate}
-                note={note}
-                draft={noteDraft}
-                isDirty={noteDirty}
-                isSaving={isSavingNote}
+                noteDraft={noteDraft}
                 items={items}
                 packingItems={packingItems}
                 onDraftChange={(value) => {
@@ -1384,18 +1439,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
                 currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
                 isMutating={isMutating}
               />
-            </TabsContent>
-
-            <TabsContent value="packing" className="h-full min-h-0">
-              <TripPackingView
-                items={packingItems}
-                isMutating={isMutating}
-                onAddItem={handleAddPackingItem}
-                onToggleItem={handleTogglePackingItem}
-                onRenameItem={handleRenamePackingItem}
-                onDeleteItem={handleDeletePackingItem}
-              />
-            </TabsContent>
+            </aside>
           </div>
 
           <footer className="border-t border-border/80 bg-background/70 px-4 py-3 backdrop-blur md:px-6">

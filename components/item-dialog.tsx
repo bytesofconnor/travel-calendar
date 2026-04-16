@@ -84,7 +84,7 @@ export function ItemDialog({
       return
     }
 
-    setTitle("")
+    setTitle(initialInput?.title ?? "")
     setNotes(initialInput?.notes ?? "")
     setStartDate(initialInput?.startDate ?? defaultDate ?? "")
     setEndDate(initialInput?.endDate ?? initialInput?.startDate ?? defaultDate ?? "")
