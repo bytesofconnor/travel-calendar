@@ -1,7 +1,6 @@
 "use client"
 
 import { Loader2, NotebookPen } from "lucide-react"
-import type { ReactNode } from "react"
 
 import { Textarea } from "@/components/ui/textarea"
 import { formatRelativeTime, type TripNote } from "@/lib/kanban-store"
@@ -12,7 +11,6 @@ interface TripNotesViewProps {
   isDirty: boolean
   isSaving: boolean
   onDraftChange: (value: string) => void
-  mobileCopilotTrigger?: ReactNode
 }
 
 export function TripNotesView({
@@ -21,7 +19,6 @@ export function TripNotesView({
   isDirty,
   isSaving,
   onDraftChange,
-  mobileCopilotTrigger,
 }: TripNotesViewProps) {
   const metaLabel = note
     ? note.authorName
@@ -39,17 +36,16 @@ export function TripNotesView({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden px-3 py-2.5 md:px-0 md:py-0">
-        <div className="flex h-full min-h-0 w-full flex-col gap-4">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2.5 md:overflow-hidden md:px-0 md:py-0">
+        <div className="flex min-h-full w-full flex-col gap-4 md:h-full md:min-h-0">
           <div className="flex items-center justify-between gap-2 md:hidden">
             <div className="flex items-center gap-2 rounded-full border border-border/70 bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">
               {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <NotebookPen className="h-3.5 w-3.5" />}
               <span>{isSaving ? "Saving…" : isDirty ? "Unsaved changes" : metaLabel}</span>
             </div>
-            {mobileCopilotTrigger}
           </div>
 
-          <div className="md:px-0 md:pt-5">
+          <div className="hidden md:block md:px-0 md:pt-5">
             <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:text-sm md:tracking-[0.2em]">
               Brainstorm
             </div>
@@ -83,7 +79,7 @@ export function TripNotesView({
               value={draft}
               onChange={(event) => onDraftChange(event.target.value)}
               placeholder="Start a shared brain dump. Jot down restaurant ideas, route thoughts, timing questions, booking reminders, or anything else that still needs figuring out."
-              className="h-full min-h-[420px] resize-none overflow-y-auto rounded-[20px] border-border/70 bg-black/28 px-4 py-4 text-base leading-8 text-foreground placeholder:text-muted-foreground/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_18px_60px_rgba(0,0,0,0.14)] backdrop-blur md:min-h-0 md:px-6 md:py-6 md:text-[15px]"
+              className="min-h-[65svh] resize-none overflow-y-auto rounded-[20px] border-border/70 bg-black/28 px-4 py-4 text-base leading-8 text-foreground placeholder:text-muted-foreground/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_18px_60px_rgba(0,0,0,0.14)] backdrop-blur [field-sizing:fixed] md:h-full md:min-h-0 md:px-6 md:py-6 md:text-[15px]"
             />
           </div>
         </div>

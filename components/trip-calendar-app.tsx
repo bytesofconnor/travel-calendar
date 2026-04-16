@@ -1339,6 +1339,31 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
             </TabsList>
           </div>
 
+          <div className="flex items-center justify-end border-b border-border px-4 py-2 lg:hidden">
+            <TripCopilot
+              mode="drawer-trigger"
+              tripName={trip.name}
+              tripStart={trip.startDate}
+              tripEnd={trip.endDate}
+              noteDraft={noteDraft}
+              items={items}
+              packingItems={packingItems}
+              onDraftChange={(value) => {
+                setNoteDraft(value)
+                setNoteDirty(true)
+              }}
+              onSaveToBrainstorm={handleSaveBrainstormContent}
+              onAddPackingIdeas={handleAddPackingIdeas}
+              onAddCalendarItem={async (input) => {
+                await handleSaveItem(input)
+                setShareMessage("Added to calendar.")
+                window.setTimeout(() => setShareMessage(""), 2000)
+              }}
+              currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
+              isMutating={isMutating}
+            />
+          </div>
+
           <div className="min-h-0 flex-1 overflow-hidden lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(320px,1fr)] lg:gap-6 lg:px-6 lg:py-6">
             <div className="min-h-0 overflow-hidden">
               {tripSection === "calendar" ? (
@@ -1374,30 +1399,6 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
                       setNoteDraft(value)
                       setNoteDirty(true)
                     }}
-                    mobileCopilotTrigger={
-                      <TripCopilot
-                        mode="drawer-trigger"
-                        tripName={trip.name}
-                        tripStart={trip.startDate}
-                        tripEnd={trip.endDate}
-                        noteDraft={noteDraft}
-                        items={items}
-                        packingItems={packingItems}
-                        onDraftChange={(value) => {
-                          setNoteDraft(value)
-                          setNoteDirty(true)
-                        }}
-                        onSaveToBrainstorm={handleSaveBrainstormContent}
-                        onAddPackingIdeas={handleAddPackingIdeas}
-                        onAddCalendarItem={async (input) => {
-                          await handleSaveItem(input)
-                          setShareMessage("Added to calendar.")
-                          window.setTimeout(() => setShareMessage(""), 2000)
-                        }}
-                        currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
-                        isMutating={isMutating}
-                      />
-                    }
                   />
                 </TabsContent>
               ) : null}
