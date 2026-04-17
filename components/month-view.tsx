@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { ChevronLeft, ChevronRight, LayoutDashboard, Plus } from "lucide-react"
 
 import {
@@ -15,6 +15,7 @@ import {
 import { ItemDialog } from "./item-dialog"
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+const AGENDA_SCROLL_OFFSET = 32
 
 interface MonthViewProps {
   items: TripItem[]
@@ -36,6 +37,10 @@ export function MonthView({
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [editingItem, setEditingItem] = useState<TripItem | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [mobileAgendaDate, setMobileAgendaDate] = useState<string | null>(null)
+  const mobileScrollRef = useRef<HTMLDivElement | null>(null)
+  const mobileAgendaSectionRefs = useRef<Record<string, HTMLElement | null>>({})
+  const programmaticScrollLockRef = useRef<number>(0)
 
   useEffect(() => {
     setMounted(true)
@@ -47,6 +52,7 @@ export function MonthView({
   const monthLabel = monthDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })
   const today = getTodayString()
   const monthAgendaDays = days.filter((day) => day.isCurrentMonth && getItemsForDate(items, day.date).length > 0)
+  const activeMobileAgendaDate = mobileAgendaDate ?? monthAgendaDays[0]?.date ?? null
 
   function handleAddItem(date: string) {
     setSelectedDate(date)
@@ -65,6 +71,113 @@ export function MonthView({
     setViewMode("week")
   }
 
+  function getDayAccentColors(date: string) {
+    const dayItems = getItemsForDate(items, date)
+    const colors = new Set<string>()
+
+    dayItems.forEach((item) => {
+      colors.add(getLocationById(item.location).color)
+      if (item.locationTo) {
+        colors.add(getLocationById(item.locationTo).color)
+      }
+    })
+
+    return Array.from(colors).slice(0, 3)
+  }
+
+  function scrollAgendaDateIntoView(date: string) {
+    setMobileAgendaDate(date)
+
+    const section = mobileAgendaSectionRefs.current[date]
+    const container = mobileScrollRef.current
+
+    if (section && container) {
+      programmaticScrollLockRef.current = Date.now() + 450
+      const nextTop = section.offsetTop - AGENDA_SCROLL_OFFSET
+
+      container.scrollTo({
+        top: Math.max(0, nextTop),
+        behavior: "smooth",
+      })
+      return
+    }
+  }
+
+  function handleMobileDayClick(date: string) {
+    scrollAgendaDateIntoView(date)
+  }
+
+  useEffect(() => {
+    const hasSelectedAgendaDate = mobileAgendaDate
+      ? monthAgendaDays.some((day) => day.date === mobileAgendaDate)
+      : false
+
+    if (!hasSelectedAgendaDate) {
+      const todayInMonth = monthAgendaDays.find((day) => day.date === today)?.date
+      setMobileAgendaDate(todayInMonth ?? monthAgendaDays[0]?.date ?? null)
+    }
+  }, [mobileAgendaDate, monthAgendaDays])
+
+  useEffect(() => {
+    const container = mobileScrollRef.current
+    if (!container || monthAgendaDays.length === 0 || typeof IntersectionObserver === "undefined") {
+      return
+    }
+    const sections = monthAgendaDays
+      .map((day) => ({
+        date: day.date,
+        element: mobileAgendaSectionRefs.current[day.date],
+      }))
+      .filter((entry): entry is { date: string; element: HTMLElement } => Boolean(entry.element))
+
+    if (sections.length === 0) {
+      return
+    }
+
+    const visibleEntries = new Map<string, { ratio: number; top: number }>()
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const target = entry.target as HTMLElement
+          const date = target.dataset.agendaDate
+          if (!date) {
+            return
+          }
+
+          if (!entry.isIntersecting) {
+            visibleEntries.delete(date)
+            return
+          }
+
+          visibleEntries.set(date, {
+            ratio: entry.intersectionRatio,
+            top: entry.boundingClientRect.top,
+          })
+        })
+
+        const activeEntry = [...visibleEntries.entries()]
+          .sort((left, right) => {
+            if (Math.abs(left[1].top - right[1].top) > 24) {
+              return left[1].top - right[1].top
+            }
+            return right[1].ratio - left[1].ratio
+          })[0]
+
+        if (activeEntry && Date.now() >= programmaticScrollLockRef.current) {
+          setMobileAgendaDate((current) => (current === activeEntry[0] ? current : activeEntry[0]))
+        }
+      },
+      {
+        root: container,
+        threshold: [0, 0.15, 0.35, 0.6, 0.85],
+        rootMargin: "-96px 0px -55% 0px",
+      },
+    )
+
+    sections.forEach(({ element }) => observer.observe(element))
+    return () => observer.disconnect()
+  }, [monthAgendaDays])
+
   if (!mounted) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -75,10 +188,13 @@ export function MonthView({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-start justify-between gap-3 px-4 py-3 md:items-center md:py-4">
+      <div className="flex items-start justify-between gap-3 px-4 py-3 md:items-start md:px-6 md:pb-4 md:pt-5">
         <div>
-          <h2 className="text-lg font-semibold md:text-xl">{monthLabel}</h2>
-          <p className="text-xs text-muted-foreground md:text-sm">Tap any date to jump into that week.</p>
+          <div className="hidden text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:block md:text-sm md:tracking-[0.2em]">
+            Calendar
+          </div>
+          <h2 className="text-lg font-semibold tracking-tight md:mt-3 md:text-xl">{monthLabel}</h2>
+          <p className="text-xs text-muted-foreground md:mt-1 md:text-sm md:leading-6">Tap any date to jump into that week.</p>
         </div>
         <div className="flex items-center gap-1 self-start md:self-auto">
           <button
@@ -103,7 +219,7 @@ export function MonthView({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div ref={mobileScrollRef} className="flex-1 overflow-y-auto">
         {items.length === 0 && (
           <div className="px-4 pt-4">
             <div className="rounded-2xl border border-dashed border-border/60 bg-background/25 px-4 py-5 text-center">
@@ -124,21 +240,47 @@ export function MonthView({
             {days.map((day, index) => {
               const dayItems = getItemsForDate(items, day.date)
               const isToday = day.date === today
+              const isActiveAgendaDay = day.date === activeMobileAgendaDate
+              const accentColors = getDayAccentColors(day.date)
 
               return (
                 <button
                   key={`${day.date}-${index}`}
-                  onClick={() => handleDayClick(day.date)}
-                  className={`relative flex min-h-[52px] flex-col items-center justify-center rounded-2xl border border-border/60 bg-background/60 text-center transition-colors ${
+                  onClick={() => handleMobileDayClick(day.date)}
+                  className={`relative flex min-h-[52px] flex-col items-center justify-center rounded-2xl border bg-background/60 text-center transition-colors ${
                     day.isCurrentMonth ? "opacity-100" : "opacity-40"
-                  } ${isToday ? "border-primary/60" : ""}`}
+                  } ${
+                    isActiveAgendaDay
+                      ? "border-primary/80 ring-1 ring-primary/40"
+                      : isToday
+                        ? "border-emerald-400/70 bg-emerald-500/8"
+                        : "border-border/60"
+                  }`}
                 >
-                  <span className={`text-sm font-medium ${isToday ? "text-primary" : "text-foreground"}`}>{day.dayNum}</span>
-                  {dayItems.length > 0 && (
-                    <span className="mt-1 text-[11px] text-muted-foreground">
-                      {dayItems.length} plan{dayItems.length === 1 ? "" : "s"}
-                    </span>
-                  )}
+                  <span
+                    className={`text-sm font-medium ${
+                      isActiveAgendaDay
+                        ? "text-primary"
+                        : isToday
+                          ? "text-emerald-300"
+                          : "text-foreground"
+                    }`}
+                  >
+                    {day.dayNum}
+                  </span>
+                  <div className="mt-1 flex h-1.5 items-center justify-center gap-1">
+                    {accentColors.length > 0 ? (
+                      accentColors.map((color) => (
+                        <span
+                          key={`${day.date}-${color}`}
+                          className="h-1.5 w-1.5 rounded-full"
+                          style={{ backgroundColor: color, opacity: isActiveAgendaDay ? 1 : 0.85 }}
+                        />
+                      ))
+                    ) : (
+                      <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
+                    )}
+                  </div>
                 </button>
               )
             })}
@@ -162,7 +304,14 @@ export function MonthView({
                 const dayItems = getItemsForDate(items, day.date)
 
                 return (
-                  <section key={day.date} className="space-y-3">
+                  <section
+                    key={day.date}
+                    data-agenda-date={day.date}
+                    ref={(node) => {
+                      mobileAgendaSectionRefs.current[day.date] = node
+                    }}
+                    className="scroll-mt-8 space-y-3"
+                  >
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-base font-semibold">
@@ -217,8 +366,8 @@ export function MonthView({
           </div>
         </div>
 
-        <div className="hidden overflow-x-auto md:block">
-          <div className="min-w-[840px] md:min-w-[760px]">
+        <div className="hidden overflow-x-auto md:block md:px-6 md:pb-6">
+          <div className="w-full max-w-5xl min-w-[840px] md:min-w-[760px]">
             <div className="grid grid-cols-7 border-b border-border px-2">
               {dayNames.map((name) => (
                 <div key={name} className="py-3 text-center text-sm font-medium text-muted-foreground">
@@ -239,9 +388,13 @@ export function MonthView({
                     }`}
                   >
                     <button
-                      onClick={() => handleDayClick(day.date)}
-                      className={`mb-2 flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors hover:bg-secondary ${
-                        isToday ? "bg-primary text-primary-foreground" : ""
+                      onClick={() => scrollAgendaDateIntoView(day.date)}
+                      className={`mb-2 flex h-8 w-8 items-center justify-center rounded-full border text-sm font-medium transition-colors hover:bg-secondary ${
+                        day.date === activeMobileAgendaDate
+                          ? "border-primary/80 ring-1 ring-primary/40 text-primary"
+                          : isToday
+                            ? "border-emerald-400/70 bg-emerald-500/10 text-emerald-300"
+                            : "border-transparent"
                       }`}
                     >
                       {day.dayNum}

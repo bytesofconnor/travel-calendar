@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ChevronDown, ChevronUp, Copy, Image as ImageIcon, Loader2, LogOut, Pencil, PlusCircle, RefreshCcw, Users } from "lucide-react"
+import { ChevronDown, ChevronUp, Copy, Heart, Image as ImageIcon, Loader2, LogOut, Pencil, Plane, PlusCircle, RefreshCcw, Users } from "lucide-react"
 import type { AuthChangeEvent, RealtimePostgresChangesPayload, Session } from "@supabase/supabase-js"
 
 import { Button } from "@/components/ui/button"
@@ -217,6 +217,9 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
   const [noteDraft, setNoteDraft] = useState("")
   const [noteDirty, setNoteDirty] = useState(false)
   const [isSavingNote, setIsSavingNote] = useState(false)
+  const [isOrganizingNote, setIsOrganizingNote] = useState(false)
+  const [organizeUndoContent, setOrganizeUndoContent] = useState<string | null>(null)
+  const [organizeUndoExpiresAt, setOrganizeUndoExpiresAt] = useState<number | null>(null)
   const [packingItems, setPackingItems] = useState<TripPackingItem[]>([])
   const [email, setEmail] = useState(initialUser?.email ?? "")
   const [displayName, setDisplayName] = useState(guessDisplayName(initialUser))
@@ -239,6 +242,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
   const [hasAccess, setHasAccess] = useState<boolean | null>(!isPaywallEnabled() ? true : null)
   const noteDirtyRef = useRef(noteDirty)
   const noteDraftRef = useRef(noteDraft)
+  const organizeUndoTimeoutRef = useRef<number | null>(null)
 
   const currentMember = members.find((member) => member.userId === user?.id)
   const footerMeta =
@@ -264,6 +268,14 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
   useEffect(() => {
     noteDraftRef.current = noteDraft
   }, [noteDraft])
+
+  useEffect(() => {
+    return () => {
+      if (organizeUndoTimeoutRef.current) {
+        window.clearTimeout(organizeUndoTimeoutRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!supabase) {
@@ -797,6 +809,111 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
     window.setTimeout(() => setShareMessage(""), 2000)
   }
 
+  function startOrganizeUndoWindow(previousContent: string) {
+    if (organizeUndoTimeoutRef.current) {
+      window.clearTimeout(organizeUndoTimeoutRef.current)
+    }
+
+    const expiresAt = Date.now() + 10_000
+    setOrganizeUndoContent(previousContent)
+    setOrganizeUndoExpiresAt(expiresAt)
+    organizeUndoTimeoutRef.current = window.setTimeout(() => {
+      setOrganizeUndoContent(null)
+      setOrganizeUndoExpiresAt(null)
+      organizeUndoTimeoutRef.current = null
+    }, 10_000)
+  }
+
+  async function handleOrganizeNotes() {
+    if (!trip || !noteDraftRef.current.trim()) {
+      return
+    }
+
+    setIsOrganizingNote(true)
+    setErrorMessage("")
+
+    try {
+      const response = await fetch("/api/brainstorm/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "organize_notes",
+          trip: {
+            name: trip.name,
+            startDate: trip.startDate,
+            endDate: trip.endDate,
+          },
+          noteDraft: noteDraftRef.current,
+          items: items.map((item) => ({
+            title: item.title,
+            startDate: item.startDate,
+            endDate: item.endDate,
+            location: item.location,
+            locationTo: item.locationTo,
+          })),
+          packingItems: packingItems.map((item) => ({
+            label: item.label,
+            isChecked: item.isChecked,
+          })),
+        }),
+      })
+
+      const payload = (await response.json().catch(() => null)) as
+        | { organizedNote?: string; caution?: string | null; error?: string }
+        | null
+
+      const organizedNote = typeof payload?.organizedNote === "string" ? payload.organizedNote.trim() : ""
+
+      if (!response.ok || !organizedNote) {
+        throw new Error(payload?.error ?? "Trip Copilot couldn’t organize the notes yet.")
+      }
+
+      const previousContent = noteDraftRef.current
+      setNoteDraft(organizedNote)
+      noteDraftRef.current = organizedNote
+      setNoteDirty(true)
+      noteDirtyRef.current = true
+      await persistNoteDraft(organizedNote)
+      startOrganizeUndoWindow(previousContent)
+      setShareMessage(payload?.caution ? `Notes organized. ${payload.caution}` : "Notes organized.")
+      window.setTimeout(() => setShareMessage(""), 2500)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Trip Copilot couldn’t organize the notes yet.")
+    } finally {
+      setIsOrganizingNote(false)
+    }
+  }
+
+  async function handleUndoOrganizeNotes() {
+    if (!organizeUndoContent) {
+      return
+    }
+
+    const previousContent = organizeUndoContent
+    if (organizeUndoTimeoutRef.current) {
+      window.clearTimeout(organizeUndoTimeoutRef.current)
+      organizeUndoTimeoutRef.current = null
+    }
+
+    setOrganizeUndoContent(null)
+    setOrganizeUndoExpiresAt(null)
+    setNoteDraft(previousContent)
+    noteDraftRef.current = previousContent
+    setNoteDirty(true)
+    noteDirtyRef.current = true
+    setErrorMessage("")
+
+    try {
+      await persistNoteDraft(previousContent)
+      setShareMessage("Restored previous notes.")
+      window.setTimeout(() => setShareMessage(""), 2000)
+    } catch {
+      return
+    }
+  }
+
   async function handleDeleteItem(itemId: string) {
     if (!supabase || !trip) {
       return
@@ -824,24 +941,46 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
     setIsMutating(true)
     setErrorMessage("")
 
+    const trimmedLabel = label.trim()
     const nextSortOrder =
       packingItems.reduce((highest, item) => Math.max(highest, item.sortOrder), -1) + 1
+    const optimisticId = `temp-${crypto.randomUUID()}`
+    const optimisticItem: TripPackingItem = {
+      id: optimisticId,
+      tripId: trip.id,
+      label: trimmedLabel,
+      isChecked: false,
+      sortOrder: nextSortOrder,
+      createdBy: user.id,
+      updatedBy: user.id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      authorName: currentMember?.displayName ?? guessDisplayName(user),
+    }
 
-    const { error } = await supabase.from("trip_packing_items").insert({
-      trip_id: trip.id,
-      label,
-      sort_order: nextSortOrder,
-      created_by: user.id,
-      updated_by: user.id,
-    })
+    setPackingItems((current) => [...current, optimisticItem])
 
-    if (error) {
-      setErrorMessage(error.message)
+    const { data, error } = await supabase
+      .from("trip_packing_items")
+      .insert({
+        trip_id: trip.id,
+        label: trimmedLabel,
+        sort_order: nextSortOrder,
+        created_by: user.id,
+        updated_by: user.id,
+      })
+      .select("id, trip_id, label, is_checked, sort_order, created_by, updated_by, created_at, updated_at")
+      .single()
+
+    if (error || !data) {
+      setPackingItems((current) => current.filter((item) => item.id !== optimisticId))
+      setErrorMessage(error?.message ?? "Unable to add packing item.")
       setIsMutating(false)
       return
     }
 
-    await loadTripState(trip.id, { showLoader: false })
+    const savedItem = withPackingAuthorNames([toTripPackingItem(data as RawTripPackingItemRow)], members)[0]
+    setPackingItems((current) => current.map((item) => (item.id === optimisticId ? savedItem : item)))
     setIsMutating(false)
   }
 
@@ -894,6 +1033,20 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
 
     setIsMutating(true)
     setErrorMessage("")
+    const previousItems = packingItems
+
+    setPackingItems((current) =>
+      current.map((currentItem) =>
+        currentItem.id === item.id
+          ? {
+              ...currentItem,
+              isChecked: nextChecked,
+              updatedBy: user.id,
+              updatedAt: new Date().toISOString(),
+            }
+          : currentItem,
+      ),
+    )
 
     const { error } = await supabase
       .from("trip_packing_items")
@@ -904,12 +1057,12 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
       .eq("id", item.id)
 
     if (error) {
+      setPackingItems(previousItems)
       setErrorMessage(error.message)
       setIsMutating(false)
       return
     }
 
-    await loadTripState(trip.id, { showLoader: false })
     setIsMutating(false)
   }
 
@@ -920,6 +1073,20 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
 
     setIsMutating(true)
     setErrorMessage("")
+    const previousItems = packingItems
+
+    setPackingItems((current) =>
+      current.map((currentItem) =>
+        currentItem.id === item.id
+          ? {
+              ...currentItem,
+              label,
+              updatedBy: user.id,
+              updatedAt: new Date().toISOString(),
+            }
+          : currentItem,
+      ),
+    )
 
     const { error } = await supabase
       .from("trip_packing_items")
@@ -930,12 +1097,12 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
       .eq("id", item.id)
 
     if (error) {
+      setPackingItems(previousItems)
       setErrorMessage(error.message)
       setIsMutating(false)
       return
     }
 
-    await loadTripState(trip.id, { showLoader: false })
     setIsMutating(false)
   }
 
@@ -946,16 +1113,19 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
 
     setIsMutating(true)
     setErrorMessage("")
+    const previousItems = packingItems
+
+    setPackingItems((current) => current.filter((currentItem) => currentItem.id !== item.id))
 
     const { error } = await supabase.from("trip_packing_items").delete().eq("id", item.id)
 
     if (error) {
+      setPackingItems(previousItems)
       setErrorMessage(error.message)
       setIsMutating(false)
       return
     }
 
-    await loadTripState(trip.id, { showLoader: false })
     setIsMutating(false)
   }
 
@@ -1097,10 +1267,23 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
 
   if (isLoading) {
     return (
-      <main className="flex h-svh items-center justify-center">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading your trip...
+      <main className="relative flex h-svh items-center justify-center overflow-hidden px-6">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.05),_transparent_38%),radial-gradient(circle_at_bottom,_rgba(96,165,250,0.08),_transparent_30%)]" />
+        <div className="relative flex max-w-sm flex-col items-center text-center">
+          <div className="loading-journey" aria-hidden="true">
+            <div className="loading-journey__trail" />
+            <div className="loading-journey__trail loading-journey__trail--glow" />
+            <div className="loading-journey__destination">
+              <Heart className="h-4 w-4 fill-current" />
+            </div>
+            <div className="loading-journey__plane">
+              <Plane className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-6 text-base font-medium tracking-tight text-foreground">Loading your trip</div>
+          <p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">
+            Pulling plans, notes, and packing lists together.
+          </p>
         </div>
       </main>
     )
@@ -1243,13 +1426,39 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
               </p>
             </div>
 
-            <button
-              onClick={() => setMobileHeaderExpanded((value) => !value)}
-              className="flex h-10 shrink-0 items-center gap-2 rounded-2xl border border-border bg-secondary px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80 md:hidden"
-            >
-              {mobileHeaderExpanded ? "Close" : "Menu"}
-              {mobileHeaderExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </button>
+            <div className="flex shrink-0 flex-col items-end gap-2 md:hidden">
+              <button
+                onClick={() => setMobileHeaderExpanded((value) => !value)}
+                className="flex h-10 items-center gap-2 rounded-2xl border border-border bg-secondary px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80"
+              >
+                {mobileHeaderExpanded ? "Close" : "Menu"}
+                {mobileHeaderExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+
+              <TripCopilot
+                mode="drawer-trigger"
+                tripName={trip.name}
+                tripStart={trip.startDate}
+                tripEnd={trip.endDate}
+                noteDraft={noteDraft}
+                items={items}
+                packingItems={packingItems}
+                onDraftChange={(value) => {
+                  setNoteDraft(value)
+                  setNoteDirty(true)
+                }}
+                onSaveToBrainstorm={handleSaveBrainstormContent}
+                onAddPackingIdeas={handleAddPackingIdeas}
+                onAddCalendarItem={async (input) => {
+                  await handleSaveItem(input)
+                  setShareMessage("Added to calendar.")
+                  window.setTimeout(() => setShareMessage(""), 2000)
+                }}
+                currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
+                isMutating={isMutating}
+                triggerClassName="h-10 rounded-2xl px-3 text-sm"
+              />
+            </div>
           </div>
 
           <div className={`${mobileHeaderExpanded ? "flex" : "hidden"} flex-col gap-3 md:flex md:flex-row md:flex-wrap md:items-center`}>
@@ -1339,35 +1548,10 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
             </TabsList>
           </div>
 
-          <div className="flex items-center justify-end border-b border-border px-4 py-2 lg:hidden">
-            <TripCopilot
-              mode="drawer-trigger"
-              tripName={trip.name}
-              tripStart={trip.startDate}
-              tripEnd={trip.endDate}
-              noteDraft={noteDraft}
-              items={items}
-              packingItems={packingItems}
-              onDraftChange={(value) => {
-                setNoteDraft(value)
-                setNoteDirty(true)
-              }}
-              onSaveToBrainstorm={handleSaveBrainstormContent}
-              onAddPackingIdeas={handleAddPackingIdeas}
-              onAddCalendarItem={async (input) => {
-                await handleSaveItem(input)
-                setShareMessage("Added to calendar.")
-                window.setTimeout(() => setShareMessage(""), 2000)
-              }}
-              currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
-              isMutating={isMutating}
-            />
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-hidden lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(320px,1fr)] lg:gap-6 lg:px-6 lg:py-6">
-            <div className="min-h-0 overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(320px,1fr)] lg:gap-6 lg:px-6 lg:py-6">
+            <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
               {tripSection === "calendar" ? (
-                <TabsContent value="calendar" className="h-full min-h-0">
+                <TabsContent value="calendar" className="flex h-full min-h-0 flex-col">
                   {viewMode === "week" ? (
                     <WeekView
                       items={items}
@@ -1389,22 +1573,26 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
               ) : null}
 
               {tripSection === "notes" ? (
-                <TabsContent value="notes" className="h-full min-h-0">
+                <TabsContent value="notes" className="flex h-full min-h-0 flex-col">
                   <TripNotesView
                     note={note}
                     draft={noteDraft}
                     isDirty={noteDirty}
                     isSaving={isSavingNote}
+                    isOrganizing={isOrganizingNote}
+                    organizeUndoExpiresAt={organizeUndoExpiresAt}
                     onDraftChange={(value) => {
                       setNoteDraft(value)
                       setNoteDirty(true)
                     }}
+                    onOrganizeNotes={handleOrganizeNotes}
+                    onUndoOrganize={handleUndoOrganizeNotes}
                   />
                 </TabsContent>
               ) : null}
 
               {tripSection === "packing" ? (
-                <TabsContent value="packing" className="h-full min-h-0">
+                <TabsContent value="packing" className="flex h-full min-h-0 flex-col">
                   <TripPackingView
                     items={packingItems}
                     isMutating={isMutating}

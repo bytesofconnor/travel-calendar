@@ -5,6 +5,7 @@ import { Check, Pencil, Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
 import { formatRelativeTime, type TripPackingItem } from "@/lib/kanban-store"
 
@@ -19,10 +20,6 @@ interface TripPackingViewProps {
 
 function sortPackingItems(items: TripPackingItem[]) {
   return [...items].sort((left, right) => {
-    if (left.isChecked !== right.isChecked) {
-      return left.isChecked ? 1 : -1
-    }
-
     if (left.sortOrder !== right.sortOrder) {
       return left.sortOrder - right.sortOrder
     }
@@ -42,10 +39,38 @@ export function TripPackingView({
   const [newItemLabel, setNewItemLabel] = useState("")
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState("")
+  const [mobileAddOpen, setMobileAddOpen] = useState(false)
 
   const sortedItems = useMemo(() => sortPackingItems(items), [items])
   const uncheckedCount = sortedItems.filter((item) => !item.isChecked).length
   const checkedCount = sortedItems.length - uncheckedCount
+
+  const addComposer = (
+    <div className="rounded-[20px] border border-border/80 bg-background/92 p-3 shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur">
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Input
+          value={newItemLabel}
+          onChange={(event) => setNewItemLabel(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault()
+              void handleAdd()
+            }
+          }}
+          placeholder="Add sunscreen, adapters, camera batteries..."
+          className="h-12 rounded-[16px] border-border/80 bg-background/50 text-base"
+        />
+        <Button
+          className="h-12 rounded-[16px] px-5 text-base sm:w-auto"
+          onClick={() => void handleAdd()}
+          disabled={isMutating || !newItemLabel.trim()}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add item
+        </Button>
+      </div>
+    </div>
+  )
 
   async function handleAdd() {
     const trimmed = newItemLabel.trim()
@@ -55,6 +80,7 @@ export function TripPackingView({
 
     await onAddItem(trimmed)
     setNewItemLabel("")
+    setMobileAddOpen(false)
   }
 
   function startEditing(item: TripPackingItem) {
@@ -84,14 +110,14 @@ export function TripPackingView({
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="border-b border-border px-4 py-2 md:px-6 md:py-3">
+      <div className="border-b border-border px-4 py-2 md:border-b-0 md:px-6 md:pb-4 md:pt-5">
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:text-sm md:tracking-[0.2em]">
               Packing
             </div>
-            <h2 className="mt-1 text-lg font-semibold tracking-tight md:text-xl">Shared checklist</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground md:text-sm">
+            <h2 className="mt-1 text-lg font-semibold tracking-tight md:mt-3 md:text-xl">Shared checklist</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground md:mt-1 md:text-sm md:leading-6">
               Shared trip essentials, all in one checklist.
             </p>
           </div>
@@ -102,30 +128,13 @@ export function TripPackingView({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2.5 md:overflow-hidden md:px-4 md:py-6">
+      <div className="min-h-0 flex-1 overflow-hidden px-3 py-2.5 md:px-6 md:pb-6 md:pt-5">
         <div className="flex w-full min-h-full max-w-5xl flex-col gap-4 md:min-h-0 md:h-full">
-          <div className="rounded-[20px] border border-border/80 bg-background/92 p-3 shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur">
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Input
-                value={newItemLabel}
-                onChange={(event) => setNewItemLabel(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault()
-                    void handleAdd()
-                  }
-                }}
-                placeholder="Add sunscreen, adapters, camera batteries..."
-                className="h-12 rounded-[16px] border-border/80 bg-background/50 text-base"
-              />
-              <Button className="h-12 rounded-[16px] px-5 text-base sm:w-auto" onClick={() => void handleAdd()} disabled={isMutating || !newItemLabel.trim()}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add item
-              </Button>
-            </div>
+          <div className="hidden md:block">
+            {addComposer}
           </div>
 
-          <div className="overflow-visible md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
+          <div className="min-h-0 flex-1 overflow-y-auto pb-24 md:pb-0 md:pr-1">
             {sortedItems.length === 0 ? (
               <div className="rounded-[20px] border border-dashed border-border/70 bg-black/20 px-6 py-14 text-center backdrop-blur">
                 <h3 className="text-2xl font-semibold tracking-tight">Nothing on the list yet</h3>
@@ -142,7 +151,12 @@ export function TripPackingView({
                     return (
                       <li
                         key={item.id}
-                        className={`flex flex-col gap-3 px-4 py-4 transition-colors md:px-5 ${
+                        onClick={() => {
+                          if (!isEditing) {
+                            void onToggleItem(item, !item.isChecked)
+                          }
+                        }}
+                        className={`flex cursor-pointer flex-col gap-3 px-4 py-4 transition-colors md:px-5 ${
                           item.isChecked ? "bg-white/[0.02]" : "bg-transparent"
                         }`}
                       >
@@ -150,6 +164,7 @@ export function TripPackingView({
                           <Checkbox
                             checked={item.isChecked}
                             onCheckedChange={(checked) => void onToggleItem(item, checked === true)}
+                            onClick={(event) => event.stopPropagation()}
                             className="mt-1 h-5 w-5 rounded-md"
                           />
                           <div className="min-w-0 flex-1">
@@ -170,19 +185,18 @@ export function TripPackingView({
                                   }
                                 }}
                                 autoFocus
+                                onClick={(event) => event.stopPropagation()}
                                 className="h-11 rounded-[16px] border-border/80 bg-background/50 text-base"
                               />
                             ) : (
                               <>
-                                <button
-                                  type="button"
+                                <div
                                   className={`text-left text-lg font-medium tracking-tight transition-colors ${
                                     item.isChecked ? "text-muted-foreground line-through" : "text-foreground"
                                   }`}
-                                  onClick={() => startEditing(item)}
                                 >
                                   {item.label}
-                                </button>
+                                </div>
                                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                   {item.authorName && (
                                     <span className="rounded-full border border-border/70 px-2 py-1">
@@ -196,18 +210,42 @@ export function TripPackingView({
                           </div>
                           {!isEditing && (
                             <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={() => startEditing(item)}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10 rounded-full"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  startEditing(item)
+                                }}
+                              >
                                 <Pencil className="h-4 w-4" />
                                 <span className="sr-only">Edit {item.label}</span>
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-rose-300 hover:text-rose-200" onClick={() => void onDeleteItem(item)}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10 rounded-full text-rose-300 hover:text-rose-200"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  void onDeleteItem(item)
+                                }}
+                              >
                                 <Trash2 className="h-4 w-4" />
                                 <span className="sr-only">Delete {item.label}</span>
                               </Button>
                             </div>
                           )}
                           {isEditing && (
-                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" onClick={() => void commitEditing(item)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-10 w-10 rounded-full"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                void commitEditing(item)
+                              }}
+                            >
                               <Check className="h-4 w-4" />
                               <span className="sr-only">Save {item.label}</span>
                             </Button>
@@ -222,6 +260,50 @@ export function TripPackingView({
           </div>
         </div>
       </div>
+
+      <div className="z-10 border-t border-border/60 bg-background/92 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur md:hidden">
+        <Button
+          variant="secondary"
+          size="sm"
+          className="ml-auto h-10 rounded-full px-5 text-sm shadow-[0_10px_30px_rgba(0,0,0,0.18)]"
+          onClick={() => setMobileAddOpen(true)}
+        >
+          <Plus className="h-4 w-4" />
+          Add item
+        </Button>
+      </div>
+
+      <Drawer open={mobileAddOpen} onOpenChange={setMobileAddOpen}>
+        <DrawerContent className="rounded-t-[24px] border-border bg-background/95 backdrop-blur md:hidden">
+          <DrawerHeader className="text-left">
+            <DrawerTitle>Add packing item</DrawerTitle>
+            <DrawerDescription>Drop in a quick essential and keep moving.</DrawerDescription>
+          </DrawerHeader>
+          <div className="space-y-3 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+            <Input
+              value={newItemLabel}
+              onChange={(event) => setNewItemLabel(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault()
+                  void handleAdd()
+                }
+              }}
+              placeholder="Add sunscreen, adapters, camera batteries..."
+              className="h-12 rounded-[16px] border-border/80 bg-background/50 text-base"
+              autoFocus
+            />
+            <Button
+              className="h-12 w-full rounded-[16px] text-base"
+              onClick={() => void handleAdd()}
+              disabled={isMutating || !newItemLabel.trim()}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add item
+            </Button>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </section>
   )
 }

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAiConfig, isAiConfigured } from "@/lib/ai/env"
 
 type BrainstormRequest = {
+  action?: "chat" | "organize_notes"
   message?: string
   history?: Array<{
     role?: "user" | "assistant"
@@ -49,6 +50,19 @@ function extractJsonObject(raw: string) {
   }
 }
 
+function extractStructuredPayload<T>(raw: string): T {
+  const fenced = raw.match(/```json\s*([\s\S]*?)```/i)
+  const candidate = fenced?.[1] ?? raw
+  const start = candidate.indexOf("{")
+  const end = candidate.lastIndexOf("}")
+
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("No JSON object found in model response.")
+  }
+
+  return JSON.parse(candidate.slice(start, end + 1)) as T
+}
+
 function normalizeStringArray(value: unknown) {
   if (!Array.isArray(value)) {
     return []
@@ -89,9 +103,10 @@ export async function POST(request: NextRequest) {
   }
 
   const body = (await request.json().catch(() => null)) as BrainstormRequest | null
+  const action = body?.action === "organize_notes" ? "organize_notes" : "chat"
   const message = body?.message?.trim()
 
-  if (!message) {
+  if (action === "chat" && !message) {
     return NextResponse.json({ error: "Missing question." }, { status: 400 })
   }
 
@@ -120,28 +135,49 @@ export async function POST(request: NextRequest) {
   const noteSummary = limitText(body?.noteDraft?.trim() || "", 2200)
   const history = normalizeHistory(body?.history)
 
-  const systemPrompt = [
-    "You are Trip Copilot, a concise but genuinely helpful AI assistant inside a shared travel planning app.",
-    "Your job is to help two travelers brainstorm ideas, recommendations, food, logistics, and packing suggestions.",
-    "Be specific and practical. Prioritize usefulness over fluff.",
-    "You do not have live browsing in this environment, so avoid pretending to know current hours, prices, or booking availability.",
-    "If a detail is likely time-sensitive, say so briefly.",
-    "When recent conversation is provided, treat it as ongoing context and build on it naturally.",
-    "Return valid JSON only with this exact shape:",
-    '{ "answer": string, "brainstormBullets": string[], "packingSuggestions": string[], "caution": string | null }',
-    "Use brainstormBullets for ideas worth saving to the shared brainstorming note.",
-    "Use packingSuggestions only when the question naturally calls for items to pack.",
-    "Keep brainstormBullets and packingSuggestions short and action-oriented.",
-  ].join(" ")
+  const systemPrompt =
+    action === "organize_notes"
+      ? [
+          "You are Trip Copilot, helping organize shared travel planning notes.",
+          "Clean up the note content without inventing facts.",
+          "Preserve all meaningful information, but remove obvious duplication, tighten wording, group related items, and format it so it is easier to scan.",
+          "Use short section headings and bullets where helpful.",
+          "Do not add new recommendations or external facts.",
+          "Return valid JSON only with this exact shape:",
+          '{ "organizedNote": string, "caution": string | null }',
+        ].join(" ")
+      : [
+          "You are Trip Copilot, a concise but genuinely helpful AI assistant inside a shared travel planning app.",
+          "Your job is to help two travelers brainstorm ideas, recommendations, food, logistics, and packing suggestions.",
+          "Be specific and practical. Prioritize usefulness over fluff.",
+          "You do not have live browsing in this environment, so avoid pretending to know current hours, prices, or booking availability.",
+          "If a detail is likely time-sensitive, say so briefly.",
+          "When recent conversation is provided, treat it as ongoing context and build on it naturally.",
+          "Return valid JSON only with this exact shape:",
+          '{ "answer": string, "brainstormBullets": string[], "packingSuggestions": string[], "caution": string | null }',
+          "Use brainstormBullets for ideas worth saving to the shared brainstorming note.",
+          "Use packingSuggestions only when the question naturally calls for items to pack.",
+          "Keep brainstormBullets and packingSuggestions short and action-oriented.",
+        ].join(" ")
 
-  const userPrompt = [
-    `Trip: ${tripName}`,
-    `Trip window: ${tripDates}`,
-    itemSummary ? `Current plans:\n${itemSummary}` : "Current plans: none yet.",
-    packingSummary ? `Current packing list:\n${packingSummary}` : "Current packing list: empty.",
-    noteSummary ? `Current brainstorm notes:\n${noteSummary}` : "Current brainstorm notes: empty.",
-    `Traveler question: ${message}`,
-  ].join("\n\n")
+  const userPrompt =
+    action === "organize_notes"
+      ? [
+          `Trip: ${tripName}`,
+          `Trip window: ${tripDates}`,
+          itemSummary ? `Current plans:\n${itemSummary}` : "Current plans: none yet.",
+          packingSummary ? `Current packing list:\n${packingSummary}` : "Current packing list: empty.",
+          noteSummary ? `Current brainstorm notes:\n${noteSummary}` : "Current brainstorm notes: empty.",
+          "Task: reorganize the current brainstorm notes so they are cleaner, deduplicated, and easier to scan.",
+        ].join("\n\n")
+      : [
+          `Trip: ${tripName}`,
+          `Trip window: ${tripDates}`,
+          itemSummary ? `Current plans:\n${itemSummary}` : "Current plans: none yet.",
+          packingSummary ? `Current packing list:\n${packingSummary}` : "Current packing list: empty.",
+          noteSummary ? `Current brainstorm notes:\n${noteSummary}` : "Current brainstorm notes: empty.",
+          `Traveler question: ${message}`,
+        ].join("\n\n")
 
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
@@ -180,6 +216,23 @@ export async function POST(request: NextRequest) {
 
   if (!content) {
     return NextResponse.json({ error: "The AI provider returned an empty response." }, { status: 502 })
+  }
+
+  if (action === "organize_notes") {
+    try {
+      const parsed = extractStructuredPayload<{ organizedNote?: unknown; caution?: unknown }>(content)
+      const organizedNote = typeof parsed.organizedNote === "string" ? parsed.organizedNote.trim() : ""
+
+      return NextResponse.json({
+        organizedNote: organizedNote || noteSummary || "",
+        caution: typeof parsed.caution === "string" && parsed.caution.trim() ? parsed.caution.trim() : null,
+      })
+    } catch {
+      return NextResponse.json({
+        organizedNote: content,
+        caution: "This cleanup came back as plain text, so double-check the formatting before keeping it.",
+      })
+    }
   }
 
   try {

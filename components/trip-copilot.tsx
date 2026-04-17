@@ -34,6 +34,7 @@ interface TripCopilotProps {
   onAddCalendarItem: (input: TripItemInput) => Promise<void> | void
   currentUserName?: string
   isMutating?: boolean
+  triggerClassName?: string
 }
 
 function appendBlock(existing: string, addition: string) {
@@ -548,6 +549,7 @@ export function TripCopilot({
   onAddCalendarItem,
   currentUserName,
   isMutating = false,
+  triggerClassName,
 }: TripCopilotProps) {
   const [aiInput, setAiInput] = useState("")
   const [aiMessages, setAiMessages] = useState<CopilotMessage[]>([])
@@ -992,7 +994,12 @@ export function TripCopilot({
         panel
       ) : (
         <>
-          <Button variant="secondary" size="sm" className="rounded-xl" onClick={() => setMobileCopilotOpen(true)}>
+          <Button
+            variant="secondary"
+            size="sm"
+            className={triggerClassName ?? "rounded-xl"}
+            onClick={() => setMobileCopilotOpen(true)}
+          >
             <Sparkles className="mr-2 h-4 w-4" />
             Ask AI
           </Button>

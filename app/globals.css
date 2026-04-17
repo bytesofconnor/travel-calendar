@@ -88,3 +88,85 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .loading-journey {
+    position: relative;
+    width: 12rem;
+    height: 4.5rem;
+  }
+
+  .loading-journey__trail {
+    position: absolute;
+    left: 1.1rem;
+    right: 1.5rem;
+    top: 2.35rem;
+    height: 1px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, transparent 0%, rgb(148 163 184 / 0.12) 18%, rgb(148 163 184 / 0.4) 50%, rgb(148 163 184 / 0.12) 82%, transparent 100%);
+  }
+
+  .loading-journey__trail--glow {
+    height: 10px;
+    top: 2.05rem;
+    background: radial-gradient(circle, rgb(96 165 250 / 0.2) 0%, transparent 72%);
+    filter: blur(8px);
+  }
+
+  .loading-journey__plane {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    color: rgb(191 219 254 / 0.95);
+    filter: drop-shadow(0 6px 18px rgb(59 130 246 / 0.28));
+    transform-origin: center;
+    animation: loading-plane 2400ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  .loading-journey__destination {
+    position: absolute;
+    right: 0.15rem;
+    top: 1.5rem;
+    color: rgb(251 113 133 / 0.95);
+    filter: drop-shadow(0 0 16px rgb(251 113 133 / 0.28));
+    animation: loading-heart 1600ms ease-in-out infinite;
+  }
+}
+
+@keyframes loading-plane {
+  0% {
+    transform: translate(0.55rem, 0.95rem) rotate(-12deg) scale(0.94);
+    opacity: 0.22;
+  }
+
+  18% {
+    opacity: 1;
+  }
+
+  50% {
+    transform: translate(5.6rem, -0.35rem) rotate(-2deg) scale(1);
+    opacity: 1;
+  }
+
+  82% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(9.8rem, 0.95rem) rotate(8deg) scale(0.96);
+    opacity: 0.28;
+  }
+}
+
+@keyframes loading-heart {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.72;
+  }
+
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
