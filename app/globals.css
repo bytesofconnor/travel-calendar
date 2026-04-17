@@ -4,39 +4,49 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.13 0.005 260);
+  --background: oklch(0.14 0.018 240);
   --foreground: oklch(0.95 0 0);
-  --card: oklch(0.17 0.005 260);
+  --card: oklch(0.18 0.016 238);
   --card-foreground: oklch(0.95 0 0);
-  --popover: oklch(0.17 0.005 260);
+  --popover: oklch(0.18 0.016 238);
   --popover-foreground: oklch(0.95 0 0);
-  --primary: oklch(0.65 0.15 250);
+  --primary: oklch(0.67 0.105 227);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.22 0.005 260);
+  --secondary: oklch(0.23 0.018 236);
   --secondary-foreground: oklch(0.95 0 0);
-  --muted: oklch(0.22 0.005 260);
-  --muted-foreground: oklch(0.55 0 0);
-  --accent: oklch(0.65 0.15 250);
+  --muted: oklch(0.23 0.014 236);
+  --muted-foreground: oklch(0.72 0.018 230);
+  --accent: oklch(0.66 0.082 210);
   --accent-foreground: oklch(1 0 0);
   --destructive: oklch(0.55 0.2 25);
   --destructive-foreground: oklch(0.95 0 0);
-  --border: oklch(0.25 0.005 260);
-  --input: oklch(0.22 0.005 260);
-  --ring: oklch(0.65 0.15 250);
+  --border: oklch(0.3 0.02 232);
+  --input: oklch(0.22 0.018 236);
+  --ring: oklch(0.66 0.082 210);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.5rem;
-  --sidebar: oklch(0.15 0.005 260);
+  --sidebar: oklch(0.15 0.018 240);
   --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.65 0.15 250);
+  --sidebar-primary: oklch(0.67 0.105 227);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.22 0.005 260);
+  --sidebar-accent: oklch(0.23 0.018 236);
   --sidebar-accent-foreground: oklch(0.95 0 0);
-  --sidebar-border: oklch(0.25 0.005 260);
-  --sidebar-ring: oklch(0.65 0.15 250);
+  --sidebar-border: oklch(0.3 0.02 232);
+  --sidebar-ring: oklch(0.66 0.082 210);
+  --mara-deep: 6 17 28;
+  --mara-sea: 16 48 72;
+  --mara-tide: 40 85 122;
+  --mara-mist: 192 208 220;
+  --mara-foam: 229 237 242;
+  --mara-sand: 169 151 118;
+  --mara-surface: linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.02));
+  --mara-shell: radial-gradient(circle at top, rgb(120 169 196 / 0.18), transparent 34%),
+    radial-gradient(circle at 18% 82%, rgb(92 129 148 / 0.14), transparent 28%),
+    linear-gradient(180deg, rgb(6 17 28 / 0.92), rgb(8 20 31 / 0.72) 24%, rgb(9 19 30 / 0.82) 100%);
 }
 
 @theme inline {
@@ -86,10 +96,64 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(circle at top, rgb(var(--mara-mist) / 0.06), transparent 22%),
+      linear-gradient(180deg, rgb(var(--mara-deep) / 1), rgb(8 19 31 / 1));
   }
 }
 
 @layer components {
+  .mara-app-shell {
+    background: linear-gradient(180deg, rgb(var(--mara-deep) / 0.72), rgb(8 21 31 / 0.4) 22%, rgb(7 17 26 / 0.58) 100%);
+  }
+
+  .mara-atmosphere {
+    background:
+      radial-gradient(circle at top, rgb(var(--mara-mist) / 0.08), transparent 26%),
+      radial-gradient(circle at 12% 70%, rgb(var(--mara-tide) / 0.14), transparent 32%),
+      radial-gradient(circle at 86% 18%, rgb(var(--mara-sea) / 0.16), transparent 24%);
+  }
+
+  .mara-topbar {
+    background:
+      linear-gradient(180deg, rgb(8 19 31 / 0.93), rgb(9 19 28 / 0.87)),
+      var(--mara-surface);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.04),
+      0 18px 48px rgb(0 0 0 / 0.2);
+  }
+
+  .mara-tab-strip {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.025));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035);
+  }
+
+  .mara-footer {
+    background: linear-gradient(180deg, rgb(6 15 24 / 0.76), rgb(5 14 22 / 0.88));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
+  }
+
+  .mara-surface {
+    background: var(--mara-surface);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.05),
+      0 24px 80px rgb(0 0 0 / 0.22);
+  }
+
+  .mara-halo {
+    position: relative;
+  }
+
+  .mara-halo::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgb(var(--mara-mist) / 0.08), transparent 34%, rgb(var(--mara-sand) / 0.05) 100%);
+    opacity: 0.9;
+  }
+
   .loading-journey {
     position: relative;
     width: 12rem;

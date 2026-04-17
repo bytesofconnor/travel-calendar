@@ -16,6 +16,8 @@ import {
   useCalendarStore,
 } from "@/lib/kanban-store"
 import { ItemDialog } from "./item-dialog"
+import { TabViewHeader } from "./tab-view-header"
+import { TabViewShell } from "./tab-view-shell"
 import { TripItemCard } from "./trip-item-card"
 
 interface WeekViewProps {
@@ -179,12 +181,12 @@ export function WeekView({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <header className="flex items-start justify-between gap-3 border-b border-border px-4 py-2 md:items-center md:py-3">
+      <header className="flex items-start justify-between gap-3 border-b border-border px-4 py-2 md:hidden">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight md:text-lg">Week View</h2>
-          <p className="text-xs text-muted-foreground md:text-sm">{weekLabel}</p>
+          <h2 className="text-lg font-semibold tracking-tight">Week View</h2>
+          <p className="text-xs text-muted-foreground">{weekLabel}</p>
         </div>
-        <div className="flex items-center gap-1 self-start md:self-auto">
+        <div className="flex items-center gap-1 self-start">
           <button
             onClick={() => {
               setCurrentMonth(getMonthStart(currentWeekStart))
@@ -369,11 +371,51 @@ export function WeekView({
           )}
         </div>
 
-        <div className="hidden h-full overflow-x-auto md:block">
-          <div className="min-w-[840px] md:min-w-[760px]">
+        <TabViewShell className="hidden md:block overflow-x-auto" innerClassName="max-w-none gap-5">
+          <TabViewHeader
+            kicker="Calendar"
+            title="Week View"
+            description={weekLabel}
+            actions={
+              <>
+                <button
+                  onClick={() => {
+                    setCurrentMonth(getMonthStart(currentWeekStart))
+                    setViewMode("month")
+                  }}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  title="Month view"
+                >
+                  <CalendarDays className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={handleExportCalendar}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  title="Export calendar"
+                >
+                  <Download className="h-5 w-5" />
+                </button>
+                <div className="mx-1 h-4 w-px bg-border" />
+                <button
+                  onClick={prevWeek}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={nextWeek}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </>
+            }
+          />
+
+          <div className="relative w-full max-w-5xl min-w-[840px] md:min-w-[760px]">
             <div className="grid grid-cols-7 border-b border-border">
               {days.map((day) => (
-                <div key={day.date} className="flex flex-col items-center border-r border-border py-3 last:border-r-0 md:py-3">
+                <div key={day.date} className="flex flex-col items-center border-r border-border py-3 last:border-r-0">
                   <span className="text-xs font-medium text-muted-foreground">{day.dayName}</span>
                   <span className="mt-0.5 text-2xl font-semibold md:text-lg">{day.dayNum}</span>
                   <span className="text-xs text-muted-foreground">{day.month}</span>
@@ -432,7 +474,7 @@ export function WeekView({
               ))}
             </div>
           </div>
-        </div>
+        </TabViewShell>
       </div>
 
       <ItemDialog

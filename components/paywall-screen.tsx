@@ -66,7 +66,7 @@ export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallS
         {/* Headline */}
         <div className="space-y-3">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-            Shared Trip Calendar
+            HeyMara
           </p>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">
             Plan trips together.

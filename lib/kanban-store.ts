@@ -663,7 +663,7 @@ export function generateICS(items: TripItem[]): string {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Shared Trip Calendar//EN",
+    "PRODID:-//HeyMara//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
   ]

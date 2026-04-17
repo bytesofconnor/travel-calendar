@@ -92,7 +92,7 @@ export function LoginScreen({
       <div className="relative z-10 w-full max-w-md px-4">
         <div className="rounded-3xl border border-border bg-card/70 p-8 shadow-2xl backdrop-blur-md">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-            Our Calendar
+            HeyMara
           </p>
 
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
@@ -100,7 +100,7 @@ export function LoginScreen({
           </h1>
 
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            The shared trip planner built for couples. Plan every flight, hotel, and adventure together — in one beautiful calendar.
+            The shared trip planner for couples and travel partners. Plan every flight, stay, and adventure together in one beautiful place.
           </p>
 
           <div className="mt-7 space-y-3">

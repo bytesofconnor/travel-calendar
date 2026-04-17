@@ -248,7 +248,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
   const footerMeta =
     tripSection === "notes"
       ? {
-          left: "Shared brainstorm for everyone on this trip",
+          left: "Shared notes for everyone traveling with HeyMara",
           right: noteDraft.trim().length > 0 ? `${noteDraft.trim().length} characters` : "Start typing anytime",
         }
       : tripSection === "packing"
@@ -867,7 +867,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
       const organizedNote = typeof payload?.organizedNote === "string" ? payload.organizedNote.trim() : ""
 
       if (!response.ok || !organizedNote) {
-        throw new Error(payload?.error ?? "Trip Copilot couldn’t organize the notes yet.")
+        throw new Error(payload?.error ?? "Mara couldn’t organize the notes yet.")
       }
 
       const previousContent = noteDraftRef.current
@@ -880,7 +880,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
       setShareMessage(payload?.caution ? `Notes organized. ${payload.caution}` : "Notes organized.")
       window.setTimeout(() => setShareMessage(""), 2500)
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Trip Copilot couldn’t organize the notes yet.")
+      setErrorMessage(error instanceof Error ? error.message : "Mara couldn’t organize the notes yet.")
     } finally {
       setIsOrganizingNote(false)
     }
@@ -1397,16 +1397,17 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
           opacity: trip.coverImageUrl ? 0.42 : 0.09,
         }}
       />
-      <div className="fixed inset-0 z-0 bg-background/66" />
+      <div className="mara-app-shell fixed inset-0 z-0" />
+      <div className="mara-atmosphere fixed inset-0 z-0 pointer-events-none" />
       <main className="relative z-10 flex h-svh flex-col overflow-hidden">
-        <header className="sticky top-0 z-20 flex flex-col gap-3 border-b border-border bg-background/92 px-4 py-3 backdrop-blur">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
+        <header className="mara-topbar sticky top-0 z-20 flex flex-col gap-3 border-b border-white/8 px-4 py-3 backdrop-blur-xl md:px-6 md:py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
               <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:text-sm md:tracking-[0.2em]">
-                Shared Trip Calendar
+                HeyMara
               </div>
-              <div className="mt-1 flex items-start gap-2">
-                <h1 className="min-w-0 text-[2.05rem] font-semibold leading-[0.96] tracking-tight md:text-[2.2rem]">
+              <div className="mt-2 flex items-start gap-2">
+                <h1 className="min-w-0 text-[2.05rem] font-semibold leading-[0.96] tracking-tight md:text-[2.35rem]">
                   {trip.name}
                 </h1>
                 {currentMember?.role === "owner" && (
@@ -1421,15 +1422,29 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
                   </button>
                 )}
               </div>
-              <p className="mt-1 text-sm text-muted-foreground md:mt-0 md:text-sm">
+              <p className="mt-2 text-sm text-muted-foreground">
                 {trip.startDate} to {trip.endDate}
               </p>
+              {trip.coverImagePhotographer && trip.coverImageSourceUrl && (
+                <div className="mt-3 hidden text-[11px] leading-5 text-muted-foreground md:block">
+                  Photo by{" "}
+                  <a
+                    href={trip.coverImageSourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2 hover:text-foreground"
+                  >
+                    {trip.coverImagePhotographer}
+                  </a>
+                  {trip.coverImageQuery ? ` for “${trip.coverImageQuery}”` : ""} on Pexels
+                </div>
+              )}
             </div>
 
             <div className="flex shrink-0 flex-col items-end gap-2 md:hidden">
               <button
                 onClick={() => setMobileHeaderExpanded((value) => !value)}
-                className="flex h-10 items-center gap-2 rounded-2xl border border-border bg-secondary px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80"
+                className="flex h-10 items-center gap-2 rounded-2xl border border-white/10 bg-secondary/85 px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary/95"
               >
                 {mobileHeaderExpanded ? "Close" : "Menu"}
                 {mobileHeaderExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -1459,69 +1474,102 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
                 triggerClassName="h-10 rounded-2xl px-3 text-sm"
               />
             </div>
-          </div>
 
-          <div className={`${mobileHeaderExpanded ? "flex" : "hidden"} flex-col gap-3 md:flex md:flex-row md:flex-wrap md:items-center`}>
-            <label className="relative block md:min-w-[220px]">
-              <select
-                value={trip.id}
-                onChange={(event) => handleSwitchTrip(event.target.value)}
-                className="h-12 w-full appearance-none rounded-2xl border border-border bg-secondary px-4 pr-10 text-base text-foreground outline-none transition-colors hover:border-border/80 focus:border-primary md:h-10 md:text-sm"
-              >
-                {allTrips.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            </label>
-            {members.map((member) => (
-              <div key={member.userId} className={`rounded-full px-4 py-2.5 text-base md:px-3 md:py-1.5 md:text-sm ${member.userId === user?.id ? "bg-secondary text-foreground font-medium" : "bg-secondary/60 text-muted-foreground"}`}>
-                {member.displayName}
+            <div className="hidden shrink-0 flex-col items-end gap-3 md:flex">
+              <div className="flex items-center gap-2">
+                <Button variant="secondary" size="sm" className="h-9 rounded-full px-4" onClick={() => void handleCopyInvite()}>
+                  <Copy className="h-4 w-4" />
+                  Copy invite
+                </Button>
+                <div className="mara-surface rounded-full border border-white/10 p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 rounded-full px-3 text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
+                    onClick={() => void handleRefreshCover()}
+                    disabled={currentMember?.role !== "owner" || isRefreshingCover || isLoading || isMutating}
+                  >
+                    <ImageIcon className="h-4 w-4" />
+                    {isRefreshingCover ? "Refreshing" : "Cover"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 rounded-full px-3 text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
+                    onClick={() => void loadTripState(trip.id)}
+                    disabled={isLoading || isMutating}
+                  >
+                    <RefreshCcw className="h-4 w-4" />
+                    Data
+                  </Button>
+                </div>
+                <Button variant="ghost" size="sm" className="h-9 rounded-full px-3 text-muted-foreground hover:text-foreground" onClick={() => void handleSignOut()}>
+                  <LogOut className="h-4 w-4" />
+                  Sign out
+                </Button>
               </div>
-            ))}
-            <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center">
-              <Button variant="secondary" size="sm" className="h-11 rounded-2xl text-base md:hidden" onClick={() => void handleCopyInvite()}>
-                <Copy className="mr-2 h-5 w-5" />
-                Share
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-11 rounded-2xl text-base md:hidden"
-                onClick={() => void (currentMember?.role === "owner" ? handleRefreshCover() : loadTripState(trip.id, { showLoader: false }))}
-                disabled={isLoading || isMutating || isRefreshingCover}
-              >
-                {currentMember?.role === "owner" ? <ImageIcon className="mr-2 h-5 w-5" /> : <RefreshCcw className="mr-2 h-5 w-5" />}
-                {currentMember?.role === "owner" ? (isRefreshingCover ? "Refreshing..." : "New cover") : "Refresh"}
-              </Button>
-              <Button variant="secondary" size="sm" className="hidden h-12 rounded-2xl text-base md:flex md:h-9 md:text-sm" onClick={() => void handleCopyInvite()}>
-                <Copy className="mr-2 h-5 w-5 md:h-4 md:w-4" />
-                Copy invite
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="hidden h-12 rounded-2xl text-base md:flex md:h-9 md:text-sm"
-                onClick={() => void handleRefreshCover()}
-                disabled={currentMember?.role !== "owner" || isRefreshingCover || isLoading || isMutating}
-              >
-                <ImageIcon className="mr-2 h-5 w-5 md:h-4 md:w-4" />
-                {isRefreshingCover ? "Refreshing cover" : "Refresh cover"}
-              </Button>
-              <Button variant="ghost" size="sm" className="hidden h-12 rounded-2xl text-base md:flex md:h-9 md:text-sm" onClick={() => void loadTripState(trip.id)} disabled={isLoading || isMutating}>
-                <RefreshCcw className="mr-2 h-5 w-5 md:h-4 md:w-4" />
-                Refresh data
-              </Button>
-              <Button variant="ghost" size="sm" className="col-span-2 h-12 rounded-2xl text-base md:col-span-1 md:h-9 md:text-sm" onClick={() => void handleSignOut()}>
-                <LogOut className="mr-2 h-5 w-5 md:h-4 md:w-4" />
-                Sign out
-              </Button>
             </div>
           </div>
+
+          <div className={`${mobileHeaderExpanded ? "flex" : "hidden"} flex-col gap-3 md:flex`}>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
+                <label className="relative block md:min-w-[240px]">
+                  <select
+                    value={trip.id}
+                    onChange={(event) => handleSwitchTrip(event.target.value)}
+                    className="h-12 w-full appearance-none rounded-2xl border border-white/10 bg-secondary/82 px-4 pr-10 text-base text-foreground outline-none transition-colors hover:border-white/15 focus:border-primary md:h-10 md:rounded-full md:text-sm"
+                  >
+                    {allTrips.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                </label>
+
+                <div className="flex flex-wrap gap-2">
+                  {members.map((member) => (
+                    <div
+                      key={member.userId}
+                      className={`rounded-full border px-4 py-2.5 text-base md:px-3 md:py-1.5 md:text-sm ${
+                        member.userId === user?.id
+                          ? "border-white/10 bg-secondary/92 text-foreground font-medium"
+                          : "border-white/8 bg-secondary/38 text-muted-foreground"
+                      }`}
+                    >
+                      {member.displayName}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 md:hidden">
+                <Button variant="secondary" size="sm" className="h-11 rounded-2xl text-base" onClick={() => void handleCopyInvite()}>
+                  <Copy className="mr-2 h-5 w-5" />
+                  Share
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-11 rounded-2xl text-base"
+                  onClick={() => void (currentMember?.role === "owner" ? handleRefreshCover() : loadTripState(trip.id, { showLoader: false }))}
+                  disabled={isLoading || isMutating || isRefreshingCover}
+                >
+                  {currentMember?.role === "owner" ? <ImageIcon className="mr-2 h-5 w-5" /> : <RefreshCcw className="mr-2 h-5 w-5" />}
+                  {currentMember?.role === "owner" ? (isRefreshingCover ? "Refreshing..." : "New cover") : "Refresh"}
+                </Button>
+                <Button variant="ghost" size="sm" className="col-span-2 h-11 rounded-2xl text-base" onClick={() => void handleSignOut()}>
+                  <LogOut className="mr-2 h-5 w-5" />
+                  Sign out
+                </Button>
+              </div>
+            </div>
+          </div>
+
           {trip.coverImagePhotographer && trip.coverImageSourceUrl && (
-            <div className="text-[11px] leading-5 text-muted-foreground">
+            <div className="text-[11px] leading-5 text-muted-foreground md:hidden">
               Photo by{" "}
               <a
                 href={trip.coverImageSourceUrl}
@@ -1536,11 +1584,11 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
           )}
         </header>
 
-        {shareMessage && <div className="border-b border-border bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">{shareMessage}</div>}
-        {errorMessage && <div className="border-b border-border bg-rose-500/10 px-4 py-2 text-sm text-rose-300">{errorMessage}</div>}
+        {shareMessage && <div className="border-b border-white/8 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">{shareMessage}</div>}
+        {errorMessage && <div className="border-b border-white/8 bg-rose-500/10 px-4 py-2 text-sm text-rose-300">{errorMessage}</div>}
 
         <Tabs value={tripSection} onValueChange={(value) => setTripSection(value as TripSection)} className="flex min-h-0 flex-1 flex-col">
-          <div className="border-b border-border px-4 py-1.5 md:px-6 md:py-3">
+          <div className="border-b border-white/8 px-4 py-1.5 md:px-6 md:py-3">
             <TabsList className="grid h-10 w-full max-w-md grid-cols-3 rounded-2xl bg-secondary/80 p-1 md:h-10">
               <TabsTrigger value="calendar" className="rounded-xl text-base md:text-sm">Calendar</TabsTrigger>
               <TabsTrigger value="notes" className="rounded-xl text-base md:text-sm">Brainstorm</TabsTrigger>
@@ -1631,7 +1679,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
             </aside>
           </div>
 
-          <footer className="border-t border-border/80 bg-background/70 px-4 py-3 backdrop-blur md:px-6">
+          <footer className="mara-footer border-t border-white/8 px-4 py-3 backdrop-blur-xl md:px-6">
             <div className="mx-auto flex w-full items-center justify-between text-xs text-muted-foreground/80">
               <span>{footerMeta.left}</span>
               <span>{footerMeta.right}</span>

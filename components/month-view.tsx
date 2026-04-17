@@ -13,6 +13,8 @@ import {
   useCalendarStore,
 } from "@/lib/kanban-store"
 import { ItemDialog } from "./item-dialog"
+import { TabViewHeader } from "./tab-view-header"
+import { TabViewShell } from "./tab-view-shell"
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 const AGENDA_SCROLL_OFFSET = 32
@@ -188,15 +190,12 @@ export function MonthView({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-start justify-between gap-3 px-4 py-3 md:items-start md:px-6 md:pb-4 md:pt-5">
+      <div className="flex items-start justify-between gap-3 px-4 py-3 md:hidden">
         <div>
-          <div className="hidden text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:block md:text-sm md:tracking-[0.2em]">
-            Calendar
-          </div>
-          <h2 className="text-lg font-semibold tracking-tight md:mt-3 md:text-xl">{monthLabel}</h2>
-          <p className="text-xs text-muted-foreground md:mt-1 md:text-sm md:leading-6">Tap any date to jump into that week.</p>
+          <h2 className="text-lg font-semibold tracking-tight">{monthLabel}</h2>
+          <p className="text-xs text-muted-foreground">Tap any date to jump into that week.</p>
         </div>
-        <div className="flex items-center gap-1 self-start md:self-auto">
+        <div className="flex items-center gap-1 self-start">
           <button
             onClick={() => setViewMode("week")}
             className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
@@ -366,8 +365,37 @@ export function MonthView({
           </div>
         </div>
 
-        <div className="hidden overflow-x-auto md:block md:px-6 md:pb-6">
+        <TabViewShell className="hidden overflow-x-auto md:block" innerClassName="max-w-none gap-4">
           <div className="w-full max-w-5xl min-w-[840px] md:min-w-[760px]">
+            <TabViewHeader
+              kicker="Calendar"
+              title={monthLabel}
+              description="Tap any date to jump into that week."
+              className="mb-4"
+              actions={
+                <>
+                  <button
+                    onClick={() => setViewMode("week")}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                    title="Week view"
+                  >
+                    <LayoutDashboard className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={prevMonth}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={nextMonth}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </>
+              }
+            />
             <div className="grid grid-cols-7 border-b border-border px-2">
               {dayNames.map((name) => (
                 <div key={name} className="py-3 text-center text-sm font-medium text-muted-foreground">
@@ -445,7 +473,7 @@ export function MonthView({
               })}
             </div>
           </div>
-        </div>
+        </TabViewShell>
       </div>
 
       <ItemDialog

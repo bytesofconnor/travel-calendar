@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
   const systemPrompt =
     action === "organize_notes"
       ? [
-          "You are Trip Copilot, helping organize shared travel planning notes.",
+          "You are Mara, helping organize shared travel planning notes inside HeyMara.",
           "Clean up the note content without inventing facts.",
           "Preserve all meaningful information, but remove obvious duplication, tighten wording, group related items, and format it so it is easier to scan.",
           "Use short section headings and bullets where helpful.",
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
           '{ "organizedNote": string, "caution": string | null }',
         ].join(" ")
       : [
-          "You are Trip Copilot, a concise but genuinely helpful AI assistant inside a shared travel planning app.",
+          "You are Mara, a concise but genuinely helpful AI assistant inside HeyMara, a shared travel planning app.",
           "Your job is to help two travelers brainstorm ideas, recommendations, food, logistics, and packing suggestions.",
           "Be specific and practical. Prioritize usefulness over fluff.",
           "You do not have live browsing in this environment, so avoid pretending to know current hours, prices, or booking availability.",
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
-      "X-Title": "Our Calendar",
+      "X-Title": "HeyMara",
     },
     body: JSON.stringify({
       model,

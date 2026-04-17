@@ -306,7 +306,7 @@ function CopilotPanel({
   calendarStatusByMessage,
 }: CopilotPanelProps) {
   const latestMessages = aiMessages.slice(-8)
-  const visiblePrompts = latestMessages.length > 0 ? promptSuggestions.slice(0, 2) : promptSuggestions
+  const visiblePrompts = latestMessages.length > 0 ? promptSuggestions.slice(0, 2) : mobile ? promptSuggestions : promptSuggestions.slice(0, 3)
   const messagesRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -323,51 +323,53 @@ function CopilotPanel({
 
   return (
     <div
-      className={`flex flex-col rounded-[18px] border border-border/80 bg-black/25 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_60px_rgba(0,0,0,0.2)] backdrop-blur ${
+      className={`flex min-h-0 flex-col overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur-xl ${
         mobile ? "" : "h-full min-h-0"
       }`}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-          <Sparkles className="h-3.5 w-3.5" />
-          Trip Copilot
+      <div className={`shrink-0 ${mobile ? "" : "space-y-0.5"}`}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5 text-sky-200/80" />
+            Mara
+          </div>
+          {latestMessages.length > 0 ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 rounded-full px-3 text-xs text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
+              onClick={onClearConversation}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Clear
+            </Button>
+          ) : null}
         </div>
-        {latestMessages.length > 0 ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 rounded-full px-3 text-xs text-muted-foreground hover:text-foreground"
-            onClick={onClearConversation}
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Clear
-          </Button>
-        ) : null}
-      </div>
-      <h3 className="mt-3 text-lg font-semibold tracking-tight">Ask about the trip</h3>
-      <p className="mt-1 text-sm leading-6 text-muted-foreground">
-        Ask for must-dos, foods, logistics, route ideas, or what else you should pack.
-      </p>
+        <h3 className={`mt-4 font-semibold tracking-tight text-foreground ${mobile ? "text-xl" : "text-[1.9rem] leading-tight md:text-lg"}`}>Ask Mara</h3>
+        <p className={`mt-1 max-w-sm text-muted-foreground ${mobile ? "text-sm leading-6" : "text-sm leading-5.5"}`}>
+          Mara knows your itinerary, notes, and packing list. Best for route ideas, food spots, logistics, and filling in the gaps.
+        </p>
 
-      <div className={`mt-4 flex flex-wrap gap-2 ${latestMessages.length > 0 ? "opacity-85" : ""}`}>
-        {visiblePrompts.map((prompt) => (
-          <button
-            key={prompt}
-            type="button"
-            onClick={() => void onAskAi(prompt)}
-            className={`rounded-full border border-border/70 bg-secondary/35 px-3 py-2 text-left text-xs leading-5 text-muted-foreground transition-colors hover:bg-secondary/55 hover:text-foreground ${
-              latestMessages.length > 0 ? "py-1.5" : ""
-            }`}
-          >
-            {prompt}
-          </button>
-        ))}
+        <div className={`mt-4 grid gap-2 ${latestMessages.length > 0 ? "opacity-90" : ""}`}>
+          {visiblePrompts.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              onClick={() => void onAskAi(prompt)}
+              className={`rounded-2xl border border-white/10 bg-white/[0.03] px-3 text-left text-xs leading-5 text-muted-foreground transition-colors hover:border-white/15 hover:bg-white/[0.05] hover:text-foreground ${
+                latestMessages.length > 0 ? "py-2" : mobile ? "py-2.5" : "py-2"
+              }`}
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div ref={messagesRef} className={`mt-4 min-h-0 flex-1 overflow-y-auto pr-1 ${mobile ? "pb-3" : ""}`}>
+      <div ref={messagesRef} className={`mt-4 min-h-0 flex-1 overflow-y-auto pr-1 ${mobile ? "pb-3" : "pb-1"}`}>
         {latestMessages.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border/70 bg-background/20 px-4 py-6">
+          <div className={`rounded-[22px] border border-white/10 bg-black/18 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] ${mobile ? "px-4 py-6" : "px-4 py-5"}`}>
             <div className="text-sm font-medium text-foreground">Start with a simple question</div>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               Try asking for Bolivia highlights, Peru food recommendations, route advice, or packing suggestions for altitude.
@@ -386,11 +388,13 @@ function CopilotPanel({
                 <div
                   key={message.id}
                   className={`rounded-2xl border px-4 py-3 ${
-                    message.role === "user" ? "border-primary/30 bg-primary/10" : "border-border/70 bg-secondary/25"
+                    message.role === "user"
+                      ? "border-sky-400/20 bg-sky-500/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]"
+                      : "border-white/10 bg-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
                   }`}
                 >
                   <div className="mb-2 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {message.role === "user" ? "You asked" : "Trip Copilot"}
+                    {message.role === "user" ? "You asked" : "Mara"}
                   </div>
                   <div className="whitespace-pre-wrap text-sm leading-7 text-foreground">{message.content}</div>
 
@@ -506,13 +510,16 @@ function CopilotPanel({
       <div
         className={
           mobile
-            ? "sticky bottom-0 mt-4 -mx-4 border-t border-border/70 bg-background/95 px-4 pb-1 pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/80"
-            : "mt-4 border-t border-border/60 pt-4"
+            ? "sticky bottom-0 mt-4 shrink-0 -mx-4 border-t border-white/10 bg-background/95 px-4 pb-1 pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+            : "mt-3 shrink-0 rounded-[20px] border border-white/10 bg-black/18 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
         }
       >
         {aiError ? <div className="mb-3 text-sm text-rose-300">{aiError}</div> : null}
 
         <div className="flex flex-col gap-2">
+          <div className="px-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            Ask anything about this trip
+          </div>
           <Input
             value={aiInput}
             onChange={(event) => setAiInput(event.target.value)}
@@ -522,12 +529,12 @@ function CopilotPanel({
                 void onAskAi()
               }
             }}
-            placeholder="Ask about Bolivia, altitude, routes, food, or what to pack…"
-            className="h-12 rounded-[16px] border-border/80 bg-background/50 text-base"
+            placeholder="Ask Mara about routes, food, logistics, or what to pack…"
+            className={`rounded-[16px] border-white/10 bg-background/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] ${mobile ? "h-12 text-base" : "h-11 text-[15px]"}`}
           />
-          <Button className="h-12 rounded-[16px] text-base" onClick={() => void onAskAi()} disabled={isAskingAi || !aiInput.trim()}>
+          <Button className={`rounded-[16px] bg-primary/90 text-primary-foreground shadow-[0_16px_34px_rgba(59,130,246,0.22)] hover:bg-primary ${mobile ? "h-12 text-base" : "h-11 text-[15px]"}`} onClick={() => void onAskAi()} disabled={isAskingAi || !aiInput.trim()}>
             {isAskingAi ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <WandSparkles className="mr-2 h-4 w-4" />}
-            Ask Trip Copilot
+            Ask Mara
           </Button>
         </div>
       </div>
@@ -940,7 +947,7 @@ export function TripCopilot({
       const caution = typeof payload?.caution === "string" ? payload.caution : null
 
       if (!response.ok || !answer) {
-        throw new Error(payload?.error ?? "Trip Copilot couldn’t answer that yet.")
+        throw new Error(payload?.error ?? "Mara couldn’t answer that yet.")
       }
 
       setAiMessages((current) => [
@@ -955,7 +962,7 @@ export function TripCopilot({
         },
       ])
     } catch (error) {
-      setAiError(error instanceof Error ? error.message : "Trip Copilot couldn’t answer that yet.")
+      setAiError(error instanceof Error ? error.message : "Mara couldn’t answer that yet.")
     } finally {
       setIsAskingAi(false)
     }
@@ -1001,14 +1008,14 @@ export function TripCopilot({
             onClick={() => setMobileCopilotOpen(true)}
           >
             <Sparkles className="mr-2 h-4 w-4" />
-            Ask AI
+            Ask Mara
           </Button>
 
           <Drawer open={mobileCopilotOpen} onOpenChange={setMobileCopilotOpen}>
             <DrawerContent className="h-[84vh] max-h-[84vh] rounded-t-[24px] border-border bg-background/95 backdrop-blur">
               <DrawerHeader className="text-left">
-                <DrawerTitle>Trip Copilot</DrawerTitle>
-                <DrawerDescription>Ask about food, route ideas, logistics, and what you should pack.</DrawerDescription>
+                <DrawerTitle>Mara</DrawerTitle>
+                <DrawerDescription>Ask Mara about food, route ideas, logistics, and what you should pack.</DrawerDescription>
               </DrawerHeader>
               <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
                 <CopilotPanel
