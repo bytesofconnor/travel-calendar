@@ -365,8 +365,8 @@ export function MonthView({
           </div>
         </div>
 
-        <TabViewShell className="hidden overflow-x-auto md:block" innerClassName="max-w-none gap-4">
-          <div className="w-full max-w-5xl min-w-[840px] md:min-w-[760px]">
+        <TabViewShell className="hidden px-4 pt-4 md:block" innerClassName="max-w-none gap-4">
+          <div className="min-w-0 w-full">
             <TabViewHeader
               kicker="Calendar"
               title={monthLabel}
@@ -375,35 +375,35 @@ export function MonthView({
               actions={
                 <>
                   <button
-                    onClick={() => setViewMode("week")}
-                    className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  onClick={() => setViewMode("week")}
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                     title="Week view"
                   >
-                    <LayoutDashboard className="h-5 w-5" />
+                    <LayoutDashboard className="h-4 w-4" />
                   </button>
                   <button
                     onClick={prevMonth}
-                    className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                   >
-                    <ChevronLeft className="h-5 w-5" />
+                    <ChevronLeft className="h-4 w-4" />
                   </button>
                   <button
                     onClick={nextMonth}
-                    className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                   >
-                    <ChevronRight className="h-5 w-5" />
+                    <ChevronRight className="h-4 w-4" />
                   </button>
                 </>
               }
             />
-            <div className="grid grid-cols-7 border-b border-border px-2">
+            <div className="grid grid-cols-7 border-b border-border/70 px-1">
               {dayNames.map((name) => (
-                <div key={name} className="py-3 text-center text-sm font-medium text-muted-foreground">
+                <div key={name} className="py-2.5 text-center text-xs font-medium tracking-[0.04em] text-muted-foreground md:text-sm">
                   {name}
                 </div>
               ))}
             </div>
-            <div className="grid grid-cols-7 gap-px bg-border p-px">
+            <div className="grid grid-cols-7 gap-px overflow-hidden rounded-[28px] border border-white/8 bg-white/8 p-px shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
               {days.map((day, index) => {
                 const dayItems = getItemsForDate(items, day.date)
                 const isToday = day.date === today
@@ -411,7 +411,7 @@ export function MonthView({
                 return (
                   <div
                     key={`${day.date}-${index}`}
-                    className={`group relative min-h-[124px] bg-background p-2.5 transition-colors md:min-h-[112px] md:p-2 ${
+                    className={`group relative min-h-[112px] bg-[linear-gradient(180deg,rgba(7,15,24,0.88),rgba(5,11,18,0.94))] p-2 transition-colors md:min-h-[108px] md:p-2 ${
                       !day.isCurrentMonth ? "opacity-40" : ""
                     }`}
                   >
@@ -440,7 +440,7 @@ export function MonthView({
                               event.stopPropagation()
                               handleEditItem(item)
                             }}
-                            className="flex items-center gap-1 truncate rounded-md px-2 py-1.5 text-left text-xs leading-tight transition-colors hover:brightness-125 md:px-1.5 md:py-1"
+                            className="flex items-center gap-1 truncate rounded-lg px-2 py-1.5 text-left text-[11px] leading-tight transition-colors hover:brightness-125 md:px-1.5 md:py-1"
                             style={{
                               background: locationTo
                                 ? `linear-gradient(90deg, ${location.color}40 0%, ${location.color}40 50%, ${locationTo.color}40 50%, ${locationTo.color}40 100%)`

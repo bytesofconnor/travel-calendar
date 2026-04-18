@@ -20,6 +20,8 @@ import { TabViewHeader } from "./tab-view-header"
 import { TabViewShell } from "./tab-view-shell"
 import { TripItemCard } from "./trip-item-card"
 
+const MAX_DESKTOP_ITEM_ROWS = 3
+
 interface WeekViewProps {
   items: TripItem[]
   currentUserName?: string
@@ -35,7 +37,7 @@ export function WeekView({
   onSaveItem,
   onDeleteItem,
 }: WeekViewProps) {
-  const { currentWeekStart, nextWeek, prevWeek, setCurrentMonth, setViewMode } = useCalendarStore()
+  const { currentWeekStart, nextWeek, prevWeek, setCurrentMonth, setCurrentWeek, setViewMode } = useCalendarStore()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [editingItem, setEditingItem] = useState<TripItem | null>(null)
@@ -75,6 +77,12 @@ export function WeekView({
     setEditingItem(item)
     setSelectedDate(null)
     setDialogOpen(true)
+  }
+
+  function handleShowMoreForDate(date: string) {
+    setCurrentMonth(getMonthStart(date))
+    setCurrentWeek(date)
+    setViewMode("month")
   }
 
   function handleExportCalendar() {
@@ -162,6 +170,7 @@ export function WeekView({
   }
 
   const itemRows = getItemRows()
+  const visibleItemRows = itemRows.slice(0, MAX_DESKTOP_ITEM_ROWS)
   const mobileSelectedDay = days.find((day) => day.date === mobileSelectedDate) ?? days[0]
   const mobileDayItems = getItemsForDate(items, mobileSelectedDay.date)
   const agendaDays = days
@@ -170,6 +179,18 @@ export function WeekView({
       items: getItemsForDate(items, day.date),
     }))
     .filter((day) => day.items.length > 0)
+  const desktopOverflowByDate = Object.fromEntries(
+    days.map((day) => {
+      const totalItems = getItemsForDate(items, day.date)
+      const visibleItems = visibleItemRows.flatMap((row) => row).filter((item) => {
+        const itemStart = item.startDate > currentWeekStart ? item.startDate : currentWeekStart
+        const itemEnd = item.endDate < weekEnd ? item.endDate : weekEnd
+        return day.date >= itemStart && day.date <= itemEnd
+      })
+
+      return [day.date, Math.max(0, totalItems.length - visibleItems.length)]
+    }),
+  ) as Record<string, number>
 
   if (!mounted) {
     return (
@@ -371,7 +392,7 @@ export function WeekView({
           )}
         </div>
 
-        <TabViewShell className="hidden md:block overflow-x-auto" innerClassName="max-w-none gap-5">
+        <TabViewShell className="hidden md:block px-4 pt-4" innerClassName="max-w-none flex-1 gap-4">
           <TabViewHeader
             kicker="Calendar"
             title="Week View"
@@ -412,10 +433,10 @@ export function WeekView({
             }
           />
 
-          <div className="relative w-full max-w-5xl min-w-[840px] md:min-w-[760px]">
+          <div className="relative flex min-h-0 w-full flex-1 flex-col">
             <div className="grid grid-cols-7 border-b border-border">
               {days.map((day) => (
-                <div key={day.date} className="flex flex-col items-center border-r border-border py-3 last:border-r-0">
+                <div key={day.date} className="flex flex-col items-center border-r border-border px-2 py-4 last:border-r-0">
                   <span className="text-xs font-medium text-muted-foreground">{day.dayName}</span>
                   <span className="mt-0.5 text-2xl font-semibold md:text-lg">{day.dayNum}</span>
                   <span className="text-xs text-muted-foreground">{day.month}</span>
@@ -423,24 +444,24 @@ export function WeekView({
               ))}
             </div>
 
-            <div className="pointer-events-none absolute inset-y-0 left-0 right-0 hidden min-w-[760px] grid-cols-7 md:grid">
+            <div className="pointer-events-none absolute inset-y-0 left-0 right-0 hidden grid-cols-7 md:grid">
               {days.map((day, index) => (
                 <div key={day.date} className={`border-r border-border/50 ${index === 6 ? "border-r-0" : ""}`} />
               ))}
             </div>
 
-            <div className="relative p-2 md:p-3">
+            <div className="relative flex flex-1 flex-col px-2 pb-3 pt-3 md:px-3 md:pb-4 md:pt-4">
               {itemRows.length === 0 ? (
-                <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-background/25 px-4 text-center md:h-40">
+                <div className="flex h-full min-h-[18rem] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-background/25 px-4 text-center">
                   <div className="text-base font-medium text-foreground">No plans yet</div>
                   <div className="max-w-sm text-sm text-muted-foreground">
                     Start building the trip together. Tap a day below to add your first stay, flight, or idea.
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col gap-2">
-                  {itemRows.map((row, rowIndex) => (
-                    <div key={rowIndex} className="relative grid h-auto min-h-[124px] grid-cols-7 gap-2 md:min-h-[112px] md:gap-1">
+                <div className="flex flex-col gap-1.5">
+                  {visibleItemRows.map((row, rowIndex) => (
+                    <div key={rowIndex} className="relative grid h-[74px] grid-cols-7 gap-2">
                       {row.map((item) => {
                         const { startDayIndex, span } = getItemStyle(item)
                         return (
@@ -452,7 +473,7 @@ export function WeekView({
                               width: `${(span / 7) * 100}%`,
                             }}
                           >
-                            <TripItemCard item={item} onEdit={() => handleEditItem(item)} />
+                            <TripItemCard item={item} onEdit={() => handleEditItem(item)} compact />
                           </div>
                         )
                       })}
@@ -462,12 +483,29 @@ export function WeekView({
               )}
             </div>
 
-            <div className="grid grid-cols-7 gap-1 px-2 pb-4 md:px-3 md:pb-4">
+            {itemRows.length > MAX_DESKTOP_ITEM_ROWS ? (
+              <div className="grid grid-cols-7 gap-2 px-2 pb-2 md:px-3">
+                {days.map((day) => (
+                  <div key={day.date} className="flex min-h-6 items-center justify-center">
+                    {desktopOverflowByDate[day.date] > 0 ? (
+                      <button
+                        onClick={() => handleShowMoreForDate(day.date)}
+                        className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                      >
+                        Show {desktopOverflowByDate[day.date]} more
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="grid grid-cols-7 gap-2 px-2 pb-5 md:px-3 md:pb-5">
               {days.map((day) => (
                 <button
                   key={day.date}
                   onClick={() => handleAddItem(day.date)}
-                  className="flex h-14 items-center justify-center rounded-xl border border-dashed border-border/60 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-secondary/50 hover:text-foreground"
+                  className="flex h-12 items-center justify-center rounded-xl border border-dashed border-border/60 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-secondary/50 hover:text-foreground"
                 >
                   <Plus className="h-5 w-5" />
                 </button>

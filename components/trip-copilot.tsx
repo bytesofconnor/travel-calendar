@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
 import { COUNTRIES, type Location, type TripItem, type TripItemInput, type TripPackingItem } from "@/lib/kanban-store"
+import { cn } from "@/lib/utils"
 
 type CopilotMessage = {
   id: string
@@ -35,6 +36,8 @@ interface TripCopilotProps {
   currentUserName?: string
   isMutating?: boolean
   triggerClassName?: string
+  panelClassName?: string
+  docked?: boolean
 }
 
 function appendBlock(existing: string, addition: string) {
@@ -286,6 +289,8 @@ interface CopilotPanelProps {
   brainstormStatusByMessage: Record<string, "idle" | "saving" | "saved" | "error">
   packingStatusByMessage: Record<string, "idle" | "saving" | "saved" | "error">
   calendarStatusByMessage: Record<string, "idle" | "editing" | "saving" | "saved" | "error">
+  className?: string
+  docked?: boolean
 }
 
 function CopilotPanel({
@@ -304,10 +309,13 @@ function CopilotPanel({
   brainstormStatusByMessage,
   packingStatusByMessage,
   calendarStatusByMessage,
+  className,
+  docked = false,
 }: CopilotPanelProps) {
   const latestMessages = aiMessages.slice(-8)
-  const visiblePrompts = latestMessages.length > 0 ? promptSuggestions.slice(0, 2) : mobile ? promptSuggestions : promptSuggestions.slice(0, 3)
+  const hasMessages = latestMessages.length > 0
   const messagesRef = useRef<HTMLDivElement | null>(null)
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
 
   useEffect(() => {
     const node = messagesRef.current
@@ -321,19 +329,40 @@ function CopilotPanel({
     })
   }, [latestMessages.length, isAskingAi])
 
+  useEffect(() => {
+    if (promptSuggestions.length <= 1) {
+      return
+    }
+
+    const interval = window.setInterval(() => {
+      setPlaceholderIndex((current) => (current + 1) % promptSuggestions.length)
+    }, 3200)
+
+    return () => window.clearInterval(interval)
+  }, [promptSuggestions])
+
+  const activePlaceholder = promptSuggestions[placeholderIndex] ?? "Ask Mara about routes, food, logistics, or what to pack…"
+
   return (
     <div
-      className={`flex min-h-0 flex-col overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur-xl ${
-        mobile ? "" : "h-full min-h-0"
-      }`}
+      className={cn(
+        "flex min-h-0 flex-col overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur-xl",
+        mobile ? "" : "h-full min-h-0",
+        docked && "rounded-none border-0 bg-transparent px-5 py-4 shadow-none backdrop-blur-none",
+        className,
+      )}
     >
       <div className={`shrink-0 ${mobile ? "" : "space-y-0.5"}`}>
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5 text-sky-200/80" />
-            Mara
-          </div>
-          {latestMessages.length > 0 ? (
+          {!docked ? (
+            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5 text-sky-200/80" />
+              Mara
+            </div>
+          ) : (
+            <div />
+          )}
+          {hasMessages ? (
             <Button
               type="button"
               variant="ghost"
@@ -346,34 +375,27 @@ function CopilotPanel({
             </Button>
           ) : null}
         </div>
-        <h3 className={`mt-4 font-semibold tracking-tight text-foreground ${mobile ? "text-xl" : "text-[1.9rem] leading-tight md:text-lg"}`}>Ask Mara</h3>
-        <p className={`mt-1 max-w-sm text-muted-foreground ${mobile ? "text-sm leading-6" : "text-sm leading-5.5"}`}>
+        <h3
+          className={`font-semibold tracking-tight text-foreground ${
+            mobile ? "mt-4 text-xl" : docked ? "mt-0 text-[1.65rem] leading-tight md:text-[1.15rem]" : "mt-4 text-[1.9rem] leading-tight md:text-lg"
+          }`}
+        >
+          Ask Mara
+        </h3>
+        <p className={`mt-1 text-muted-foreground ${mobile ? "max-w-sm text-sm leading-6" : docked ? "max-w-md text-sm leading-6" : "max-w-sm text-sm leading-5.5"}`}>
           Mara knows your itinerary, notes, and packing list. Best for route ideas, food spots, logistics, and filling in the gaps.
         </p>
-
-        <div className={`mt-4 grid gap-2 ${latestMessages.length > 0 ? "opacity-90" : ""}`}>
-          {visiblePrompts.map((prompt) => (
-            <button
-              key={prompt}
-              type="button"
-              onClick={() => void onAskAi(prompt)}
-              className={`rounded-2xl border border-white/10 bg-white/[0.03] px-3 text-left text-xs leading-5 text-muted-foreground transition-colors hover:border-white/15 hover:bg-white/[0.05] hover:text-foreground ${
-                latestMessages.length > 0 ? "py-2" : mobile ? "py-2.5" : "py-2"
-              }`}
-            >
-              {prompt}
-            </button>
-          ))}
-        </div>
       </div>
 
-      <div ref={messagesRef} className={`mt-4 min-h-0 flex-1 overflow-y-auto pr-1 ${mobile ? "pb-3" : "pb-1"}`}>
-        {latestMessages.length === 0 ? (
-          <div className={`rounded-[22px] border border-white/10 bg-black/18 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] ${mobile ? "px-4 py-6" : "px-4 py-5"}`}>
-            <div className="text-sm font-medium text-foreground">Start with a simple question</div>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Try asking for Bolivia highlights, Peru food recommendations, route advice, or packing suggestions for altitude.
-            </p>
+      <div
+        ref={messagesRef}
+        className={`min-h-0 overflow-y-auto ${mobile ? "mt-4 flex-1 pb-3 pr-1" : docked ? (hasMessages ? "mt-4 flex-1 pb-2" : "mt-3 flex-none pb-0") : "mt-4 flex-1 pb-1 pr-1"}`}
+      >
+        {!hasMessages ? (
+          <div className={`${mobile ? "pt-2" : docked ? "pt-1" : "pt-1"}`}>
+            <div className={`${docked ? "px-0 py-0 text-sm leading-6" : "rounded-full border border-white/8 bg-white/[0.025] px-3 py-2 text-xs"} text-muted-foreground`}>
+              Try asking about routes, foods, logistics, or what to pack.
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
@@ -389,8 +411,8 @@ function CopilotPanel({
                   key={message.id}
                   className={`rounded-2xl border px-4 py-3 ${
                     message.role === "user"
-                      ? "border-sky-400/20 bg-sky-500/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]"
-                      : "border-white/10 bg-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+                      ? "border-sky-300/16 bg-sky-500/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]"
+                      : "border-white/8 bg-white/[0.025] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]"
                   }`}
                 >
                   <div className="mb-2 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
@@ -511,15 +533,19 @@ function CopilotPanel({
         className={
           mobile
             ? "sticky bottom-0 mt-4 shrink-0 -mx-4 border-t border-white/10 bg-background/95 px-4 pb-1 pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/80"
-            : "mt-3 shrink-0 rounded-[20px] border border-white/10 bg-black/18 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+            : docked
+              ? "mt-4 shrink-0 border-t border-white/8 pt-4"
+              : "mt-3 shrink-0 rounded-[20px] border border-white/10 bg-black/18 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
         }
       >
         {aiError ? <div className="mb-3 text-sm text-rose-300">{aiError}</div> : null}
 
         <div className="flex flex-col gap-2">
-          <div className="px-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-            Ask anything about this trip
-          </div>
+          {!docked ? (
+            <div className="px-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+              Ask anything about this trip
+            </div>
+          ) : null}
           <Input
             value={aiInput}
             onChange={(event) => setAiInput(event.target.value)}
@@ -529,10 +555,14 @@ function CopilotPanel({
                 void onAskAi()
               }
             }}
-            placeholder="Ask Mara about routes, food, logistics, or what to pack…"
-            className={`rounded-[16px] border-white/10 bg-background/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] ${mobile ? "h-12 text-base" : "h-11 text-[15px]"}`}
+            placeholder={activePlaceholder}
+            className={`rounded-[16px] border-white/10 bg-background/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] ${mobile ? "h-12 text-base" : docked ? "h-11 text-[15px]" : "h-11 text-[15px]"}`}
           />
-          <Button className={`rounded-[16px] bg-primary/90 text-primary-foreground shadow-[0_16px_34px_rgba(59,130,246,0.22)] hover:bg-primary ${mobile ? "h-12 text-base" : "h-11 text-[15px]"}`} onClick={() => void onAskAi()} disabled={isAskingAi || !aiInput.trim()}>
+          <Button
+            className={`rounded-[16px] border border-white/10 bg-[linear-gradient(180deg,rgba(90,132,149,0.72),rgba(60,92,108,0.86))] text-primary-foreground shadow-[0_10px_24px_rgba(17,42,56,0.14)] hover:bg-[linear-gradient(180deg,rgba(100,144,162,0.76),rgba(69,102,120,0.9))] ${mobile ? "h-12 text-base" : docked ? "h-11 text-[15px]" : "h-11 text-[15px]"}`}
+            onClick={() => void onAskAi()}
+            disabled={isAskingAi || !aiInput.trim()}
+          >
             {isAskingAi ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <WandSparkles className="mr-2 h-4 w-4" />}
             Ask Mara
           </Button>
@@ -557,6 +587,8 @@ export function TripCopilot({
   currentUserName,
   isMutating = false,
   triggerClassName,
+  panelClassName,
+  docked = false,
 }: TripCopilotProps) {
   const [aiInput, setAiInput] = useState("")
   const [aiMessages, setAiMessages] = useState<CopilotMessage[]>([])
@@ -978,6 +1010,8 @@ export function TripCopilot({
 
   const panel = (
     <CopilotPanel
+      className={panelClassName}
+      docked={docked}
       promptSuggestions={promptSuggestions}
       aiInput={aiInput}
       setAiInput={setAiInput}

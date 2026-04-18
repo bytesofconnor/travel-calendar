@@ -24,8 +24,8 @@ export function TripItemCard({ item, onEdit, compact = false }: TripItemCardProp
   return (
     <button
       onClick={onEdit}
-      className={`flex h-full w-full flex-col justify-between overflow-hidden rounded-xl border text-left transition-all hover:brightness-110 ${
-        compact ? "p-2" : "p-2.5 md:p-2.5"
+      className={`flex h-full w-full flex-col overflow-hidden rounded-xl border text-left transition-all hover:brightness-110 ${
+        compact ? "justify-between p-1.5" : "justify-between p-2.5 md:p-2.5"
       }`}
       style={{
         borderColor: `${location.color}66`,
@@ -36,9 +36,7 @@ export function TripItemCard({ item, onEdit, compact = false }: TripItemCardProp
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-1">
-          <h3 className={`truncate font-medium leading-tight text-foreground ${
-            compact ? "text-xs" : "text-sm md:text-sm"
-          }`}>
+          <h3 className={`${compact ? "truncate text-[11px]" : "truncate text-sm md:text-sm"} font-medium leading-tight text-foreground`}>
             {item.title}
           </h3>
           {item.link && !compact && (
@@ -60,7 +58,24 @@ export function TripItemCard({ item, onEdit, compact = false }: TripItemCardProp
         )}
       </div>
 
-      {!compact && (
+      {compact ? (
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-1 overflow-hidden">
+            <div className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: location.color }} />
+            <span className="truncate text-[10px] text-muted-foreground">
+              {locationTo ? `${location.name} → ${locationTo.name}` : location.name}
+            </span>
+          </div>
+          {item.authorName ? (
+            <div
+              className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/8 px-1 text-[9px] font-medium text-foreground/90"
+              title={item.authorName}
+            >
+              <span className="leading-none">{initials}</span>
+            </div>
+          ) : null}
+        </div>
+      ) : (
         <div className="mt-2 flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
             <div className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: location.color }} />

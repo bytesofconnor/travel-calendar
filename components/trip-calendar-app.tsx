@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ChevronDown, ChevronUp, Copy, Heart, Image as ImageIcon, Loader2, LogOut, Pencil, Plane, PlusCircle, RefreshCcw, Users } from "lucide-react"
+import { ChevronDown, ChevronUp, Copy, Heart, Image as ImageIcon, Loader2, LogOut, Pencil, Plane, PlusCircle, RefreshCcw, Sparkles, Users, X } from "lucide-react"
 import type { AuthChangeEvent, RealtimePostgresChangesPayload, Session } from "@supabase/supabase-js"
 
 import { Button } from "@/components/ui/button"
@@ -235,6 +235,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
   const [isMutating, setIsMutating] = useState(false)
   const [shareMessage, setShareMessage] = useState("")
   const [mobileHeaderExpanded, setMobileHeaderExpanded] = useState(false)
+  const [desktopMaraOpen, setDesktopMaraOpen] = useState(false)
   const [isRefreshingCover, setIsRefreshingCover] = useState(false)
   const [isEditingTripDetails, setIsEditingTripDetails] = useState(false)
   const [coverAttemptedTripId, setCoverAttemptedTripId] = useState<string | null>(null)
@@ -1477,32 +1478,35 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
 
             <div className="hidden shrink-0 flex-col items-end gap-3 md:flex">
               <div className="flex items-center gap-2">
+                <div className="lg:hidden">
+                  <TripCopilot
+                    mode="drawer-trigger"
+                    tripName={trip.name}
+                    tripStart={trip.startDate}
+                    tripEnd={trip.endDate}
+                    noteDraft={noteDraft}
+                    items={items}
+                    packingItems={packingItems}
+                    onDraftChange={(value) => {
+                      setNoteDraft(value)
+                      setNoteDirty(true)
+                    }}
+                    onSaveToBrainstorm={handleSaveBrainstormContent}
+                    onAddPackingIdeas={handleAddPackingIdeas}
+                    onAddCalendarItem={async (input) => {
+                      await handleSaveItem(input)
+                      setShareMessage("Added to calendar.")
+                      window.setTimeout(() => setShareMessage(""), 2000)
+                    }}
+                    currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
+                    isMutating={isMutating}
+                    triggerClassName="h-9 rounded-full px-4 text-sm"
+                  />
+                </div>
                 <Button variant="secondary" size="sm" className="h-9 rounded-full px-4" onClick={() => void handleCopyInvite()}>
                   <Copy className="h-4 w-4" />
                   Copy invite
                 </Button>
-                <div className="mara-surface rounded-full border border-white/10 p-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 rounded-full px-3 text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
-                    onClick={() => void handleRefreshCover()}
-                    disabled={currentMember?.role !== "owner" || isRefreshingCover || isLoading || isMutating}
-                  >
-                    <ImageIcon className="h-4 w-4" />
-                    {isRefreshingCover ? "Refreshing" : "Cover"}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 rounded-full px-3 text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
-                    onClick={() => void loadTripState(trip.id)}
-                    disabled={isLoading || isMutating}
-                  >
-                    <RefreshCcw className="h-4 w-4" />
-                    Data
-                  </Button>
-                </div>
                 <Button variant="ghost" size="sm" className="h-9 rounded-full px-3 text-muted-foreground hover:text-foreground" onClick={() => void handleSignOut()}>
                   <LogOut className="h-4 w-4" />
                   Sign out
@@ -1542,6 +1546,31 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
                       {member.displayName}
                     </div>
                   ))}
+                </div>
+              </div>
+
+              <div className="hidden md:flex md:items-center md:gap-2">
+                <div className="mara-surface rounded-full border border-white/10 p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 rounded-full px-3 text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
+                    onClick={() => void handleRefreshCover()}
+                    disabled={currentMember?.role !== "owner" || isRefreshingCover || isLoading || isMutating}
+                  >
+                    <ImageIcon className="h-4 w-4" />
+                    {isRefreshingCover ? "Refreshing" : "Refresh cover"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 rounded-full px-3 text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
+                    onClick={() => void loadTripState(trip.id)}
+                    disabled={isLoading || isMutating}
+                  >
+                    <RefreshCcw className="h-4 w-4" />
+                    Refresh data
+                  </Button>
                 </div>
               </div>
 
@@ -1596,10 +1625,10 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
             </TabsList>
           </div>
 
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(320px,1fr)] lg:gap-6 lg:px-6 lg:py-6">
-            <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+            <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden lg:px-4 lg:py-5">
               {tripSection === "calendar" ? (
-                <TabsContent value="calendar" className="flex h-full min-h-0 flex-col">
+                <TabsContent value="calendar" className="flex h-full min-h-0 min-w-0 flex-col">
                   {viewMode === "week" ? (
                     <WeekView
                       items={items}
@@ -1621,7 +1650,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
               ) : null}
 
               {tripSection === "notes" ? (
-                <TabsContent value="notes" className="flex h-full min-h-0 flex-col">
+                <TabsContent value="notes" className="flex h-full min-h-0 min-w-0 flex-col">
                   <TripNotesView
                     note={note}
                     draft={noteDraft}
@@ -1640,7 +1669,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
               ) : null}
 
               {tripSection === "packing" ? (
-                <TabsContent value="packing" className="flex h-full min-h-0 flex-col">
+                <TabsContent value="packing" className="flex h-full min-h-0 min-w-0 flex-col">
                   <TripPackingView
                     items={packingItems}
                     isMutating={isMutating}
@@ -1653,29 +1682,71 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
               ) : null}
             </div>
 
-            <aside className="hidden min-h-0 lg:flex lg:flex-col">
-              <TripCopilot
-                mode="panel"
-                tripName={trip.name}
-                tripStart={trip.startDate}
-                tripEnd={trip.endDate}
-                noteDraft={noteDraft}
-                items={items}
-                packingItems={packingItems}
-                onDraftChange={(value) => {
-                  setNoteDraft(value)
-                  setNoteDirty(true)
-                }}
-                onSaveToBrainstorm={handleSaveBrainstormContent}
-                onAddPackingIdeas={handleAddPackingIdeas}
-                onAddCalendarItem={async (input) => {
-                  await handleSaveItem(input)
-                  setShareMessage("Added to calendar.")
-                  window.setTimeout(() => setShareMessage(""), 2000)
-                }}
-                currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
-                isMutating={isMutating}
-              />
+            {!desktopMaraOpen ? (
+              <div className="pointer-events-none absolute inset-y-0 right-0 hidden items-start pr-0 pt-5 lg:flex">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="pointer-events-auto h-10 rounded-l-full rounded-r-none border-r-0 px-4 shadow-[0_12px_30px_rgba(3,10,18,0.22)]"
+                  onClick={() => setDesktopMaraOpen(true)}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Ask Mara
+                </Button>
+              </div>
+            ) : null}
+
+            <aside
+              className={`hidden min-h-0 shrink-0 overflow-hidden border-l border-white/10 bg-[linear-gradient(180deg,rgba(6,17,28,0.985),rgba(8,19,31,0.97))] shadow-[-28px_0_80px_rgba(0,0,0,0.26)] transition-[width,opacity] duration-300 ease-out lg:flex ${
+                desktopMaraOpen ? "w-[31rem] opacity-100" : "w-0 opacity-0"
+              }`}
+            >
+              <div className="flex min-h-0 w-[31rem] flex-col">
+                <div className="flex items-center justify-between border-b border-white/8 px-4 py-4">
+                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                    <Sparkles className="h-3.5 w-3.5 text-sky-200/80" />
+                    Mara
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="h-8 w-8 rounded-full text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
+                    onClick={() => {
+                      setDesktopMaraOpen(false)
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Close Mara</span>
+                  </Button>
+                </div>
+
+                <div className="min-h-0 flex-1">
+                  <TripCopilot
+                    mode="panel"
+                    tripName={trip.name}
+                    tripStart={trip.startDate}
+                    tripEnd={trip.endDate}
+                    noteDraft={noteDraft}
+                    items={items}
+                    packingItems={packingItems}
+                    onDraftChange={(value) => {
+                      setNoteDraft(value)
+                      setNoteDirty(true)
+                    }}
+                    onSaveToBrainstorm={handleSaveBrainstormContent}
+                    onAddPackingIdeas={handleAddPackingIdeas}
+                    onAddCalendarItem={async (input) => {
+                      await handleSaveItem(input)
+                      setShareMessage("Added to calendar.")
+                      window.setTimeout(() => setShareMessage(""), 2000)
+                    }}
+                    currentUserName={currentMember?.displayName ?? guessDisplayName(user)}
+                    isMutating={isMutating}
+                    docked
+                    panelClassName="rounded-none border-0 bg-transparent p-0 shadow-none backdrop-blur-none"
+                  />
+                </div>
+              </div>
             </aside>
           </div>
 
