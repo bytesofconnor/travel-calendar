@@ -1625,7 +1625,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
             </TabsList>
           </div>
 
-          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+          <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
             <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden lg:px-4 lg:py-5">
               {tripSection === "calendar" ? (
                 <TabsContent value="calendar" className="flex h-full min-h-0 min-w-0 flex-col">
@@ -1683,7 +1683,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
             </div>
 
             {!desktopMaraOpen ? (
-              <div className="pointer-events-none absolute inset-y-0 right-0 hidden items-start pr-0 pt-5 lg:flex">
+              <div className="pointer-events-none absolute inset-y-0 right-0 hidden items-start pr-0 pt-5 xl:flex">
                 <Button
                   variant="secondary"
                   size="sm"
@@ -1697,7 +1697,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
             ) : null}
 
             <aside
-              className={`hidden min-h-0 shrink-0 overflow-hidden border-l border-white/10 bg-[linear-gradient(180deg,rgba(6,17,28,0.985),rgba(8,19,31,0.97))] shadow-[-28px_0_80px_rgba(0,0,0,0.26)] transition-[width,opacity] duration-300 ease-out lg:flex ${
+              className={`hidden min-h-0 shrink-0 overflow-hidden border-l border-white/10 bg-[linear-gradient(180deg,rgba(6,17,28,0.985),rgba(8,19,31,0.97))] shadow-[-28px_0_80px_rgba(0,0,0,0.26)] transition-[width,opacity] duration-300 ease-out xl:flex ${
                 desktopMaraOpen ? "w-[31rem] opacity-100" : "w-0 opacity-0"
               }`}
             >
