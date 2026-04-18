@@ -34,13 +34,19 @@ export async function GET(request: Request) {
     },
   })
 
-  if (code) {
-    await supabase.auth.exchangeCodeForSession(code)
-  } else if (tokenHash && type) {
-    await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type,
-    })
+  try {
+    if (code) {
+      await supabase.auth.exchangeCodeForSession(code)
+    } else if (tokenHash && type) {
+      await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type,
+      })
+    }
+  } catch {
+    const fallbackUrl = new URL(next, requestUrl.origin)
+    fallbackUrl.searchParams.set("auth", "error")
+    return NextResponse.redirect(fallbackUrl)
   }
 
   return response

@@ -1478,7 +1478,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
 
             <div className="hidden shrink-0 flex-col items-end gap-3 md:flex">
               <div className="flex items-center gap-2">
-                <div className="lg:hidden">
+                <div className="xl:hidden">
                   <TripCopilot
                     mode="drawer-trigger"
                     tripName={trip.name}
@@ -1503,6 +1503,17 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
                     triggerClassName="h-9 rounded-full px-4 text-sm"
                   />
                 </div>
+                {!desktopMaraOpen ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="hidden h-9 rounded-full px-4 xl:inline-flex"
+                    onClick={() => setDesktopMaraOpen(true)}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Ask Mara
+                  </Button>
+                ) : null}
                 <Button variant="secondary" size="sm" className="h-9 rounded-full px-4" onClick={() => void handleCopyInvite()}>
                   <Copy className="h-4 w-4" />
                   Copy invite
@@ -1681,20 +1692,6 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
                 </TabsContent>
               ) : null}
             </div>
-
-            {!desktopMaraOpen ? (
-              <div className="pointer-events-none absolute inset-y-0 right-0 hidden items-start pr-0 pt-5 xl:flex">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="pointer-events-auto h-10 rounded-l-full rounded-r-none border-r-0 px-4 shadow-[0_12px_30px_rgba(3,10,18,0.22)]"
-                  onClick={() => setDesktopMaraOpen(true)}
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Ask Mara
-                </Button>
-              </div>
-            ) : null}
 
             <aside
               className={`hidden min-h-0 shrink-0 overflow-hidden border-l border-white/10 bg-[linear-gradient(180deg,rgba(6,17,28,0.985),rgba(8,19,31,0.97))] shadow-[-28px_0_80px_rgba(0,0,0,0.26)] transition-[width,opacity] duration-300 ease-out xl:flex ${
