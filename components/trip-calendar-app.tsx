@@ -222,6 +222,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
   const [organizeUndoExpiresAt, setOrganizeUndoExpiresAt] = useState<number | null>(null)
   const [packingItems, setPackingItems] = useState<TripPackingItem[]>([])
   const [email, setEmail] = useState(initialUser?.email ?? "")
+  const [verificationCode, setVerificationCode] = useState("")
   const [displayName, setDisplayName] = useState(guessDisplayName(initialUser))
   const [tripName, setTripName] = useState(DEFAULT_TRIP_NAME)
   const [tripStart, setTripStart] = useState(DEFAULT_TRIP_START)
@@ -231,6 +232,10 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
   const [errorMessage, setErrorMessage] = useState("")
   const [isLoading, setIsLoading] = useState(Boolean(initialUser))
   const [isSendingAuth, setIsSendingAuth] = useState(false)
+  const [isSendingEmailCode, setIsSendingEmailCode] = useState(false)
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false)
+  const [isSigningInWithGoogle, setIsSigningInWithGoogle] = useState(false)
+  const [hasPendingCode, setHasPendingCode] = useState(false)
   const [isStartingDevBypass, setIsStartingDevBypass] = useState(false)
   const [isMutating, setIsMutating] = useState(false)
   const [shareMessage, setShareMessage] = useState("")
@@ -283,6 +288,19 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
       return
     }
 
+    void supabase.auth.getSession().then((result: { data: { session: Session | null }; error: Error | null }) => {
+      const { data, error } = result
+      if (error || !data.session?.user) {
+        return
+      }
+
+      setUser({
+        id: data.session.user.id,
+        email: data.session.user.email,
+        userMetadata: data.session.user.user_metadata,
+      })
+    })
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
@@ -307,6 +325,17 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
 
     return () => subscription.unsubscribe()
   }, [supabase])
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("auth") === "error") {
+      setErrorMessage("That magic link is expired or already used. Please request a new one.")
+    }
+  }, [])
 
   // Check paywall access whenever the user changes
   useEffect(() => {
@@ -616,6 +645,8 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
     }
 
     setIsSendingAuth(true)
+    setHasPendingCode(false)
+    setVerificationCode("")
     setAuthMessage("")
     setErrorMessage("")
 
@@ -637,6 +668,84 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
     }
 
     setIsSendingAuth(false)
+  }
+
+  async function handleSendEmailCode() {
+    if (!supabase || !email.trim()) {
+      return
+    }
+
+    setIsSendingEmailCode(true)
+    setAuthMessage("")
+    setErrorMessage("")
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: {
+        shouldCreateUser: true,
+      },
+    })
+
+    if (error) {
+      setErrorMessage(error.message)
+      setHasPendingCode(false)
+    } else {
+      setHasPendingCode(true)
+      setAuthMessage(`Code sent to ${email.trim()}. Enter the 6-digit code from the email to finish signing in.`)
+    }
+
+    setIsSendingEmailCode(false)
+  }
+
+  async function handleVerifyEmailCode() {
+    if (!supabase || !email.trim() || verificationCode.trim().length < 6) {
+      return
+    }
+
+    setIsVerifyingCode(true)
+    setAuthMessage("")
+    setErrorMessage("")
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: verificationCode.trim(),
+      type: "email",
+    })
+
+    if (error) {
+      setErrorMessage(error.message)
+    } else {
+      setHasPendingCode(false)
+      setVerificationCode("")
+      setAuthMessage("You’re signed in. Loading your trip…")
+    }
+
+    setIsVerifyingCode(false)
+  }
+
+  async function handleContinueWithGoogle() {
+    if (!supabase) {
+      return
+    }
+
+    setIsSigningInWithGoogle(true)
+    setAuthMessage("")
+    setErrorMessage("")
+
+    const nextPath = joinInput.trim() ? `/?join=${encodeURIComponent(joinInput.trim())}` : "/"
+    const redirectUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: redirectUrl,
+      },
+    })
+
+    if (error) {
+      setErrorMessage(error.message)
+      setIsSigningInWithGoogle(false)
+    }
   }
 
   async function handleStartDevBypass() {
@@ -1253,14 +1362,23 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
     return (
       <LoginScreen
         email={email}
+        verificationCode={verificationCode}
         joinInput={joinInput}
         isSendingAuth={isSendingAuth}
+        isSendingEmailCode={isSendingEmailCode}
+        isVerifyingCode={isVerifyingCode}
+        isSigningInWithGoogle={isSigningInWithGoogle}
         isStartingDevBypass={isStartingDevBypass}
+        hasPendingCode={hasPendingCode}
         authMessage={authMessage}
         errorMessage={errorMessage}
         onEmailChange={setEmail}
+        onVerificationCodeChange={setVerificationCode}
         onJoinInputChange={(v) => setJoinInput(v.toLowerCase())}
+        onSendEmailCode={() => void handleSendEmailCode()}
         onSendMagicLink={() => void handleSendMagicLink()}
+        onVerifyEmailCode={() => void handleVerifyEmailCode()}
+        onContinueWithGoogle={() => void handleContinueWithGoogle()}
         onStartDevBypass={isDevAuthBypassEnabled() ? () => void handleStartDevBypass() : undefined}
       />
     )
