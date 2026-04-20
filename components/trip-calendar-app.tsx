@@ -254,7 +254,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
   const footerMeta =
     tripSection === "notes"
       ? {
-          left: "Shared notes for everyone traveling with HeyMara",
+          left: "Shared notes for everyone traveling together in Travel Calendar",
           right: noteDraft.trim().length > 0 ? `${noteDraft.trim().length} characters` : "Start typing anytime",
         }
       : tripSection === "packing"
@@ -1523,7 +1523,7 @@ export function TripCalendarApp({ initialUser, joinCode }: TripCalendarAppProps)
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground md:text-sm md:tracking-[0.2em]">
-                HeyMara
+                Travel Calendar
               </div>
               <div className="mt-2 flex items-start gap-2">
                 <h1 className="min-w-0 text-[2.05rem] font-semibold leading-[0.96] tracking-tight md:text-[2.35rem]">

@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og'
 
-export const alt = 'HeyMara — Shared Trip Planner for Couples'
+export const alt = 'Travel Calendar — Shared Trip Planner for Couples'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -63,7 +63,7 @@ export default function OGImage() {
             marginBottom: 20,
           }}
         >
-          HeyMara
+          Travel Calendar
         </div>
 
         {/* Headline */}
@@ -103,7 +103,7 @@ export default function OGImage() {
             letterSpacing: '0.05em',
           }}
         >
-          heymara.app
+          travelcalendar.space
         </div>
       </div>
     ),

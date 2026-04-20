@@ -2,9 +2,9 @@ import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const SITE_URL = 'https://heymara.app'
-const SITE_NAME = 'HeyMara'
-const TITLE = 'HeyMara — Shared Trip Planner for Couples & Travel Partners'
+const SITE_URL = 'https://travelcalendar.space'
+const SITE_NAME = 'Travel Calendar'
+const TITLE = 'Travel Calendar — Shared Trip Planner for Couples & Travel Partners'
 const DESCRIPTION =
   'The simplest shared travel calendar for couples and trip partners. Plan every flight, stay, and adventure together in real time. One calendar, two (or more) people, zero drama.'
 
@@ -29,9 +29,9 @@ export const metadata: Metadata = {
     'trip organizer for two',
     'vacation planner for couples',
   ],
-  authors: [{ name: 'HeyMara', url: SITE_URL }],
-  creator: 'HeyMara',
-  publisher: 'HeyMara',
+  authors: [{ name: 'Travel Calendar', url: SITE_URL }],
+  creator: 'Travel Calendar',
+  publisher: 'Travel Calendar',
   applicationName: SITE_NAME,
   generator: SITE_NAME,
   referrer: 'origin-when-cross-origin',
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'HeyMara — Shared Trip Planner for Couples',
+        alt: 'Travel Calendar — Shared Trip Planner for Couples',
       },
     ],
   },
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
     title: TITLE,
     description: DESCRIPTION,
     images: ['/og-image.png'],
-        creator: '@heymaraapp',
+        creator: '@travelcalendar',
   },
   alternates: {
     canonical: SITE_URL,

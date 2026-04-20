@@ -158,7 +158,7 @@ export function TripPackingView({
           {addComposer}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto pb-24 md:pb-0 md:pr-1">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-24 md:pb-0 md:pr-1">
           {sortedItems.length === 0 ? (
             <div className="rounded-[20px] border border-dashed border-border/70 bg-black/20 px-6 py-14 text-center backdrop-blur">
               <h3 className="text-2xl font-semibold tracking-tight">Nothing on the list yet</h3>

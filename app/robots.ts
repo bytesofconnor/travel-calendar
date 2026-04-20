@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: '*',
       allow: '/',
     },
-    sitemap: 'https://ourcalendar.space/sitemap.xml',
-    host: 'https://ourcalendar.space',
+    sitemap: 'https://travelcalendar.space/sitemap.xml',
+    host: 'https://travelcalendar.space',
   }
 }
