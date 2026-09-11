@@ -1,7 +1,13 @@
 "use client"
 
+import { useMutation } from "convex/react"
 import { useState } from "react"
 import { ArrowRight, Loader2, MapPin } from "lucide-react"
+
+import { api } from "@/convex/_generated/api"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface PaywallScreenProps {
   userId: string
@@ -10,13 +16,14 @@ interface PaywallScreenProps {
 }
 
 export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallScreenProps) {
+  const grantByCode = useMutation(api.access.grantByCode)
   const [showCodeInput, setShowCodeInput] = useState(false)
   const [code, setCode] = useState("")
   const [isRedeeming, setIsRedeeming] = useState(false)
   const [codeError, setCodeError] = useState("")
 
   const stripeUrl = paymentLink
-    ? `${paymentLink}?client_reference_id=${userId}&prefilled_promo_code=`
+    ? `${paymentLink.includes("?") ? `${paymentLink}&` : `${paymentLink}?`}client_reference_id=${userId}`
     : null
 
   async function handleRedeem() {
@@ -26,28 +33,18 @@ export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallS
     setCodeError("")
 
     try {
-      const res = await fetch("/api/access/bypass", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: code.trim() }),
-      })
-
-      if (res.ok) {
-        onAccessGranted()
-      } else {
-        const data = await res.json() as { error?: string }
-        setCodeError(data.error ?? "Invalid code.")
-      }
-    } catch {
-      setCodeError("Something went wrong. Try again.")
+      await grantByCode({ code: code.trim() })
+      onAccessGranted()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid code."
+      setCodeError(message.replace(/^.*ConvexError:\s*/i, "") || "Invalid code.")
     } finally {
       setIsRedeeming(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background px-4">
-      {/* Subtle radial glow */}
+    <main id="main-content" className="fixed inset-0 z-50 flex items-center justify-center bg-background px-4">
       <div
         className="pointer-events-none fixed inset-0 opacity-20"
         style={{
@@ -56,14 +53,12 @@ export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallS
       />
 
       <div className="relative w-full max-w-sm space-y-8 text-center">
-        {/* Icon */}
         <div className="flex justify-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary">
             <MapPin className="h-7 w-7 text-foreground" />
           </div>
         </div>
 
-        {/* Headline */}
         <div className="space-y-3">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
             Travel Calendar
@@ -72,17 +67,15 @@ export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallS
             Plan trips together.
           </h1>
           <p className="text-base text-muted-foreground">
-            One payment. Every trip, forever.
+            One payment. Every trip forever — including agent access.
           </p>
         </div>
 
-        {/* Price */}
         <div className="flex items-baseline justify-center gap-1">
           <span className="text-5xl font-bold tracking-tight text-foreground">$9.99</span>
           <span className="text-base text-muted-foreground">once</span>
         </div>
 
-        {/* CTA */}
         <div className="space-y-3">
           {stripeUrl ? (
             <a
@@ -98,7 +91,6 @@ export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallS
             </div>
           )}
 
-          {/* Bypass code */}
           {!showCodeInput ? (
             <button
               type="button"
@@ -109,8 +101,12 @@ export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallS
             </button>
           ) : (
             <div className="space-y-2">
+              <Label htmlFor="access-code" className="sr-only">
+                Access code
+              </Label>
               <div className="flex gap-2">
-                <input
+                <Input
+                  id="access-code"
                   type="text"
                   placeholder="Enter code"
                   value={code}
@@ -118,27 +114,33 @@ export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallS
                     setCode(e.target.value)
                     setCodeError("")
                   }}
-                  onKeyDown={(e) => { if (e.key === "Enter") void handleRedeem() }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void handleRedeem()
+                  }}
                   autoFocus
-                  className="h-11 flex-1 rounded-xl border-0 bg-secondary px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  aria-invalid={Boolean(codeError)}
+                  aria-describedby={codeError ? "access-code-error" : undefined}
+                  className="h-11 flex-1 rounded-xl border-border bg-secondary"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  className="h-11 rounded-xl px-4"
                   onClick={() => void handleRedeem()}
                   disabled={isRedeeming || !code.trim()}
-                  className="flex h-11 items-center justify-center rounded-xl bg-secondary px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80 disabled:opacity-50"
                 >
-                  {isRedeeming ? <Loader2 className="h-4 w-4 animate-spin" /> : "Redeem"}
-                </button>
+                  {isRedeeming ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : "Redeem"}
+                </Button>
               </div>
-              {codeError && (
-                <p className="text-xs text-destructive">{codeError}</p>
-              )}
+              {codeError ? (
+                <p id="access-code-error" className="text-xs text-destructive" role="alert">
+                  {codeError}
+                </p>
+              ) : null}
             </div>
           )}
         </div>
 
-        {/* Just paid? */}
         {stripeUrl && (
           <p className="text-xs text-muted-foreground/60">
             Just paid?{" "}
@@ -152,6 +154,6 @@ export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallS
           </p>
         )}
       </div>
-    </div>
+    </main>
   )
 }

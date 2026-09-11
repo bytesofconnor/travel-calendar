@@ -36,8 +36,12 @@ interface TripCopilotProps {
   currentUserName?: string
   isMutating?: boolean
   triggerClassName?: string
+  triggerIconOnly?: boolean
   panelClassName?: string
   docked?: boolean
+  /** Controlled drawer open (mobile Ask whisper). */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 function appendBlock(existing: string, addition: string) {
@@ -341,23 +345,23 @@ function CopilotPanel({
     return () => window.clearInterval(interval)
   }, [promptSuggestions])
 
-  const activePlaceholder = promptSuggestions[placeholderIndex] ?? "Ask Mara about routes, food, logistics, or what to pack…"
+  const activePlaceholder = promptSuggestions[placeholderIndex] ?? "Ask about routes, food, logistics, or packing…"
 
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur-xl",
+        "flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card p-4",
         mobile ? "" : "h-full min-h-0",
-        docked && "rounded-none border-0 bg-transparent px-5 py-4 shadow-none backdrop-blur-none",
+        docked && "rounded-none border-0 bg-transparent px-5 py-4 shadow-none",
         className,
       )}
     >
       <div className={`shrink-0 ${mobile ? "" : "space-y-0.5"}`}>
         <div className="flex items-center justify-between gap-3">
           {!docked ? (
-            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              <Sparkles className="h-3.5 w-3.5 text-sky-200/80" />
-              Mara
+            <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5" />
+              Assistant
             </div>
           ) : (
             <div />
@@ -367,7 +371,7 @@ function CopilotPanel({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 rounded-full px-3 text-xs text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
+              className="h-8 rounded-md px-3 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
               onClick={onClearConversation}
             >
               <RotateCcw className="h-3.5 w-3.5" />
@@ -380,10 +384,10 @@ function CopilotPanel({
             mobile ? "mt-4 text-xl" : docked ? "mt-0 text-[1.65rem] leading-tight md:text-[1.15rem]" : "mt-4 text-[1.9rem] leading-tight md:text-lg"
           }`}
         >
-          Ask Mara
+          Ask about this trip
         </h3>
         <p className={`mt-1 text-muted-foreground ${mobile ? "max-w-sm text-sm leading-6" : docked ? "max-w-md text-sm leading-6" : "max-w-sm text-sm leading-5.5"}`}>
-          Mara knows your itinerary, notes, and packing list. Best for route ideas, food spots, logistics, and filling in the gaps.
+          Uses your itinerary, notes, and packing list — routes, food, logistics, and gaps.
         </p>
       </div>
 
@@ -409,14 +413,14 @@ function CopilotPanel({
               return (
                 <div
                   key={message.id}
-                  className={`rounded-2xl border px-4 py-3 ${
+                  className={`rounded-lg border px-3.5 py-3 ${
                     message.role === "user"
-                      ? "border-sky-300/16 bg-sky-500/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]"
-                      : "border-white/8 bg-white/[0.025] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]"
+                      ? "border-border bg-secondary/60"
+                      : "border-border bg-card"
                   }`}
                 >
-                  <div className="mb-2 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {message.role === "user" ? "You asked" : "Mara"}
+                  <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                    {message.role === "user" ? "You" : "Assistant"}
                   </div>
                   <div className="whitespace-pre-wrap text-sm leading-7 text-foreground">{message.content}</div>
 
@@ -556,15 +560,15 @@ function CopilotPanel({
               }
             }}
             placeholder={activePlaceholder}
-            className={`rounded-[16px] border-white/10 bg-background/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] ${mobile ? "h-12 text-base" : docked ? "h-11 text-[15px]" : "h-11 text-[15px]"}`}
+            className={`${mobile ? "h-12 text-base" : "h-10 text-[13px]"} rounded-md border-border bg-background`}
           />
           <Button
-            className={`rounded-[16px] border border-white/10 bg-[linear-gradient(180deg,rgba(90,132,149,0.72),rgba(60,92,108,0.86))] text-primary-foreground shadow-[0_10px_24px_rgba(17,42,56,0.14)] hover:bg-[linear-gradient(180deg,rgba(100,144,162,0.76),rgba(69,102,120,0.9))] ${mobile ? "h-12 text-base" : docked ? "h-11 text-[15px]" : "h-11 text-[15px]"}`}
+            className={`${mobile ? "h-12 text-base" : "h-10 text-[13px]"} rounded-md`}
             onClick={() => void onAskAi()}
             disabled={isAskingAi || !aiInput.trim()}
           >
             {isAskingAi ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <WandSparkles className="mr-2 h-4 w-4" />}
-            Ask Mara
+            Ask
           </Button>
         </div>
       </div>
@@ -587,14 +591,19 @@ export function TripCopilot({
   currentUserName,
   isMutating = false,
   triggerClassName,
+  triggerIconOnly = false,
   panelClassName,
   docked = false,
+  open,
+  onOpenChange,
 }: TripCopilotProps) {
   const [aiInput, setAiInput] = useState("")
   const [aiMessages, setAiMessages] = useState<CopilotMessage[]>([])
   const [isAskingAi, setIsAskingAi] = useState(false)
   const [aiError, setAiError] = useState("")
-  const [mobileCopilotOpen, setMobileCopilotOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const mobileCopilotOpen = open ?? uncontrolledOpen
+  const setMobileCopilotOpen = onOpenChange ?? setUncontrolledOpen
   const [brainstormStatusByMessage, setBrainstormStatusByMessage] = useState<Record<string, "idle" | "saving" | "saved" | "error">>({})
   const [packingStatusByMessage, setPackingStatusByMessage] = useState<Record<string, "idle" | "saving" | "saved" | "error">>({})
   const [calendarStatusByMessage, setCalendarStatusByMessage] = useState<Record<string, "idle" | "editing" | "saving" | "saved" | "error">>({})
@@ -979,7 +988,7 @@ export function TripCopilot({
       const caution = typeof payload?.caution === "string" ? payload.caution : null
 
       if (!response.ok || !answer) {
-        throw new Error(payload?.error ?? "Mara couldn’t answer that yet.")
+        throw new Error(payload?.error ?? "Couldn’t answer that yet.")
       }
 
       setAiMessages((current) => [
@@ -994,7 +1003,7 @@ export function TripCopilot({
         },
       ])
     } catch (error) {
-      setAiError(error instanceof Error ? error.message : "Mara couldn’t answer that yet.")
+      setAiError(error instanceof Error ? error.message : "Couldn’t answer that yet.")
     } finally {
       setIsAskingAi(false)
     }
@@ -1036,20 +1045,23 @@ export function TripCopilot({
       ) : (
         <>
           <Button
-            variant="secondary"
-            size="sm"
-            className={triggerClassName ?? "rounded-xl"}
+            variant="ghost"
+            size={triggerIconOnly ? "icon-sm" : "sm"}
+            className={cn(triggerIconOnly ? "text-muted-foreground hover:text-foreground" : "gap-1.5", triggerClassName)}
             onClick={() => setMobileCopilotOpen(true)}
+            aria-label="Ask about this trip"
           >
-            <Sparkles className="mr-2 h-4 w-4" />
-            Ask Mara
+            <Sparkles className="h-4 w-4" />
+            {triggerIconOnly ? null : <span>Ask</span>}
           </Button>
 
           <Drawer open={mobileCopilotOpen} onOpenChange={setMobileCopilotOpen}>
-            <DrawerContent className="h-[84vh] max-h-[84vh] rounded-t-[24px] border-border bg-background/95 backdrop-blur">
+            <DrawerContent className="h-[84vh] max-h-[84vh] rounded-t-xl border-border bg-background">
               <DrawerHeader className="text-left">
-                <DrawerTitle>Mara</DrawerTitle>
-                <DrawerDescription>Ask Mara about food, route ideas, logistics, and what you should pack.</DrawerDescription>
+                <DrawerTitle>Ask about this trip</DrawerTitle>
+                <DrawerDescription>
+                  Routes, food, logistics, packing — grounded in your shared plans.
+                </DrawerDescription>
               </DrawerHeader>
               <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
                 <CopilotPanel

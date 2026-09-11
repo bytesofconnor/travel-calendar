@@ -9,98 +9,66 @@ export default function OGImage() {
     (
       <div
         style={{
-          background: '#0a0a0a',
+          background: '#121110',
           width: '100%',
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           justifyContent: 'center',
-          fontFamily: 'system-ui, sans-serif',
+          fontFamily: 'Georgia, serif',
           position: 'relative',
+          padding: '80px 96px',
         }}
       >
-        {/* Subtle radial glow */}
         <div
           style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'radial-gradient(ellipse 70% 50% at 50% 40%, rgba(255,255,255,0.06), transparent)',
-          }}
-        />
-
-        <div
-          style={{
-            width: 80,
-            height: 80,
-            background: 'linear-gradient(180deg, #1f2937, #111827)',
-            borderRadius: 999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 32,
-            border: '4px solid rgba(255,255,255,0.12)',
-          }}
-        >
-          <div
-            style={{
-              width: 22,
-              height: 22,
-              background: '#60a5fa',
-              borderRadius: 999,
-              boxShadow: '0 0 0 10px rgba(96,165,250,0.16)',
-            }}
-          />
-        </div>
-
-        {/* Label */}
-        <div
-          style={{
-            fontSize: 16,
-            letterSpacing: '0.2em',
+            fontSize: 18,
+            letterSpacing: '0.22em',
             textTransform: 'uppercase',
-            color: '#666',
-            marginBottom: 20,
+            color: '#A8A29A',
+            marginBottom: 28,
+            fontFamily: 'system-ui, sans-serif',
           }}
         >
           Travel Calendar
         </div>
 
-        {/* Headline */}
         <div
           style={{
-            fontSize: 64,
-            fontWeight: 700,
-            color: '#ffffff',
-            textAlign: 'center',
-            lineHeight: 1.1,
+            fontSize: 72,
+            fontWeight: 400,
+            color: '#F5F2EC',
+            lineHeight: 1.02,
             maxWidth: 900,
-            marginBottom: 24,
+            letterSpacing: '-0.03em',
           }}
         >
-          Plan trips together.
+          Plan the trip together.
         </div>
 
-        {/* Subline */}
         <div
           style={{
             fontSize: 28,
-            color: '#888',
-            textAlign: 'center',
-            maxWidth: 700,
+            color: '#A8A29A',
+            maxWidth: 760,
+            marginTop: 28,
+            lineHeight: 1.45,
+            fontFamily: 'system-ui, sans-serif',
           }}
         >
-          One calendar. Two people. Every adventure.
+          One calendar for couples and travel partners — flights, stays, notes, and packing in one place.
         </div>
 
-        {/* URL */}
         <div
           style={{
             position: 'absolute',
             bottom: 48,
+            left: 96,
             fontSize: 20,
-            color: '#444',
-            letterSpacing: '0.05em',
+            color: '#C4B59C',
+            letterSpacing: '0.08em',
+            fontFamily: 'system-ui, sans-serif',
           }}
         >
           travelcalendar.space

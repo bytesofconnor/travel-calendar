@@ -41,7 +41,7 @@ export async function fetchTripCoverImage(apiKey: string, tripName: string, quer
     headers: {
       Authorization: apiKey,
     },
-    next: { revalidate: 60 * 60 * 24 },
+    cache: "no-store",
   })
 
   if (!response.ok) {

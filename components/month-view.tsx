@@ -106,6 +106,13 @@ export function MonthView({
   }
 
   function handleMobileDayClick(date: string) {
+    const dayItems = getItemsForDate(items, date)
+
+    if (dayItems.length === 0) {
+      handleAddItem(date)
+      return
+    }
+
     scrollAgendaDateIntoView(date)
   }
 
@@ -193,25 +200,28 @@ export function MonthView({
       <div className="flex items-start justify-between gap-3 px-4 py-3 md:hidden">
         <div>
           <h2 className="text-lg font-semibold tracking-tight">{monthLabel}</h2>
-          <p className="text-xs text-muted-foreground">Tap any date to jump into that week.</p>
+          <p className="text-xs text-muted-foreground">Tap a date to add a plan or jump to that day.</p>
         </div>
         <div className="flex items-center gap-1 self-start">
           <button
             onClick={() => setViewMode("week")}
             className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             title="Week view"
+            aria-label="Switch to week view"
           >
             <LayoutDashboard className="h-5 w-5" />
           </button>
           <button
             onClick={prevMonth}
             className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            aria-label="Previous month"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
           <button
             onClick={nextMonth}
             className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            aria-label="Next month"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
@@ -288,14 +298,14 @@ export function MonthView({
           <div className="mt-5 space-y-4">
             <div>
               <h3 className="text-base font-semibold">This month</h3>
-              <p className="text-sm text-muted-foreground">Tap any date above to jump into that week.</p>
+              <p className="text-sm text-muted-foreground">Tap a date above to review plans or add a new one.</p>
             </div>
 
             {monthAgendaDays.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border/60 bg-background/25 px-4 py-6 text-center">
                 <div className="text-base font-medium text-foreground">No plans in this month yet</div>
                 <div className="mt-1 text-sm text-muted-foreground">
-                  Pick a date above to add your first item.
+                  Tap an empty date above to add your first item.
                 </div>
               </div>
             ) : (
@@ -370,7 +380,7 @@ export function MonthView({
             <TabViewHeader
               kicker="Calendar"
               title={monthLabel}
-              description="Tap any date to jump into that week."
+              description="Click a date number to open that week."
               className="mb-4"
               actions={
                 <>
@@ -416,7 +426,8 @@ export function MonthView({
                     }`}
                   >
                     <button
-                      onClick={() => scrollAgendaDateIntoView(day.date)}
+                      onClick={() => handleDayClick(day.date)}
+                      aria-label={`Open week of ${day.date}`}
                       className={`mb-2 flex h-8 w-8 items-center justify-center rounded-full border text-sm font-medium transition-colors hover:bg-secondary ${
                         day.date === activeMobileAgendaDate
                           ? "border-primary/80 ring-1 ring-primary/40 text-primary"

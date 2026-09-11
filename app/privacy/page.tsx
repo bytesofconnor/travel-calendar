@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <main className="relative min-h-svh overflow-hidden px-6 py-16">
+    <main id="main-content" className="relative min-h-dvh overflow-hidden px-6 py-16">
       <div className="pointer-events-none absolute inset-0 mara-atmosphere opacity-80" />
       <div className="relative mx-auto max-w-3xl">
         <div className="mara-surface rounded-[2rem] border border-border/70 bg-card/85 p-8 shadow-2xl backdrop-blur md:p-10">

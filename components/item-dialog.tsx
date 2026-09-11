@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ChevronLeft, Link as LinkIcon, Plane, Trash2, X } from "lucide-react"
+import { Link as LinkIcon, Plane, Trash2 } from "lucide-react"
 
 import {
   Dialog,
@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { COUNTRIES, getCountryForLocation, type Location, type TripItem, type TripItemInput } from "@/lib/kanban-store"
+import type { TripItem, TripItemInput } from "@/lib/kanban-store"
 
 interface ItemDialogProps {
   open: boolean
@@ -20,6 +21,7 @@ interface ItemDialogProps {
   defaultDate: string | null
   editItem: TripItem | null
   initialInput?: Partial<TripItemInput> | null
+  initialTravel?: boolean
   currentUserName?: string
   isSaving?: boolean
   isDeleting?: boolean
@@ -33,6 +35,7 @@ export function ItemDialog({
   defaultDate,
   editItem,
   initialInput,
+  initialTravel = false,
   currentUserName,
   isSaving = false,
   isDeleting = false,
@@ -43,21 +46,15 @@ export function ItemDialog({
   const [notes, setNotes] = useState("")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
-  const [location, setLocation] = useState<Location>("")
-  const [locationTo, setLocationTo] = useState<Location | undefined>(undefined)
+  const [location, setLocation] = useState("")
+  const [locationTo, setLocationTo] = useState("")
   const [isTravel, setIsTravel] = useState(false)
   const [linkLabel, setLinkLabel] = useState("")
   const [linkUrl, setLinkUrl] = useState("")
   const [showLink, setShowLink] = useState(false)
 
-  // Country selection state — null means "show country picker"
-  const [locationCountry, setLocationCountry] = useState<string | null>(null)
-  const [locationToCountry, setLocationToCountry] = useState<string | null>(null)
-
   useEffect(() => {
-    if (!open) {
-      return
-    }
+    if (!open) return
 
     if (editItem) {
       setTitle(editItem.title)
@@ -65,13 +62,8 @@ export function ItemDialog({
       setStartDate(editItem.startDate)
       setEndDate(editItem.endDate)
       setLocation(editItem.location)
-      setLocationTo(editItem.locationTo)
+      setLocationTo(editItem.locationTo ?? "")
       setIsTravel(Boolean(editItem.locationTo))
-      // Auto-detect countries from existing location IDs
-      const fromCountry = getCountryForLocation(editItem.location)
-      setLocationCountry(fromCountry?.id ?? null)
-      const toCountry = editItem.locationTo ? getCountryForLocation(editItem.locationTo) : null
-      setLocationToCountry(toCountry?.id ?? null)
       if (editItem.link) {
         setLinkLabel(editItem.link.label)
         setLinkUrl(editItem.link.url)
@@ -89,19 +81,15 @@ export function ItemDialog({
     setStartDate(initialInput?.startDate ?? defaultDate ?? "")
     setEndDate(initialInput?.endDate ?? initialInput?.startDate ?? defaultDate ?? "")
     setLocation(initialInput?.location ?? "")
-    setLocationTo(initialInput?.locationTo)
-    setIsTravel(Boolean(initialInput?.locationTo))
-    setLocationCountry(initialInput?.location ? getCountryForLocation(initialInput.location)?.id ?? null : null)
-    setLocationToCountry(initialInput?.locationTo ? getCountryForLocation(initialInput.locationTo)?.id ?? null : null)
+    setLocationTo(initialInput?.locationTo ?? "")
+    setIsTravel(Boolean(initialInput?.locationTo) || initialTravel)
     setLinkLabel(initialInput?.link?.label ?? "")
     setLinkUrl(initialInput?.link?.url ?? "")
     setShowLink(Boolean(initialInput?.link?.url))
-  }, [defaultDate, editItem, initialInput, open])
+  }, [defaultDate, editItem, initialInput, initialTravel, open])
 
   async function handleSave() {
-    if (!title.trim() || !startDate || !endDate || !location) {
-      return
-    }
+    if (!title.trim() || !startDate || !endDate || !location.trim()) return
 
     await onSave(
       {
@@ -109,11 +97,12 @@ export function ItemDialog({
         notes: notes.trim() || undefined,
         startDate,
         endDate,
-        location,
-        locationTo: isTravel ? locationTo : undefined,
-        link: showLink && linkUrl.trim()
-          ? { label: linkLabel.trim() || "Link", url: linkUrl.trim() }
-          : undefined,
+        location: location.trim(),
+        locationTo: isTravel && locationTo.trim() ? locationTo.trim() : undefined,
+        link:
+          showLink && linkUrl.trim()
+            ? { label: linkLabel.trim() || "Link", url: linkUrl.trim() }
+            : undefined,
       },
       editItem ?? undefined,
     )
@@ -122,305 +111,185 @@ export function ItemDialog({
   }
 
   async function handleDelete() {
-    if (!editItem) {
-      return
-    }
-
+    if (!editItem) return
     await onDelete(editItem.id)
     onOpenChange(false)
   }
 
-  function selectFromCountry(countryId: string) {
-    const country = COUNTRIES.find((c) => c.id === countryId)
-    if (!country) return
-    setLocationCountry(countryId)
-    // Auto-select the first location in that country if current location isn't in it
-    const currentInCountry = country.locations.some((l) => l.id === location)
-    if (!currentInCountry) {
-      setLocation(country.locations[0].id)
-    }
-  }
-
-  function selectToCountry(countryId: string) {
-    const country = COUNTRIES.find((c) => c.id === countryId)
-    if (!country) return
-    setLocationToCountry(countryId)
-    // Auto-select the first location in that country if current locationTo isn't in it
-    const currentInCountry = locationTo && country.locations.some((l) => l.id === locationTo)
-    if (!currentInCountry) {
-      setLocationTo(country.locations[0].id)
-    }
-  }
-
-  const fromCountryDef = COUNTRIES.find((c) => c.id === locationCountry)
-  const toCountryDef = COUNTRIES.find((c) => c.id === locationToCountry)
+  const canSave = Boolean(title.trim() && startDate && endDate && location.trim() && (!isTravel || locationTo.trim()))
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[calc(100svh-1rem)] w-[calc(100vw-1rem)] max-w-lg flex-col gap-0 overflow-hidden rounded-3xl p-0 sm:my-4 sm:max-h-[calc(100vh-2rem)] sm:w-full lg:max-w-4xl">
-        <DialogHeader className="border-b border-border px-4 py-4">
-          <DialogTitle className="text-base font-medium">
-            {editItem ? "Edit Item" : "Add Item"}
+      <DialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-lg flex-col gap-0 overflow-hidden rounded-xl border-border bg-card p-0 sm:my-4">
+        <DialogHeader className="border-b border-border px-5 py-3.5 text-left">
+          <DialogTitle className="text-base font-semibold tracking-tight">
+            {editItem ? "Edit plan" : "Add for both of you"}
           </DialogTitle>
-          <div className="text-xs text-muted-foreground">
+          <p className="text-[13px] text-muted-foreground">
             {editItem?.authorName
               ? `Originally added by ${editItem.authorName}`
               : currentUserName
-                ? `Saving as ${currentUserName}`
-                : "Shared with your trip members"}
-          </div>
+                ? `Saving as ${currentUserName} · visible to everyone on this trip`
+                : "Visible to everyone on this trip"}
+          </p>
         </DialogHeader>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4">
-          <div className="flex flex-col gap-4 pb-4">
-          <Input
-            placeholder="What's the plan?"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            className="h-12 border-0 bg-secondary/50 text-base placeholder:text-muted-foreground focus-visible:ring-1"
-            autoFocus
-          />
-
-          <Textarea
-            placeholder="Add notes..."
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            className="min-h-[120px] resize-none border-0 bg-secondary/50 text-base placeholder:text-muted-foreground focus-visible:ring-1 md:text-sm"
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Start</label>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-5">
+          <div className="flex flex-col gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="plan-title">Plan</Label>
               <Input
-                type="date"
-                value={startDate}
-                onChange={(event) => {
-                  setStartDate(event.target.value)
-                  if (!endDate || event.target.value > endDate) {
-                    setEndDate(event.target.value)
-                  }
-                }}
-                className="h-11 border-0 bg-secondary/50 text-base focus-visible:ring-1 md:text-sm"
+                id="plan-title"
+                placeholder="What's the plan?"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                className="h-12 border-border bg-background text-base"
+                autoFocus
               />
             </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">End</label>
-              <Input
-                type="date"
-                value={endDate}
-                min={startDate}
-                onChange={(event) => setEndDate(event.target.value)}
-                className="h-11 border-0 bg-secondary/50 text-base focus-visible:ring-1 md:text-sm"
+
+            <div className="space-y-1.5">
+              <Label htmlFor="plan-notes">Notes</Label>
+              <Textarea
+                id="plan-notes"
+                placeholder="Notes for your partner (optional)"
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                className="min-h-[100px] resize-none border-border bg-background text-base"
               />
             </div>
-          </div>
 
-          <div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="plan-start">Start</Label>
+                <Input
+                  id="plan-start"
+                  type="date"
+                  value={startDate}
+                  onChange={(event) => {
+                    setStartDate(event.target.value)
+                    if (!endDate || event.target.value > endDate) {
+                      setEndDate(event.target.value)
+                    }
+                  }}
+                  className="h-11 border-border bg-background"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="plan-end">End</Label>
+                <Input
+                  id="plan-end"
+                  type="date"
+                  value={endDate}
+                  min={startDate}
+                  onChange={(event) => setEndDate(event.target.value)}
+                  className="h-11 border-border bg-background"
+                />
+              </div>
+            </div>
+
             <button
               type="button"
+              aria-pressed={isTravel}
               onClick={() => {
-                setIsTravel(!isTravel)
-                if (!isTravel) {
-                  // Turning on travel: default "To" country to same as "From"
-                  setLocationToCountry(locationCountry)
-                  setLocationTo(undefined)
-                }
+                setIsTravel((value) => !value)
+                if (isTravel) setLocationTo("")
               }}
-              className={`flex min-h-11 items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-                isTravel
-                  ? "bg-primary/10 text-primary"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              className={`flex min-h-11 items-center gap-2 rounded-2xl px-3 py-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                isTravel ? "plan-travel-toggle plan-travel-toggle--on" : "bg-secondary text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Plane className="h-4 w-4" />
-              {isTravel ? "Travel between locations" : "Add travel/transit"}
+              <Plane className="h-4 w-4" aria-hidden="true" />
+              {isTravel ? "Flight / transit" : "Mark as flight / transit"}
             </button>
-          </div>
 
-          <div className={isTravel ? "grid gap-4 xl:grid-cols-2" : ""}>
-            <div>
-              <div className="mb-2 flex items-center gap-2">
-                {locationCountry && (
-                  <button
-                    type="button"
-                    onClick={() => setLocationCountry(null)}
-                    className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    <ChevronLeft className="h-3 w-3" />
-                    {fromCountryDef?.flag} {fromCountryDef?.name}
-                  </button>
-                )}
-                <label className="block text-xs font-medium text-muted-foreground">
-                  {locationCountry
-                    ? isTravel
-                      ? "From"
-                      : "Location"
-                    : isTravel
-                      ? "From — choose a country"
-                      : "Location — choose a country"}
-                </label>
+            <div className={isTravel ? "grid gap-3 sm:grid-cols-2" : ""}>
+              <div className="space-y-1.5">
+                <Label htmlFor="plan-location">{isTravel ? "From" : "Where"}</Label>
+                <Input
+                  id="plan-location"
+                  placeholder={isTravel ? "Cusco" : "Cusco, hotel, trailhead…"}
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value)}
+                  className="h-11 border-border bg-background"
+                />
               </div>
-
-              {locationCountry === null ? (
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-3">
-                  {COUNTRIES.map((country) => (
-                    <button
-                      key={country.id}
-                      type="button"
-                      onClick={() => selectFromCountry(country.id)}
-                      className="flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl bg-secondary/50 p-2 text-center transition-all hover:bg-secondary"
-                    >
-                      <span className="text-2xl leading-none">{country.flag}</span>
-                      <span className="text-[10px] leading-tight text-foreground">{country.name}</span>
-                    </button>
-                  ))}
+              {isTravel ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="plan-location-to">To</Label>
+                  <Input
+                    id="plan-location-to"
+                    placeholder="Lima"
+                    value={locationTo}
+                    onChange={(event) => setLocationTo(event.target.value)}
+                    className="h-11 border-border bg-background"
+                  />
                 </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-3">
-                  {(fromCountryDef?.locations ?? []).map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setLocation(item.id)}
-                      className={`flex min-h-[78px] flex-col items-center justify-center gap-1.5 rounded-xl p-2 text-center transition-all ${
-                        location === item.id
-                          ? "bg-secondary ring-2 ring-primary ring-offset-1 ring-offset-background"
-                          : "bg-secondary/50 hover:bg-secondary"
-                      }`}
-                    >
-                      <div className="h-6 w-6 rounded-full" style={{ backgroundColor: item.color }} />
-                      <span className="text-[10px] leading-tight text-foreground">{item.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              ) : null}
             </div>
 
-            {isTravel && (
-              <div>
-                <div className="mb-2 flex items-center gap-2">
-                  {locationToCountry && (
-                    <button
-                      type="button"
-                      onClick={() => setLocationToCountry(null)}
-                      className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      <ChevronLeft className="h-3 w-3" />
-                      {toCountryDef?.flag} {toCountryDef?.name}
-                    </button>
-                  )}
-                  <label className="block text-xs font-medium text-muted-foreground">
-                    {locationToCountry ? "To" : "To — choose a country"}
-                  </label>
+            {showLink ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="plan-link-label">Link label</Label>
+                  <Input
+                    id="plan-link-label"
+                    placeholder="Booking"
+                    value={linkLabel}
+                    onChange={(event) => setLinkLabel(event.target.value)}
+                    className="h-11 border-border bg-background"
+                  />
                 </div>
-
-                {locationToCountry === null ? (
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-3">
-                    {COUNTRIES.map((country) => (
-                      <button
-                        key={country.id}
-                        type="button"
-                        onClick={() => selectToCountry(country.id)}
-                        className="flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl bg-secondary/50 p-2 text-center transition-all hover:bg-secondary"
-                      >
-                        <span className="text-2xl leading-none">{country.flag}</span>
-                        <span className="text-[10px] leading-tight text-foreground">{country.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-3">
-                    {(toCountryDef?.locations ?? [])
-                      .filter((item) => item.id !== location)
-                      .map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => setLocationTo(item.id)}
-                          className={`flex min-h-[78px] flex-col items-center justify-center gap-1.5 rounded-xl p-2 text-center transition-all ${
-                            locationTo === item.id
-                              ? "bg-secondary ring-2 ring-primary ring-offset-1 ring-offset-background"
-                              : "bg-secondary/50 hover:bg-secondary"
-                          }`}
-                        >
-                          <div className="h-6 w-6 rounded-full" style={{ backgroundColor: item.color }} />
-                          <span className="text-[10px] leading-tight text-foreground">{item.name}</span>
-                        </button>
-                      ))}
-                  </div>
-                )}
+                <div className="space-y-1.5">
+                  <Label htmlFor="plan-link-url">URL</Label>
+                  <Input
+                    id="plan-link-url"
+                    placeholder="https://"
+                    value={linkUrl}
+                    onChange={(event) => setLinkUrl(event.target.value)}
+                    className="h-11 border-border bg-background"
+                  />
+                </div>
               </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowLink(true)}
+                className="inline-flex min-h-10 items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <LinkIcon className="h-4 w-4" aria-hidden="true" />
+                Add a booking or map link
+              </button>
             )}
           </div>
-
-          {showLink ? (
-            <div className="space-y-2 rounded-lg bg-secondary/30 p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Link</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowLink(false)
-                    setLinkLabel("")
-                    setLinkUrl("")
-                  }}
-                  className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              <Input
-                placeholder="Label (e.g., Airbnb)"
-                value={linkLabel}
-                onChange={(event) => setLinkLabel(event.target.value)}
-                className="h-11 border-0 bg-secondary/50 text-base focus-visible:ring-1 md:text-sm"
-              />
-              <Input
-                placeholder="https://..."
-                value={linkUrl}
-                onChange={(event) => setLinkUrl(event.target.value)}
-                className="h-11 border-0 bg-secondary/50 text-base focus-visible:ring-1 md:text-sm"
-              />
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowLink(true)}
-              className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <LinkIcon className="h-4 w-4" />
-              Add link
-            </button>
-          )}
         </div>
-          </div>
 
-        <div className="sticky bottom-0 flex flex-col gap-3 border-t border-border bg-background/96 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4">
           {editItem ? (
             <Button
+              type="button"
               variant="ghost"
-              size="sm"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={() => void handleDelete()}
-              disabled={isDeleting}
-              className="justify-start text-destructive hover:bg-destructive/10 hover:text-destructive sm:justify-center"
+              disabled={isDeleting || isSaving}
             >
-              <Trash2 className="mr-1.5 h-4 w-4" />
-              {isDeleting ? "Deleting..." : "Delete"}
+              <Trash2 className="h-4 w-4" />
+              Delete
             </Button>
           ) : (
-            <div />
+            <span />
           )}
-          <div className="grid grid-cols-2 gap-2 sm:flex">
-            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} disabled={isSaving || isDeleting} className="h-11 rounded-xl">
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button
-              size="sm"
+              type="button"
+              className="rounded-full px-5"
               onClick={() => void handleSave()}
-              disabled={!title.trim() || !startDate || !endDate || !location || isSaving || isDeleting}
-              className="h-11 rounded-xl"
+              disabled={!canSave || isSaving}
             >
-              {isSaving ? "Saving..." : editItem ? "Save" : "Add"}
+              {isSaving ? "Saving…" : editItem ? "Save changes" : "Add plan"}
             </Button>
           </div>
         </div>

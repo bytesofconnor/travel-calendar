@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { defaultTripDates } from "@/lib/format-dates"
 
 export type Location = string
 
@@ -535,9 +536,9 @@ export const LOCATIONS: LocationDef[] = [
   { id: "travel", name: "Travel/Transit", color: "#6b7280", bgClass: "bg-gray-500", borderClass: "border-gray-500/40" },
 ]
 
-export const DEFAULT_TRIP_NAME = "Peru & Bolivia 2026"
-export const DEFAULT_TRIP_START = "2026-04-27"
-export const DEFAULT_TRIP_END = "2026-06-30"
+const { start: DEFAULT_TRIP_START, end: DEFAULT_TRIP_END } = defaultTripDates()
+export const DEFAULT_TRIP_NAME = ""
+export { DEFAULT_TRIP_START, DEFAULT_TRIP_END }
 
 interface CalendarUiStore {
   currentWeekStart: string
@@ -555,8 +556,38 @@ interface CalendarUiStore {
   prevMonth: () => void
 }
 
+const LOCATION_PALETTE = [
+  "#0f766e",
+  "#1d4ed8",
+  "#b45309",
+  "#be123c",
+  "#4338ca",
+  "#047857",
+  "#0369a1",
+  "#a16207",
+]
+
+function colorForLabel(label: string) {
+  let hash = 0
+  for (let i = 0; i < label.length; i += 1) {
+    hash = (hash * 31 + label.charCodeAt(i)) >>> 0
+  }
+  return LOCATION_PALETTE[hash % LOCATION_PALETTE.length] ?? LOCATION_PALETTE[0]
+}
+
 export function getLocationById(id: Location): LocationDef {
-  return LOCATIONS.find((location) => location.id === id) ?? LOCATIONS[0]
+  const found = LOCATIONS.find((location) => location.id === id)
+  if (found) return found
+
+  const name = id.trim() || "Somewhere"
+  const color = colorForLabel(name.toLowerCase())
+  return {
+    id: name,
+    name,
+    color,
+    bgClass: "bg-slate-500",
+    borderClass: "border-slate-500/40",
+  }
 }
 
 export function getCountryForLocation(locationId: string): CountryDef | undefined {

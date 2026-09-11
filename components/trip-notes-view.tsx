@@ -42,9 +42,9 @@ export function TripNotesView({
     <section className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="border-b border-border px-4 py-2 md:hidden">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Brainstorm</div>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight">Ideas and research</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Shared notes, route thoughts, and trip planning in one place.</p>
+          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Notes</div>
+          <h2 className="mt-1 text-lg font-semibold tracking-tight">Shared planning notes</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">Route ideas, must-books, and research — synced for everyone.</p>
         </div>
       </div>
 
@@ -72,9 +72,9 @@ export function TripNotesView({
         </div>
 
         <TabViewHeader
-          kicker="Brainstorm"
-          title="Ideas and research"
-          description="Shared notes, route thoughts, and trip planning in one place."
+          kicker="Notes"
+          title="Shared planning notes"
+          description="Route ideas, must-books, and research — synced for everyone on the trip."
           actions={
             <>
               <Button
@@ -101,7 +101,7 @@ export function TripNotesView({
           <Textarea
             value={draft}
             onChange={(event) => onDraftChange(event.target.value)}
-            placeholder="Start a shared planning note. Capture route ideas, must-book moments, timing questions, food spots, or anything else you want Mara to help organize later."
+            placeholder="Shared planning notes — routes, must-books, timing questions, food spots. Organize later with Ask."
             className="min-h-[65svh] resize-none overflow-y-auto rounded-[20px] border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] px-4 py-4 text-[15px] font-[450] leading-8 tracking-[0.01em] text-foreground placeholder:text-muted-foreground/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_60px_rgba(0,0,0,0.14)] backdrop-blur [field-sizing:fixed] selection:bg-primary/25 md:h-full md:min-h-0 md:px-6 md:py-6 md:text-[15px]"
           />
         </div>

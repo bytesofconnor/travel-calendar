@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { CalendarDays, ChevronLeft, ChevronRight, Download, Plus } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { BedDouble, CalendarDays, ChevronLeft, ChevronRight, Download, Lightbulb, Plane, Plus } from "lucide-react"
 
 import {
   addDays,
@@ -9,7 +9,6 @@ import {
   getItemsForDate,
   getDaysInWeek,
   getItemsForWeek,
-  getLocationById,
   getMonthStart,
   type TripItem,
   type TripItemInput,
@@ -41,9 +40,11 @@ export function WeekView({
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [editingItem, setEditingItem] = useState<TripItem | null>(null)
-  const [mobileMode, setMobileMode] = useState<"day" | "agenda">("day")
+  const [initialInput, setInitialInput] = useState<Partial<TripItemInput> | null>(null)
+  const [initialTravel, setInitialTravel] = useState(false)
   const [mobileSelectedDate, setMobileSelectedDate] = useState(currentWeekStart)
   const [mounted, setMounted] = useState(false)
+  const selectedDayRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -67,15 +68,28 @@ export function WeekView({
     setMobileSelectedDate(nextMobileDate)
   }, [currentWeekStart, todayDate])
 
-  function handleAddItem(date: string) {
+  useEffect(() => {
+    if (!mounted) return
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    selectedDayRef.current?.scrollIntoView({
+      block: "nearest",
+      behavior: reduceMotion ? "auto" : "smooth",
+    })
+  }, [mobileSelectedDate, mounted])
+
+  function handleAddItem(date: string, opts?: { travel?: boolean; title?: string }) {
     setSelectedDate(date)
     setEditingItem(null)
+    setInitialInput(opts?.title ? { title: opts.title } : null)
+    setInitialTravel(Boolean(opts?.travel))
     setDialogOpen(true)
   }
 
   function handleEditItem(item: TripItem) {
     setEditingItem(item)
     setSelectedDate(null)
+    setInitialInput(null)
+    setInitialTravel(false)
     setDialogOpen(true)
   }
 
@@ -155,30 +169,13 @@ export function WeekView({
     return rows
   }
 
-  function getDayAccentColors(dayDate: string) {
-    const dayItems = getItemsForDate(items, dayDate)
-    const colors = new Set<string>()
-
-    dayItems.forEach((item) => {
-      colors.add(getLocationById(item.location).color)
-      if (item.locationTo) {
-        colors.add(getLocationById(item.locationTo).color)
-      }
-    })
-
-    return Array.from(colors).slice(0, 3)
-  }
-
   const itemRows = getItemRows()
   const visibleItemRows = itemRows.slice(0, MAX_DESKTOP_ITEM_ROWS)
   const mobileSelectedDay = days.find((day) => day.date === mobileSelectedDate) ?? days[0]
-  const mobileDayItems = getItemsForDate(items, mobileSelectedDay.date)
-  const agendaDays = days
-    .map((day) => ({
-      ...day,
-      items: getItemsForDate(items, day.date),
-    }))
-    .filter((day) => day.items.length > 0)
+  const timelineDays = days.map((day) => ({
+    ...day,
+    items: getItemsForDate(items, day.date),
+  }))
   const desktopOverflowByDate = Object.fromEntries(
     days.map((day) => {
       const totalItems = getItemsForDate(items, day.date)
@@ -202,194 +199,201 @@ export function WeekView({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <header className="flex items-start justify-between gap-3 border-b border-border px-4 py-2 md:hidden">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">Week View</h2>
-          <p className="text-xs text-muted-foreground">{weekLabel}</p>
-        </div>
-        <div className="flex items-center gap-1 self-start">
+      {/* Mobile week rail + timeline */}
+      <div className="week-rail border-b border-border md:hidden">
+        <div className="flex items-center gap-0.5 px-1.5 pt-1.5">
           <button
+            type="button"
+            onClick={prevWeek}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Previous week"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <p className="min-w-0 flex-1 text-center text-[12px] font-medium tabular-nums text-muted-foreground">
+            {weekLabel}
+          </p>
+          <button
+            type="button"
             onClick={() => {
               setCurrentMonth(getMonthStart(currentWeekStart))
               setViewMode("month")
             }}
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground md:h-9 md:w-9"
-            title="Month view"
+            className="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <CalendarDays className="h-5 w-5 md:h-5 md:w-5" />
+            Month
           </button>
           <button
-            onClick={handleExportCalendar}
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground md:h-9 md:w-9"
-            title="Export calendar"
-          >
-            <Download className="h-5 w-5 md:h-5 md:w-5" />
-          </button>
-          <div className="mx-1 h-4 w-px bg-border" />
-          <button
-            onClick={prevWeek}
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground md:h-9 md:w-9"
-          >
-            <ChevronLeft className="h-5 w-5 md:h-5 md:w-5" />
-          </button>
-          <button
+            type="button"
             onClick={nextWeek}
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground md:h-9 md:w-9"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Next week"
           >
-            <ChevronRight className="h-5 w-5 md:h-5 md:w-5" />
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
-      </header>
 
-      <div className="border-b border-border px-4 py-1.5 md:hidden">
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => setMobileMode("day")}
-            className={`rounded-2xl px-4 py-2 text-sm font-medium transition-colors ${
-              mobileMode === "day" ? "bg-secondary text-foreground" : "text-muted-foreground"
-            }`}
-          >
-            Day
-          </button>
-          <button
-            onClick={() => setMobileMode("agenda")}
-            className={`rounded-2xl px-4 py-2 text-sm font-medium transition-colors ${
-              mobileMode === "agenda" ? "bg-secondary text-foreground" : "text-muted-foreground"
-            }`}
-          >
-            Agenda
-          </button>
+        <div className="grid grid-cols-7 gap-0.5 px-1.5 pb-1.5 pt-1" role="listbox" aria-label="Days this week">
+          {timelineDays.map((day) => {
+            const isSelected = day.date === mobileSelectedDay.date
+            const isToday = day.date === todayDate
+            const planCount = day.items.length
+
+            return (
+              <button
+                key={day.date}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                data-selected={isSelected ? "true" : "false"}
+                onClick={() => setMobileSelectedDate(day.date)}
+                aria-label={`${day.dayName} ${day.month} ${day.dayNum}${isToday ? ", today" : ""}${planCount ? `, ${planCount} plan${planCount === 1 ? "" : "s"}` : ""}`}
+                className={`relative flex flex-col items-center gap-0.5 rounded-md px-0.5 py-1.5 text-center transition-[background-color,color,box-shadow] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  isSelected
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`}
+              >
+                <span className={`text-[10px] font-medium uppercase tracking-[0.08em] ${isSelected ? "text-primary-foreground/65" : ""}`}>
+                  {day.dayName.slice(0, 1)}
+                </span>
+                <span className={`text-[14px] font-semibold leading-none tabular-nums ${isToday && !isSelected ? "text-[var(--brand)]" : ""}`}>
+                  {day.dayNum}
+                </span>
+                <span
+                  className={`mt-0.5 h-1 w-1 rounded-full ${
+                    planCount > 0
+                      ? isSelected
+                        ? "bg-primary-foreground"
+                        : "bg-foreground/50"
+                      : isToday && !isSelected
+                        ? "bg-[var(--brand)]"
+                        : "bg-transparent"
+                  }`}
+                />
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      {mobileMode === "day" ? (
-        <div className="border-b border-border px-4 py-1.5 md:hidden">
-          <div className="grid grid-cols-7 gap-1.5">
-            {days.map((day) => {
-              const isSelected = day.date === mobileSelectedDay.date
-              const isToday = day.date === todayDate
-              const accentColors = getDayAccentColors(day.date)
-
-              return (
-                <button
-                  key={day.date}
-                  onClick={() => setMobileSelectedDate(day.date)}
-                  className={`rounded-[18px] px-1 py-1.5 text-center transition-colors ${
-                    isSelected ? "bg-secondary text-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  <div className="text-[11px] uppercase tracking-wide">{day.dayName}</div>
-                  <div className={`mt-0.5 text-[1.35rem] font-semibold ${isToday && !isSelected ? "text-primary" : ""}`}>{day.dayNum}</div>
-                  <div className="text-[11px]">{day.month}</div>
-                  <div className="mt-1 flex h-1.5 items-center justify-center gap-1">
-                    {accentColors.length > 0 ? (
-                      accentColors.map((color) => (
-                        <span
-                          key={`${day.date}-${color}`}
-                          className="h-1.5 w-1.5 rounded-full"
-                          style={{ backgroundColor: color, opacity: isSelected ? 1 : 0.85 }}
-                        />
-                      ))
-                    ) : (
-                      <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
-                    )}
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      ) : null}
-
       <div className="relative min-h-0 min-w-0 flex-1 overflow-y-auto">
-        <div className="px-4 py-3 md:hidden">
-          {mobileMode === "day" ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-lg font-semibold">
-                    {new Date(mobileSelectedDay.date + "T12:00:00").toLocaleDateString("en-US", {
-                      weekday: "long",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {mobileDayItems.length === 0
-                      ? "No plans yet"
-                      : `${mobileDayItems.length} plan${mobileDayItems.length === 1 ? "" : "s"} for this day`}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleAddItem(mobileSelectedDay.date)}
-                  className="flex h-11 items-center justify-center rounded-2xl bg-secondary px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add
-                </button>
-              </div>
-
-              {mobileDayItems.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-border/60 bg-background/25 px-4 py-8 text-center">
-                  <div className="text-base font-medium text-foreground">Nothing planned yet</div>
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    Add a stay, flight, or idea for this day.
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {mobileDayItems.map((item) => (
-                    <div key={item.id} className="min-h-[116px]">
-                      <TripItemCard item={item} onEdit={() => handleEditItem(item)} />
-                    </div>
-                  ))}
-                </div>
-              )}
+        <div className="md:hidden">
+          {items.length === 0 ? (
+            <div className="plans-welcome">
+              <p className="plans-welcome__title">Start building the trip</p>
+              <p className="mt-1.5 text-[13px] leading-5 text-muted-foreground">
+                Drop in stays, flights, and ideas day by day. Your partner sees every change live.
+              </p>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {agendaDays.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-border/60 bg-background/25 px-4 py-8 text-center">
-                  <div className="text-base font-medium text-foreground">This week is still open</div>
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    Tap a day above to start planning, or switch back to the day view.
-                  </div>
+          ) : null}
+          {timelineDays.map((day) => {
+            const isSelected = day.date === mobileSelectedDay.date
+            const isToday = day.date === todayDate
+            const dateObj = new Date(day.date + "T12:00:00")
+            const weekday = dateObj.toLocaleDateString("en-US", { weekday: "short" })
+            const monthDay = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+
+            return (
+              <section
+                key={day.date}
+                ref={(node) => {
+                  if (isSelected) selectedDayRef.current = node
+                }}
+                data-selected={isSelected ? "true" : "false"}
+                className={`timeline-day border-b border-border px-4 py-2 transition-colors duration-150 ${
+                  isSelected ? "bg-secondary/50" : "bg-transparent"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setMobileSelectedDate(day.date)}
+                    className="flex min-w-0 flex-1 items-baseline gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span className={`text-[13px] font-semibold tabular-nums ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>
+                      {weekday}
+                    </span>
+                    <span className={`text-[13px] tabular-nums ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>
+                      {monthDay}
+                    </span>
+                    {isToday ? (
+                      <span className="rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--brand)] bg-[color-mix(in_oklab,var(--brand)_12%,transparent)]">
+                        Today
+                      </span>
+                    ) : null}
+                    {day.items.length > 0 ? (
+                      <span className="text-[11px] tabular-nums text-muted-foreground">
+                        · {day.items.length}
+                      </span>
+                    ) : null}
+                  </button>
+                  {!isSelected && day.items.length === 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileSelectedDate(day.date)
+                        handleAddItem(day.date)
+                      }}
+                      className="flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-[12px] text-muted-foreground/80 transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add
+                    </button>
+                  ) : null}
                 </div>
-              ) : (
-                agendaDays.map((day) => (
-                  <section key={day.date} className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-base font-semibold">
-                          {new Date(day.date + "T12:00:00").toLocaleDateString("en-US", {
-                            weekday: "long",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {day.items.length} plan{day.items.length === 1 ? "" : "s"}
-                        </div>
+
+                {day.items.length > 0 ? (
+                  <div className="mt-2 space-y-1.5">
+                    {day.items.map((item) => (
+                      <div key={item.id}>
+                        <TripItemCard item={item} onEdit={() => handleEditItem(item)} />
                       </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                {isSelected ? (
+                  <div className="plan-composer mt-2">
+                    <button
+                      type="button"
+                      onClick={() => handleAddItem(day.date)}
+                      className="plan-composer__field"
+                    >
+                      <Plus className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <span>{items.length === 0 ? "What’s first — stay, flight, or idea?" : "Add a plan…"}</span>
+                    </button>
+                    <div className="plan-composer__types" role="group" aria-label="Quick add">
                       <button
-                        onClick={() => handleAddItem(day.date)}
-                        className="rounded-xl px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                        type="button"
+                        className="plan-composer__type"
+                        onClick={() => handleAddItem(day.date, { title: "Stay" })}
                       >
-                        Add
+                        <BedDouble className="h-3.5 w-3.5" />
+                        Stay
+                      </button>
+                      <button
+                        type="button"
+                        className="plan-composer__type"
+                        onClick={() => handleAddItem(day.date, { travel: true, title: "Flight" })}
+                      >
+                        <Plane className="h-3.5 w-3.5" />
+                        Flight
+                      </button>
+                      <button
+                        type="button"
+                        className="plan-composer__type"
+                        onClick={() => handleAddItem(day.date, { title: "Idea" })}
+                      >
+                        <Lightbulb className="h-3.5 w-3.5" />
+                        Idea
                       </button>
                     </div>
-                    <div className="space-y-3">
-                      {day.items.map((item) => (
-                        <div key={item.id} className="min-h-[116px]">
-                          <TripItemCard item={item} onEdit={() => handleEditItem(item)} />
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                ))
-              )}
-            </div>
-          )}
+                  </div>
+                ) : null}
+              </section>
+            )
+          })}
         </div>
 
         <TabViewShell className="hidden md:block px-4 pt-4" innerClassName="max-w-none flex-1 gap-4">
@@ -517,9 +521,17 @@ export function WeekView({
 
       <ItemDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open)
+          if (!open) {
+            setInitialInput(null)
+            setInitialTravel(false)
+          }
+        }}
         defaultDate={selectedDate}
         editItem={editingItem}
+        initialInput={initialInput}
+        initialTravel={initialTravel}
         currentUserName={currentUserName}
         isSaving={isMutating}
         isDeleting={isMutating}

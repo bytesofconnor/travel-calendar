@@ -1,0 +1,16 @@
+{
+  "name": "@travel-calendar/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Read-only MCP sketch for Travel Calendar trip graph",
+  "bin": {
+    "travel-calendar-mcp": "./server.mjs"
+  },
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  }
+}

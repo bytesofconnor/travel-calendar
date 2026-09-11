@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { formatRelativeTime, type TripPackingItem } from "@/lib/kanban-store"
+import { EmptyState } from "@/components/ds"
 import { TabViewHeader } from "./tab-view-header"
 import { TabViewShell } from "./tab-view-shell"
 
@@ -48,26 +50,30 @@ export function TripPackingView({
   const checkedCount = sortedItems.length - uncheckedCount
 
   const addComposer = (
-    <div className="rounded-[20px] border border-border/80 bg-background/92 p-3 shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur">
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Input
-          value={newItemLabel}
-          onChange={(event) => setNewItemLabel(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault()
-              void handleAdd()
-            }
-          }}
-          placeholder="Add sunscreen, adapters, camera batteries..."
-          className="h-12 rounded-[16px] border-border/80 bg-background/50 text-base"
-        />
+    <div className="rounded-[20px] border border-border bg-card p-3 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <Label htmlFor="packing-add-input">New packing item</Label>
+          <Input
+            id="packing-add-input"
+            value={newItemLabel}
+            onChange={(event) => setNewItemLabel(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault()
+                void handleAdd()
+              }
+            }}
+            placeholder="Add sunscreen, adapters, camera batteries..."
+            className="h-12 rounded-[16px] border-border bg-background text-base"
+          />
+        </div>
         <Button
           className="h-12 rounded-[16px] px-5 text-base sm:w-auto"
           onClick={() => void handleAdd()}
           disabled={isMutating || !newItemLabel.trim()}
         >
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
           Add item
         </Button>
       </div>
@@ -158,38 +164,48 @@ export function TripPackingView({
           {addComposer}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-24 md:pb-0 md:pr-1">
+        <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain md:pr-1 ${sortedItems.length === 0 ? "pb-6" : "pb-24"} md:pb-0`}>
           {sortedItems.length === 0 ? (
-            <div className="rounded-[20px] border border-dashed border-border/70 bg-black/20 px-6 py-14 text-center backdrop-blur">
-              <h3 className="text-2xl font-semibold tracking-tight">Nothing on the list yet</h3>
-              <p className="mt-3 text-base leading-7 text-muted-foreground">
-                Start with the essentials and let the list grow with the trip. It stays shared for everyone automatically.
-              </p>
-            </div>
+            <EmptyState
+              title="Nothing on the list yet"
+              description="Start with the essentials and let the list grow with the trip. It stays shared for everyone automatically."
+              action={
+                <Button
+                  size="pill"
+                  onClick={() => {
+                    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+                      setMobileAddOpen(true)
+                      return
+                    }
+                    document.getElementById("packing-add-input")?.focus()
+                  }}
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Add first item
+                </Button>
+              }
+            />
           ) : (
-            <div className="overflow-hidden rounded-[20px] border border-border/80 bg-black/25 backdrop-blur">
-              <ul className="divide-y divide-border/70">
+            <div className="overflow-hidden rounded-[20px] border border-border bg-card shadow-sm">
+              <ul className="divide-y divide-border" aria-label="Packing list">
                 {sortedItems.map((item) => {
                   const isEditing = editingItemId === item.id
+                  const labelId = `packing-label-${item.id}`
 
                   return (
                     <li
                       key={item.id}
-                      onClick={() => {
-                        if (!isEditing) {
-                          void onToggleItem(item, !item.isChecked)
-                        }
-                      }}
-                      className={`flex cursor-pointer flex-col gap-3 px-4 py-4 transition-colors md:px-5 ${
-                        item.isChecked ? "bg-white/[0.02]" : "bg-transparent"
+                      className={`flex flex-col gap-3 px-4 py-4 transition-colors md:px-5 ${
+                        item.isChecked ? "bg-secondary/40" : "bg-transparent"
                       }`}
                     >
                       <div className="flex items-start gap-3">
                         <Checkbox
+                          id={`packing-check-${item.id}`}
                           checked={item.isChecked}
                           onCheckedChange={(checked) => void onToggleItem(item, checked === true)}
-                          onClick={(event) => event.stopPropagation()}
                           className="mt-1 h-5 w-5 rounded-md"
+                          aria-labelledby={labelId}
                         />
                         <div className="min-w-0 flex-1">
                           {isEditing ? (
@@ -202,28 +218,29 @@ export function TripPackingView({
                                   event.preventDefault()
                                   void commitEditing(item)
                                 }
-
                                 if (event.key === "Escape") {
                                   event.preventDefault()
                                   cancelEditing()
                                 }
                               }}
                               autoFocus
-                              onClick={(event) => event.stopPropagation()}
-                              className="h-11 rounded-[16px] border-border/80 bg-background/50 text-base"
+                              aria-label={`Rename ${item.label}`}
+                              className="h-11 rounded-[16px] border-border bg-background text-base"
                             />
                           ) : (
                             <>
-                              <div
-                                className={`text-left text-lg font-medium tracking-tight transition-colors ${
+                              <label
+                                id={labelId}
+                                htmlFor={`packing-check-${item.id}`}
+                                className={`block cursor-pointer text-left text-lg font-medium tracking-tight transition-colors ${
                                   item.isChecked ? "text-muted-foreground line-through" : "text-foreground"
                                 }`}
                               >
                                 {item.label}
-                              </div>
+                              </label>
                               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                 {item.authorName && (
-                                  <span className="rounded-full border border-border/70 px-2 py-1">
+                                  <span className="rounded-full border border-border px-2 py-1">
                                     {item.authorName}
                                   </span>
                                 )}
@@ -238,40 +255,31 @@ export function TripPackingView({
                               variant="ghost"
                               size="icon"
                               className="h-10 w-10 rounded-full"
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                startEditing(item)
-                              }}
+                              onClick={() => startEditing(item)}
+                              aria-label={`Edit ${item.label}`}
                             >
                               <Pencil className="h-4 w-4" />
-                              <span className="sr-only">Edit {item.label}</span>
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-10 w-10 rounded-full text-rose-300 hover:text-rose-200"
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                void onDeleteItem(item)
-                              }}
+                              className="h-10 w-10 rounded-full text-destructive hover:text-destructive"
+                              onClick={() => void onDeleteItem(item)}
+                              aria-label={`Delete ${item.label}`}
                             >
                               <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Delete {item.label}</span>
                             </Button>
                           </div>
                         )}
                         {isEditing && (
                           <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="icon"
                             className="h-10 w-10 rounded-full"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              void commitEditing(item)
-                            }}
+                            onClick={() => void commitEditing(item)}
+                            aria-label={`Save ${item.label}`}
                           >
                             <Check className="h-4 w-4" />
-                            <span className="sr-only">Save {item.label}</span>
                           </Button>
                         )}
                       </div>

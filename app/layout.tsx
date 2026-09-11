@@ -1,6 +1,26 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Analytics } from '@vercel/analytics/next'
+import { ConvexAuthNextjsServerProvider } from '@convex-dev/auth/nextjs/server'
+import { DM_Sans, Instrument_Serif } from 'next/font/google'
+import { ConvexClientProvider } from '@/components/convex-client-provider'
+import { SkipLink } from '@/components/ds'
+import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ['latin'],
+  weight: '400',
+  style: ['normal', 'italic'],
+  variable: '--font-instrument-serif',
+  display: 'swap',
+})
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-dm-sans',
+  display: 'swap',
+})
 
 const SITE_URL = 'https://travelcalendar.space'
 const SITE_NAME = 'Travel Calendar'
@@ -73,15 +93,40 @@ export const metadata: Metadata = {
     canonical: SITE_URL,
   },
   category: 'travel',
+  manifest: '/manifest.webmanifest',
   icons: {
     icon: [
       { url: '/icon.svg', type: 'image/svg+xml' },
-      { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },
-      { url: '/icon-dark-32x32.png', media: '(prefers-color-scheme: dark)' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
-    apple: '/apple-icon.png',
+    apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
     shortcut: '/icon.svg',
   },
+  appleWebApp: {
+    capable: true,
+    title: "Together",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  colorScheme: 'light dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#1c1f27' },
+    { media: '(prefers-color-scheme: dark)', color: '#16181e' },
+  ],
 }
 
 export default function RootLayout({
@@ -120,19 +165,25 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="en">
-      <head>
-        <meta name="theme-color" content="#0a0a0a" />
-        <meta name="color-scheme" content="dark light" />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
-      </head>
-      <body className="font-sans antialiased">
-        {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
-      </body>
-    </html>
+    <ConvexAuthNextjsServerProvider>
+      <html lang="en" suppressHydrationWarning>
+        <head>
+          <meta name="color-scheme" content="light dark" />
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          />
+        </head>
+        <body className={`${instrumentSerif.variable} ${dmSans.variable} font-sans antialiased`}>
+          <SkipLink href="#main-content" />
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <ConvexClientProvider>
+              {children}
+            </ConvexClientProvider>
+          </ThemeProvider>
+          {process.env.NODE_ENV === 'production' && <Analytics />}
+        </body>
+      </html>
+    </ConvexAuthNextjsServerProvider>
   )
 }

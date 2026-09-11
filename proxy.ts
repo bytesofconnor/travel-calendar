@@ -1,36 +1,19 @@
-import { createServerClient } from "@supabase/ssr"
-import { NextResponse, type NextRequest } from "next/server"
+import { convexAuthNextjsMiddleware } from "@convex-dev/auth/nextjs/server"
+import { NextResponse } from "next/server"
 
-import { isSupabaseConfigured } from "@/lib/supabase/env"
-
-export async function proxy(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.next({ request })
-  }
-
-  let response = NextResponse.next({ request })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          response = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
-        },
-      },
-    },
-  )
-
-  await supabase.auth.getUser()
-
-  return response
-}
+/**
+ * Next 16 proxy middleware.
+ * Convex Auth refreshes auth cookies (required for @convex-dev/auth).
+ */
+export const proxy = convexAuthNextjsMiddleware(
+  async () => {
+    // Login UI owns gated UX; middleware only refreshes cookies.
+    return NextResponse.next()
+  },
+  {
+    cookieConfig: { maxAge: 60 * 60 * 24 * 30 },
+  },
+)
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
