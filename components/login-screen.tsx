@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { ChevronDown, KeyRound, Loader2, Mail, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { LandingMastMedia } from "@/components/landing-mast-media"
 import { SpectrumHairline } from "@/components/trip-cover"
 
 function GoogleIcon() {
@@ -72,8 +73,9 @@ export function LoginScreen({
   }, [hasPendingCode, emailAuthEnabled])
 
   return (
-    <main id="main-content" className="together-story create-join flex min-h-dvh flex-col overflow-y-auto overscroll-contain">
+    <main id="main-content" className="together-story create-join">
       <div className="create-join__mast">
+        <LandingMastMedia />
         <div className="create-join__mast-bar">
           <span className="create-join__brand">Travel Calendar</span>
         </div>

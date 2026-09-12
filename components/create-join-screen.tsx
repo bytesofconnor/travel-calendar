@@ -2,6 +2,7 @@
 
 import { ArrowLeft, Loader2, LogOut } from "lucide-react"
 
+import { LandingMastMedia } from "@/components/landing-mast-media"
 import { SpectrumHairline } from "@/components/trip-cover"
 import { Input } from "@/components/ui/input"
 
@@ -54,8 +55,9 @@ export function CreateJoinScreen({
   const canJoin = Boolean(displayName.trim() && joinInput.trim())
 
   return (
-    <main id="main-content" className="together-story create-join flex min-h-dvh flex-col overflow-y-auto overscroll-contain">
+    <main id="main-content" className="together-story create-join">
       <div className="create-join__mast">
+        <LandingMastMedia />
         <div className="create-join__mast-bar">
           {hasTrips && onBackToTrips ? (
             <button
