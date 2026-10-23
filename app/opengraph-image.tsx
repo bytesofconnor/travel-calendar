@@ -71,7 +71,7 @@ export default function OGImage() {
             fontFamily: 'system-ui, sans-serif',
           }}
         >
-          travelcalendar.space
+          www.travelcalendar.space
         </div>
       </div>
     ),

@@ -22,7 +22,7 @@ const dmSans = DM_Sans({
   display: 'swap',
 })
 
-const SITE_URL = 'https://travelcalendar.space'
+const SITE_URL = 'https://www.travelcalendar.space'
 const SITE_NAME = 'Travel Calendar'
 const TITLE = 'Travel Calendar — Shared Trip Planner for Couples & Travel Partners'
 const DESCRIPTION =

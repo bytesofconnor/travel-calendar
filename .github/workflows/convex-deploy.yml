@@ -1,0 +1,192 @@
+name: Convex deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "convex/**"
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    name: observe
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      deploy: ${{ steps.decision.outputs.deploy }}
+      ref: ${{ steps.decision.outputs.ref }}
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Decide whether to deploy
+        id: decision
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_TERMINAL_PROMPT: "0"
+        run: |
+          set -euo pipefail
+
+          finish() {
+            echo "deploy=$1" >> "$GITHUB_OUTPUT"
+            if [ -n "${2:-}" ]; then
+              echo "ref=$2" >> "$GITHUB_OUTPUT"
+            fi
+            exit 0
+          }
+
+          event=$(jq -r '.workflow_run.event' "$GITHUB_EVENT_PATH")
+          conclusion=$(jq -r '.workflow_run.conclusion' "$GITHUB_EVENT_PATH")
+          pr_count=$(jq '(.workflow_run.pull_requests // []) | length' "$GITHUB_EVENT_PATH")
+          if [ "$event" != "pull_request" ] || [ "$pr_count" -eq 0 ] || [ "$conclusion" != "success" ]; then
+            finish false
+          fi
+
+          number=$(jq -r '.workflow_run.pull_requests[0].number' "$GITHUB_EVENT_PATH")
+          deadline=$((SECONDS + 300))
+
+          while true; do
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              finish false
+            fi
+
+            if ! pr=$(gh pr view "$number" --repo "$GITHUB_REPOSITORY" --json baseRefName,headRepository,isDraft,mergedBy,mergeCommit,state); then
+              sleep 5
+              continue
+            fi
+            head_repo=$(printf '%s' "$pr" | jq -r '.headRepository.nameWithOwner // empty')
+            if [ "$head_repo" != "$GITHUB_REPOSITORY" ] || [ "$(printf '%s' "$pr" | jq -r '.isDraft')" = "true" ]; then
+              finish false
+            fi
+
+            base_ref=$(printf '%s' "$pr" | jq -r '.baseRefName')
+            if [ "$(printf '%s' "$pr" | jq -r '.state')" = "MERGED" ]; then
+              merged=true
+            else
+              merged=false
+            fi
+
+            login=$(printf '%s' "$pr" | jq -r '.mergedBy.login // empty')
+            case "$login" in
+              "github-actions[bot]" | "app/github-actions")
+                merged_by=github-actions
+                ;;
+              *)
+                merged_by=other
+                ;;
+            esac
+
+            merge_sha=$(printf '%s' "$pr" | jq -r '.mergeCommit.oid // empty')
+            if [ "$merged" = "true" ] && { [ -z "$merge_sha" ] || [ -z "$login" ]; }; then
+              sleep 5
+              continue
+            fi
+            files='[]'
+            if [ -n "$merge_sha" ]; then
+              git fetch --no-tags origin "$merge_sha"
+              files=$(git diff-tree --no-commit-id --name-only -r "$merge_sha" | jq -Rsc 'split("\n") | map(select(length > 0))')
+            fi
+
+            verdict=$(
+              jq -n \
+                --arg origin same-repo-pr \
+                --arg baseRef "$base_ref" \
+                --argjson merged "$merged" \
+                --arg mergedBy "$merged_by" \
+                --arg mergeSha "$merge_sha" \
+                --argjson files "$files" \
+                '{origin:$origin, baseRef:$baseRef, merged:$merged, mergedBy:$mergedBy, mergeSha:$mergeSha, files:$files}' \
+                | node .github/policy/automerge-policy.mjs deploy
+            )
+            action=$(printf '%s' "$verdict" | jq -r '.action')
+            if [ "$action" = "wait" ]; then
+              if [ "$SECONDS" -ge "$deadline" ]; then
+                finish false
+              fi
+              sleep 5
+              continue
+            fi
+            if [ "$action" = "deploy" ]; then
+              ref=$(printf '%s' "$verdict" | jq -r '.ref // empty')
+              if [ -n "$merge_sha" ] && [ "$ref" = "$merge_sha" ]; then
+                finish true "$ref"
+              fi
+            fi
+            finish false
+          done
+
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    needs: observe
+    permissions:
+      contents: read
+    concurrency:
+      group: convex-deploy
+      cancel-in-progress: false
+    # always() so a skipped observe does not skip deploy on push or workflow_dispatch.
+    if: >-
+      always() &&
+      (
+        github.event_name == 'push' ||
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event_name == 'workflow_run' &&
+          needs.observe.result == 'success' &&
+          needs.observe.outputs.deploy == 'true'
+        )
+      )
+    steps:
+      - name: Check CONVEX_DEPLOY_KEY
+        id: secret
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          if [ -z "$CONVEX_DEPLOY_KEY" ]; then
+            echo "CONVEX_DEPLOY_KEY is not set; skipping Convex deploy."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.secret.outputs.skip != 'true'
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.event_name == 'workflow_run' && needs.observe.outputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Setup pnpm
+        if: steps.secret.outputs.skip != 'true'
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        if: steps.secret.outputs.skip != 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.secret.outputs.skip != 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy Convex
+        if: steps.secret.outputs.skip != 'true'
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: pnpm exec convex deploy

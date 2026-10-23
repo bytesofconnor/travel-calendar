@@ -1,0 +1,29 @@
+{
+  "ignoreCommand": "bash scripts/vercel-ignore-build.sh",
+  "redirects": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "ourcalendar.space" }],
+      "destination": "https://www.travelcalendar.space/",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "ourcalendar.space" }],
+      "destination": "https://www.travelcalendar.space/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "www.ourcalendar.space" }],
+      "destination": "https://www.travelcalendar.space/",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.ourcalendar.space" }],
+      "destination": "https://www.travelcalendar.space/:path*",
+      "permanent": true
+    }
+  ]
+}

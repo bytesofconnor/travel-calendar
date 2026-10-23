@@ -1,0 +1,28 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories:
+      - /
+      - /mcp/travel-calendar
+    schedule:
+      interval: weekly
+    ignore:
+      # eslint-config-next 16.2's react plugin crashes on ESLint 10.
+      # Take ESLint 10 when Next is upgraded.
+      - dependency-name: eslint
+        update-types:
+          - version-update:semver-major
+    groups:
+      npm:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [major, minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [major, minor, patch]
