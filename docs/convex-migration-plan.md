@@ -91,7 +91,7 @@ Do these before / during Phase 1. Keep secrets out of git; paste into Convex env
 ### 0.2 Google OAuth (for Convex Auth)
 1. [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials.
 2. Create (or reuse) an OAuth 2.0 Client (Web).
-3. **Authorized JavaScript origins:** `http://localhost:59316` and `https://travelcalendar.space`.
+3. **Authorized JavaScript origins:** `http://localhost:59316` and `https://www.travelcalendar.space`. Apex `https://travelcalendar.space` redirects to www.
 4. **Authorized redirect URI:**  
    `https://<YOUR_DEPLOYMENT>.convex.site/api/auth/callback/google`  
    (from Convex dashboard → Settings → URL & Deploy Key → HTTP Actions URL).
@@ -102,7 +102,7 @@ Do these before / during Phase 1. Keep secrets out of git; paste into Convex env
 ### 0.3 Resend (email OTP)
 1. [resend.com](https://resend.com) → create API key.
 2. For local OTP, `onboarding@resend.dev` sender is fine initially.
-3. Later: verify `travelcalendar.space` domain for production From-address.
+3. Later: verify the apex `travelcalendar.space` domain in Resend for the production From-address. The website canonical host is `www.travelcalendar.space`; email uses the apex.
 
 ### 0.4 Stripe (can wait until Phase 7)
 1. Keep existing Payment Link or create a test-mode link.
@@ -310,7 +310,7 @@ Or one shot: `pnpm dev:all`
 
 Open **http://localhost:59316**. Keep Convex dashboard Data + Logs open while testing.
 
-Convex `SITE_URL` must stay `http://localhost:59316` in local/dev (already set). Google OAuth **Authorized JavaScript origins** should include `http://localhost:59316`.
+Convex `SITE_URL` must stay `http://localhost:59316` in local/dev (already set). Production `SITE_URL` is `https://www.travelcalendar.space`. Google OAuth **Authorized JavaScript origins** should include `http://localhost:59316` and `https://www.travelcalendar.space`. The authorized redirect URI stays on `*.convex.site/api/auth/callback/google`.
 
 ---
 
