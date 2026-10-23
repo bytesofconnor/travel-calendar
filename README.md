@@ -1,35 +1,37 @@
 # Travel Calendar
 
-Shared trip calendar for couples and travel partners — **one trip, two people, always in sync.**
+Shared trip calendar for couples and travel partners. One trip, two people, always in sync.
 
-Backend is **Convex** only (Auth + database + realtime).
+Production: **https://www.travelcalendar.space**
 
-Product niche and trip-workspace IA: [docs/together-story-spec.md](docs/together-story-spec.md) (§0 Niche brief).
+Backend is Convex (Auth, database, and realtime). The package manager is pnpm.
 
 ## Local development
 
-Always use this URL:
-
-**http://localhost:59316**
+Node.js 22. Dev server: **http://localhost:59316** (do not use port 3000).
 
 ```bash
-# Terminal A — Convex
-pnpm dev:convex
-
-# Terminal B — Next.js (port 59316 is fixed in package.json)
-pnpm dev
+pnpm install
+pnpm dev:convex   # terminal A
+pnpm dev          # terminal B
 ```
 
-Or both: `pnpm dev:all`
+Or both: `pnpm dev:all`.
 
-Do not use port 3000. Google OAuth, Convex `SITE_URL`, and local scripts all assume **59316**.
+Copy [`.env.example`](.env.example) to `.env.local` and set `NEXT_PUBLIC_CONVEX_URL` (and `NEXT_PUBLIC_CONVEX_SITE_URL`) from `npx convex dev`. Convex deployment env, not Next env, holds `SITE_URL`, Google OAuth, and the Resend OTP key. Local `SITE_URL` is `http://localhost:59316`. Production `SITE_URL` is `https://www.travelcalendar.space`.
 
-See [docs/convex-migration-plan.md](docs/convex-migration-plan.md) for cutover history and prior stack notes.
+## Checks
 
-## Design system
+`pnpm lint`, `pnpm typecheck`, `pnpm build`, and `pnpm test:smoke`.
 
-Authenticated UI uses the light paper/ink system documented in [docs/design-system.md](docs/design-system.md) (`components/ui` + `components/ds`).
+Pull requests use `.github/pull_request_template.md` (**Summary**, **Verification**, **Blast Radius**). CI job `checks` runs those commands plus a frozen `pnpm install` at the repo root and in `mcp/travel-calendar`. Same-repo PRs squash-merge after `checks` passes. Forks stay manual.
 
-## Agent / MCP (read-only sketch)
+## Deploy
 
-HTTP + MCP tools to list trips and load a trip bundle. See [docs/agent-api.md](docs/agent-api.md) and [mcp/travel-calendar/README.md](mcp/travel-calendar/README.md).
+Convex production deploys from `main` when `convex/**` changes (`.github/workflows/convex-deploy.yml`, secret `CONVEX_DEPLOY_KEY`).
+
+Vercel project `travelcalendar.space` builds the Next app. `scripts/vercel-ignore-build.sh` skips preview builds for `dependabot/` and `cursor/` branches, and skips a build when the commit does not change the app. `ourcalendar.space` and `www.ourcalendar.space` 308 to https://www.travelcalendar.space and keep the path and query.
+
+## MCP sketch
+
+Read-only trip tools live in [`mcp/travel-calendar`](mcp/travel-calendar/README.md). That package pins the same pnpm as the root (`packageManager`) and has its own lockfile.

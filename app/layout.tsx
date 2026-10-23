@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { ConvexAuthNextjsServerProvider } from '@convex-dev/auth/nextjs/server'
 import { DM_Sans, Instrument_Serif } from 'next/font/google'
 import { ConvexClientProvider } from '@/components/convex-client-provider'
@@ -182,6 +183,7 @@ export default function RootLayout({
             </ConvexClientProvider>
           </ThemeProvider>
           {process.env.NODE_ENV === 'production' && <Analytics />}
+          {process.env.NODE_ENV === 'production' && <SpeedInsights />}
         </body>
       </html>
     </ConvexAuthNextjsServerProvider>

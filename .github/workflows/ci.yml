@@ -73,6 +73,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install MCP dependencies
+        working-directory: mcp/travel-calendar
+        run: pnpm install --frozen-lockfile
+
       - name: Lint
         run: pnpm lint
 
