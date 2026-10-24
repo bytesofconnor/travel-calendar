@@ -29,3 +29,15 @@ Hobby builds are limited. `vercel.json` runs `bash scripts/vercel-ignore-build.s
 Skip preview builds whose branch starts with `dependabot/` or `cursor/`. A production build still runs, including on those branch names, when the commit changes the app. Skip the build when the commit does not change the app root. If the parent commit is missing, the build runs.
 
 Dependabot opens one grouped npm pull request covering `/` and `/mcp/travel-calendar`, and one GitHub Actions pull request, each week. Those groups include major updates. Root and `mcp/travel-calendar` both pin `packageManager` to pnpm 10.32.1 so Dependabot rewrites each lockfile with that pnpm. A Dependabot branch that is behind `main` can still text-merge `pnpm-lock.yaml` into duplicated mapping keys without a git conflict; rebase it instead of merging the stale lockfile.
+
+## Roadmap
+
+Before product work, read `ROADMAP.md`.
+
+The same pull request that ships, starts, or drops a roadmap item updates that file. Bump `Updated`. When an item ships, move it from Open to Shipped with the date and the pull request link. When an item is dropped, move it to Not doing with a one-line reason. Renumber Open so the ranks stay contiguous from 1.
+
+A chat or a wording change that changes priority also lands in a pull request. It squash-merges when `checks` passes.
+
+Dependabot, and a pure infra or docs pull request that does not change product direction, leave the Open list alone. Bump `Updated` only when that pull request edits `ROADMAP.md`.
+
+Mark an item Shipped only when its check is met. Do not invent progress.
