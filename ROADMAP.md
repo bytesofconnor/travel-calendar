@@ -1,8 +1,8 @@
 # Travel Calendar Roadmap
 
-Updated: 2026-10-24 · Owner: Travel Calendar · North star: The easiest shared travel calendar to customize by intent. The shared trip engine comes before the UI, MCP is the first-class way agents read and write it, and humans may barely use a fancy UI if their assistants change the shared calendar.
+Updated: 2026-10-24 · Owner: Travel Calendar · North star: The easiest shared travel calendar to customize by intent. The shared trip engine comes before the UI, MCP is the first-class way agents read and write it, and humans may barely use a fancy UI if their assistants change the shared calendar. Each partner can optionally sync the trip out to Google Calendar or Apple Calendar. That export is not a second source of truth.
 
-Say "what's good near X," book it, and it lands on the trip both people see. This is the system of record for every trip a couple takes, built for how travel planning works with robots in 2035. Humans set intent. Agents read and write the shared calendar as the source of truth. It is not a chat product. Distribution meets both people wherever they already talk to their AI. MCP is the first host. Meta Muse, Messenger-style AI surfaces, ChatGPT, and Claude follow once that contract holds, so either partner can change the same trip from their preferred agent.
+Say "what's good near X," book it, and it lands on the trip both people see. This is the system of record for every trip a couple takes, built for how travel planning works with robots in 2035. Humans set intent. Agents read and write the shared calendar as the source of truth. Personal calendars only receive a copy. It is not a chat product. Distribution meets both people wherever they already talk to their AI. MCP is the first host. Meta Muse, Messenger-style AI surfaces, ChatGPT, and Claude follow once that contract holds, so either partner can change the same trip from their preferred agent.
 
 ## Open (ranked)
 
@@ -22,6 +22,7 @@ Say "what's good near X," book it, and it lands on the trip both people see. Thi
 ## Later
 
 - Meta Muse and other AI hosts, after Open item 4 proves the MCP engine contract. Nearby, then reserve, then add to the trip, from either partner's assistant.
+- Optional Google Calendar and Apple Calendar sync for each partner. The shared trip stays the source of truth. Check when it ships: a trip date or plan appears on the connected personal calendar, and turning sync off stops new writes without deleting the shared trip.
 - Further React majors, and the next TypeScript major, stay deferred while the Open checks are still open. TypeScript 6 is already on main.
 - Growth bets and a feature wishlist wait until those checks are green.
 
