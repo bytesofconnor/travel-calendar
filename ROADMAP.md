@@ -1,8 +1,8 @@
 # Travel Calendar Roadmap
 
-Updated: 2026-10-24 · Owner: Travel Calendar · North star: The agent-native system of record for couples' trips, built for how travel planning works with robots in 2035, not a communication platform.
+Updated: 2026-10-24 · Owner: Travel Calendar · North star: The easiest shared travel calendar to customize by intent, an agent-native system of record for couples that meets each partner wherever they talk to their AI.
 
-Humans set intent and constraints. Their agents, and ours, read and write the shared trip as the source of truth. Those agents book and update against that trip. Both partners see one accurate plan from "should we go?" to wheels-down.
+Say "what's good near X," book it, and it lands on the trip both people see. This is the system of record for every trip a couple takes, built for how travel planning works with robots in 2035. Humans set intent. Agents read and write the shared calendar as the source of truth. It is not a chat product. Distribution meets both people wherever they already talk to their AI, including Meta Muse, Messenger-style AI surfaces, ChatGPT, Claude, and MCP hosts, so either partner can change the same trip from their preferred agent.
 
 ## Open (ranked)
 
@@ -20,6 +20,7 @@ Humans set intent and constraints. Their agents, and ours, read and write the sh
 
 ## Later
 
+- First-class agent surfaces, including MCP, Meta Muse, and other AI hosts, so nearby, then reserve, then add to the trip works from either partner's assistant.
 - Further React majors, and the next TypeScript major, stay deferred while the Open checks are still open. TypeScript 6 is already on main.
 - Growth bets and a feature wishlist wait until those checks are green.
 
