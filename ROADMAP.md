@@ -1,8 +1,8 @@
 # Travel Calendar Roadmap
 
-Updated: 2026-10-24 · Owner: Travel Calendar · North star: Be the Stripe of travel calendars, the calendar memory for agents. A shared, agent-native system of record for every trip a couple takes. Intent goes in, and one trusted plan comes out. Optional export goes to Google Calendar or Apple Calendar. The engine and MCP come first. The UI comes second. It is not a chat app, and it is not a booking engine.
+Updated: 2026-10-24 · Owner: Travel Calendar · North star: Be the Stripe of travel calendars. The product is calendar memory for agents, built for couples. Two people and their agents share one trusted trip calendar as the system of record. Intent goes in, and one plan comes out. Optional export goes to Google Calendar or Apple Calendar. The engine and MCP come first. The UI comes second. It is not a chat app, not a booking engine, and not another AI itinerary planner.
 
-Say "what's good near X," and add that plan to the shared trip both people see. Humans set intent. Agents read and write the shared calendar as the source of truth. Personal calendars only receive a copy. Distribution meets both people wherever they already talk to their AI. MCP is the first host. Meta Muse, Messenger-style AI surfaces, ChatGPT, and Claude follow once that contract holds, so either partner can change the same trip from their preferred agent.
+Say "what's good near X," and add that plan to the shared trip both people see. The object is that calendar, shaped by time. It is not a markdown trip file, and it is not a day-board. Humans set intent. Agents read and write the shared calendar as the source of truth. Personal calendars only receive a copy. Distribution meets both people wherever they already talk to their AI. MCP is the first host. Meta Muse, Messenger-style AI surfaces, ChatGPT, and Claude follow once that contract holds, so either partner can change the same trip from their preferred agent.
 
 ## Open (ranked)
 
@@ -31,3 +31,4 @@ Say "what's good near X," and add that plan to the shared trip both people see. 
 - A different-backend rewrite. The current Convex app is the product.
 - A multi-trip team product before couple and partner flows work.
 - Booking and reservations for flights, hotels, and restaurant checkout. The product is the shared trip system of record. Users or other agents book elsewhere, and the calendar holds the plan.
+- A generic solo itinerary planner, such as LetsPackUp, PlanGoGo, Traveler.md, or aitrips. Those are a markdown trip file or a day-board for one person. The unit here is a couple, and the object is one shared calendar.
