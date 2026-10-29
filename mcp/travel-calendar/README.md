@@ -1,9 +1,14 @@
-# Travel Calendar MCP (sketch)
+# Travel Calendar MCP
 
-Read-only MCP server that wraps the agent HTTP API:
+MCP server for the Travel Calendar agent HTTP API.
 
+- `check_access`
 - `list_trips`
 - `get_trip_bundle`
+- `create_trip`
+- `update_trip`
+
+`create_trip` requires lifetime access and returns `tripId`. `update_trip` replaces the name, start date, and end date. The API key's user must own the trip. Both members see that change on reload and in `get_trip_bundle`.
 
 ## 1. Create an API key
 
@@ -13,11 +18,11 @@ In the Convex dashboard, copy your `users` document `_id`, then:
 npx convex run agentKeys:createForUser '{"userId":"YOUR_USER_ID","name":"cursor-mcp"}'
 ```
 
-Save the returned `key` (`tc_…`) — it is shown only once.
+Save the returned `key` (`tc_…`). It is shown only once.
 
 ## Access
 
-Lifetime access ($9.99 once) gates trip tools. Use `check_access` first; if unpaid, complete the returned Stripe `paymentUrl`, then retry.
+Lifetime access ($9.99 once) is required for `list_trips`, `get_trip_bundle`, and `create_trip`. `update_trip` does not check it. Use `check_access` first. If the user has not paid, complete the returned Stripe `paymentUrl`, then retry.
 
 ```bash
 cd mcp/travel-calendar
@@ -52,4 +57,16 @@ curl -sS -H "Authorization: Bearer tc_…" \
   https://determined-anaconda-212.convex.site/agent/v1/trips
 ```
 
-Write tools are intentionally out of scope for this sketch.
+```bash
+curl -sS -H "Authorization: Bearer tc_…" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Lisbon","startDate":"2026-05-01","endDate":"2026-05-08","displayName":"Ada"}' \
+  https://determined-anaconda-212.convex.site/agent/v1/trips
+```
+
+```bash
+curl -sS -X PUT -H "Authorization: Bearer tc_…" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Porto","startDate":"2026-06-01","endDate":"2026-06-04"}' \
+  https://determined-anaconda-212.convex.site/agent/v1/trips/TRIP_ID
+```

@@ -1,9 +1,33 @@
-import { v } from "convex/values"
+import { ConvexError, v } from "convex/values"
 
-import { mutation, query } from "./_generated/server"
-import { requireOwner } from "./lib/auth"
-import { requireAccess } from "./access"
+import type { Id } from "./_generated/dataModel"
+import { internalMutation, mutation, query } from "./_generated/server"
+import type { MutationCtx } from "./_generated/server"
+import { requireAccess, userHasAccess } from "./access"
+import { checkOwner, getCurrentUserId, requireOwner } from "./lib/auth"
 import { getTripBundleForUser, listTripsForUser } from "./lib/tripData"
+
+type TripScheduleInput = {
+  name: string
+  startDate: string
+  endDate: string
+}
+
+type CreateTripInput = TripScheduleInput & {
+  displayName: string
+}
+
+type UpdateTripInput = TripScheduleInput & {
+  tripId: Id<"trips">
+}
+
+type CreateTripResult =
+  | { ok: true; tripId: Id<"trips"> }
+  | { ok: false; error: "name_required" | "payment_required" }
+
+type UpdateTripResult =
+  | { ok: true }
+  | { ok: false; error: "name_required" | "not_found" | "not_owner" }
 
 function generateInviteCode() {
   const bytes = new Uint8Array(6)
@@ -95,6 +119,102 @@ export const getBundle = query({
   },
 })
 
+async function insertTrip(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  input: CreateTripInput,
+): Promise<CreateTripResult> {
+  const name = input.name.trim()
+  const displayName = input.displayName.trim()
+  if (!name || !displayName) {
+    return { ok: false, error: "name_required" }
+  }
+
+  let inviteCode = generateInviteCode()
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const existing = await ctx.db
+      .query("trips")
+      .withIndex("by_invite_code", (q) => q.eq("inviteCode", inviteCode))
+      .unique()
+    if (!existing) {
+      break
+    }
+    inviteCode = generateInviteCode()
+  }
+
+  const tripId = await ctx.db.insert("trips", {
+    name,
+    inviteCode,
+    startDate: input.startDate,
+    endDate: input.endDate,
+    createdBy: userId,
+  })
+
+  await ctx.db.insert("tripMembers", {
+    tripId,
+    userId,
+    role: "owner",
+    displayName,
+  })
+
+  await ctx.db.insert("tripNotes", {
+    tripId,
+    content: "",
+    updatedBy: userId,
+  })
+
+  return { ok: true, tripId }
+}
+
+async function createTripForUser(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  input: CreateTripInput,
+): Promise<CreateTripResult> {
+  if (!(await userHasAccess(ctx, userId))) {
+    return { ok: false, error: "payment_required" }
+  }
+  return await insertTrip(ctx, userId, input)
+}
+
+function throwUpdateFailure(result: UpdateTripResult): asserts result is { ok: true } {
+  if (result.ok) {
+    return
+  }
+  if (result.error === "name_required") {
+    throw new Error("Trip name is required.")
+  }
+  if (result.error === "not_owner") {
+    throw new ConvexError("Owner access required")
+  }
+  if (result.error === "not_found") {
+    throw new ConvexError("Not a member of this trip")
+  }
+  const unreachable: never = result.error
+  throw new Error(unreachable)
+}
+
+async function patchTrip(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  input: UpdateTripInput,
+): Promise<UpdateTripResult> {
+  const owner = await checkOwner(ctx, input.tripId, userId)
+  if (!owner.ok) {
+    return owner
+  }
+  const name = input.name.trim()
+  if (!name) {
+    return { ok: false, error: "name_required" }
+  }
+  await ctx.db.patch(input.tripId, {
+    name,
+    startDate: input.startDate,
+    endDate: input.endDate,
+  })
+  return { ok: true }
+}
+
 export const create = mutation({
   args: {
     name: v.string(),
@@ -104,47 +224,19 @@ export const create = mutation({
   },
   returns: v.id("trips"),
   handler: async (ctx, args) => {
-    const userId = await requireAccess(ctx)
-    const name = args.name.trim()
-    const displayName = args.displayName.trim()
-    if (!name || !displayName) {
+    const userId = await getCurrentUserId(ctx)
+    const result = await createTripForUser(ctx, userId, args)
+    if (result.ok) {
+      return result.tripId
+    }
+    if (result.error === "payment_required") {
+      throw new ConvexError("Payment required: lifetime access ($9.99 once)")
+    }
+    if (result.error === "name_required") {
       throw new Error("Trip name and display name are required.")
     }
-
-    let inviteCode = generateInviteCode()
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      const existing = await ctx.db
-        .query("trips")
-        .withIndex("by_invite_code", (q) => q.eq("inviteCode", inviteCode))
-        .unique()
-      if (!existing) {
-        break
-      }
-      inviteCode = generateInviteCode()
-    }
-
-    const tripId = await ctx.db.insert("trips", {
-      name,
-      inviteCode,
-      startDate: args.startDate,
-      endDate: args.endDate,
-      createdBy: userId,
-    })
-
-    await ctx.db.insert("tripMembers", {
-      tripId,
-      userId,
-      role: "owner",
-      displayName,
-    })
-
-    await ctx.db.insert("tripNotes", {
-      tripId,
-      content: "",
-      updatedBy: userId,
-    })
-
-    return tripId
+    const unreachable: never = result.error
+    throw new Error(unreachable)
   },
 })
 
@@ -200,13 +292,67 @@ export const update = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireOwner(ctx, args.tripId)
-    await ctx.db.patch(args.tripId, {
-      name: args.name.trim(),
+    const userId = await getCurrentUserId(ctx)
+    throwUpdateFailure(await patchTrip(ctx, userId, args))
+    return null
+  },
+})
+
+const createTripResult = v.union(
+  v.object({
+    ok: v.literal(true),
+    tripId: v.id("trips"),
+  }),
+  v.object({
+    ok: v.literal(false),
+    error: v.union(v.literal("name_required"), v.literal("payment_required")),
+  }),
+)
+
+const updateTripResult = v.union(
+  v.object({
+    ok: v.literal(true),
+  }),
+  v.object({
+    ok: v.literal(false),
+    error: v.union(v.literal("name_required"), v.literal("not_found"), v.literal("not_owner")),
+  }),
+)
+
+export const createForAgent = internalMutation({
+  args: {
+    userId: v.id("users"),
+    name: v.string(),
+    startDate: v.string(),
+    endDate: v.string(),
+    displayName: v.string(),
+  },
+  returns: createTripResult,
+  handler: async (ctx, args) => {
+    return await createTripForUser(ctx, args.userId, args)
+  },
+})
+
+export const updateForAgent = internalMutation({
+  args: {
+    userId: v.id("users"),
+    tripId: v.string(),
+    name: v.string(),
+    startDate: v.string(),
+    endDate: v.string(),
+  },
+  returns: updateTripResult,
+  handler: async (ctx, args): Promise<UpdateTripResult> => {
+    const tripId = ctx.db.normalizeId("trips", args.tripId)
+    if (!tripId) {
+      return { ok: false, error: "not_found" }
+    }
+    return await patchTrip(ctx, args.userId, {
+      tripId,
+      name: args.name,
       startDate: args.startDate,
       endDate: args.endDate,
     })
-    return null
   },
 })
 

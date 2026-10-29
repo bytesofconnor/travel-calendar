@@ -80,6 +80,9 @@ jobs:
         working-directory: mcp/travel-calendar
         run: pnpm install --frozen-lockfile
 
+      - name: Test agent trip writes
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test convex/lib/agentTripBody.test.mts mcp/travel-calendar/server.test.mts
+
       - name: Lint
         run: pnpm lint
 
