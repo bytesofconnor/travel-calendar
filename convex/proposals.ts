@@ -776,7 +776,7 @@ function websiteMessage(error: ShellError) {
   }
 }
 
-async function visiblePending(ctx: ReadCtx, userId: Id<"users">) {
+async function visiblePending(ctx: ReadCtx, userId: Id<"users">, confirmId: Id<"proposals"> | null) {
   const seen = new Map<string, Doc<"proposals">>()
   const mine = await ctx.db
     .query("proposals")
@@ -798,18 +798,24 @@ async function visiblePending(ctx: ReadCtx, userId: Id<"users">) {
       seen.set(row._id, row)
     }
   }
-  // Trip-add rows have no tripId, so the trip index cannot see them. The glance link has to resolve for any signed-in user.
-  const all = await ctx.db.query("proposals").collect()
-  for (const row of all) {
-    if (row.status === "pending" && row.target === "trip" && row.op === "add" && row.tripId === undefined) {
-      seen.set(row._id, row)
+  // A new trip has no members yet, so the glance id is the only way the other person can see that one row.
+  if (confirmId) {
+    const linked = await ctx.db.get(confirmId)
+    if (
+      linked &&
+      linked.status === "pending" &&
+      linked.target === "trip" &&
+      linked.op === "add" &&
+      linked.tripId === undefined
+    ) {
+      seen.set(linked._id, linked)
     }
   }
   return [...seen.values()].sort((a, b) => b._creationTime - a._creationTime)
 }
 
-async function queueRows(ctx: ReadCtx, userId: Id<"users">) {
-  const rows = await visiblePending(ctx, userId)
+async function queueRows(ctx: ReadCtx, userId: Id<"users">, confirmId: Id<"proposals"> | null) {
+  const rows = await visiblePending(ctx, userId, confirmId)
   const built = []
   for (const row of rows) {
     const proposal = toDomain(row)
@@ -886,11 +892,12 @@ export const reject = mutation({
 })
 
 export const pending = query({
-  args: {},
+  args: { confirmId: v.optional(v.string()) },
   returns: v.array(queueRowValidator),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
     const userId = await getCurrentUserId(ctx)
-    const rows = await queueRows(ctx, userId)
+    const confirmId = args.confirmId ? ctx.db.normalizeId("proposals", args.confirmId) : null
+    const rows = await queueRows(ctx, userId, confirmId)
     return rows.map((row) => row.website)
   },
 })
@@ -970,7 +977,7 @@ export const listPendingForAgent = internalQuery({
   args: { userId: v.id("users") },
   returns: v.object({ proposals: v.array(agentQueueRow) }),
   handler: async (ctx, args) => {
-    const rows = await queueRows(ctx, args.userId)
+    const rows = await queueRows(ctx, args.userId, null)
     return { proposals: rows.map((row) => row.agent) }
   },
 })

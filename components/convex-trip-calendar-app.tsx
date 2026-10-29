@@ -168,7 +168,10 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
   const [autoJoinAttempted, setAutoJoinAttempted] = useState(false)
 
   const bundle = useQuery(api.trips.getBundle, activeTripId ? { tripId: activeTripId } : "skip")
-  const pendingQuery = useQuery(api.proposals.pending, isAuthenticated && me ? {} : "skip")
+  const pendingQuery = useQuery(
+    api.proposals.pending,
+    isAuthenticated && me ? (confirmId ? { confirmId } : {}) : "skip",
+  )
 
   const createTrip = useMutation(api.trips.create)
   const joinTrip = useMutation(api.trips.join)
@@ -1105,13 +1108,24 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
   }
 
   const dayCount = tripDayCount(trip.startDate, trip.endDate)
+  const tripProposer = bundle?.trip.proposedBy
+    ? members.find((member) => member.userId === bundle.trip.proposedBy)?.displayName
+    : undefined
+  const tripConfirmer = bundle?.trip.confirmedBy
+    ? members.find((member) => member.userId === bundle.trip.confirmedBy)?.displayName
+    : undefined
+  const tripAttribution =
+    tripProposer && tripConfirmer ? `${tripProposer} proposed · ${tripConfirmer} confirmed` : null
   const coverMeta = [
     formatTripDateRange(trip.startDate, trip.endDate),
     `${dayCount} day${dayCount === 1 ? "" : "s"}`,
     members.length > 1
       ? `you & ${members.find((m) => m.userId !== userId)?.displayName?.split(" ")[0] || "partner"}`
       : "you",
-  ].join(" · ")
+    tripAttribution,
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join(" · ")
   const packingChecked = packingItems.filter((item) => item.isChecked).length
   const notesCount = noteDraft.trim() ? 1 : 0
   const captureHint = storyMode === "today" ? "What’s happening today?" : "Add to the trip…"
