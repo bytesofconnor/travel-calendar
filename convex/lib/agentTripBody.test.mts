@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { parseCreateBody, parseUpdateBody } from "./agentTripBody.ts"
+import { parseCreateBody, parseJoinBody, parseThemeBody, parseUpdateBody } from "./agentTripBody.ts"
 
 const createValue = {
   name: "Lisbon",
@@ -83,4 +83,64 @@ test("parseUpdateBody rejects non-strings", () => {
   assert.deepEqual(parseUpdateBody({ ...updateValue, endDate: 20260604 }), invalid)
   assert.deepEqual(parseUpdateBody(undefined), invalid)
   assert.deepEqual(parseUpdateBody([]), invalid)
+})
+
+const joinValue = {
+  inviteCode: "AbC",
+  displayName: "Ada",
+}
+
+const invalidJoin = { ok: false, error: "Invalid join fields." }
+const invalidTheme = { ok: false, error: "Invalid theme fields." }
+
+test("parseJoinBody accepts exactly the two strings", () => {
+  assert.deepEqual(parseJoinBody(joinValue), { ok: true, value: joinValue })
+})
+
+test("parseJoinBody accepts empty strings", () => {
+  const value = { inviteCode: "", displayName: "" }
+  assert.deepEqual(parseJoinBody(value), { ok: true, value })
+})
+
+test("parseJoinBody rejects extra keys, including host and userId", () => {
+  assert.deepEqual(parseJoinBody({ ...joinValue, host: "grok" }), invalidJoin)
+  assert.deepEqual(parseJoinBody({ ...joinValue, userId: "user_1" }), invalidJoin)
+})
+
+test("parseJoinBody rejects missing fields and non-strings", () => {
+  assert.deepEqual(parseJoinBody({ inviteCode: joinValue.inviteCode }), invalidJoin)
+  assert.deepEqual(parseJoinBody({}), invalidJoin)
+  assert.deepEqual(parseJoinBody({ ...joinValue, displayName: 1 }), invalidJoin)
+  assert.deepEqual(parseJoinBody({ ...joinValue, inviteCode: null }), invalidJoin)
+  assert.deepEqual(parseJoinBody(null), invalidJoin)
+  assert.deepEqual(parseJoinBody([joinValue]), invalidJoin)
+})
+
+test("parseThemeBody accepts a trip id and a pack string or null", () => {
+  assert.deepEqual(parseThemeBody({ tripId: "trip_1", themePack: "dusk-rose" }), {
+    ok: true,
+    value: { tripId: "trip_1", themePack: "dusk-rose" },
+  })
+  assert.deepEqual(parseThemeBody({ tripId: "trip_1", themePack: null }), {
+    ok: true,
+    value: { tripId: "trip_1", themePack: null },
+  })
+})
+
+test("parseThemeBody accepts an unknown pack string", () => {
+  assert.deepEqual(parseThemeBody({ tripId: "trip_1", themePack: "not-a-pack" }), {
+    ok: true,
+    value: { tripId: "trip_1", themePack: "not-a-pack" },
+  })
+})
+
+test("parseThemeBody rejects extra keys, missing fields, and non-strings", () => {
+  assert.deepEqual(parseThemeBody({ tripId: "trip_1", themePack: null, host: "grok" }), invalidTheme)
+  assert.deepEqual(parseThemeBody({ tripId: "trip_1", themePack: null, userId: "user_1" }), invalidTheme)
+  assert.deepEqual(parseThemeBody({ tripId: "trip_1" }), invalidTheme)
+  assert.deepEqual(parseThemeBody({ themePack: null }), invalidTheme)
+  assert.deepEqual(parseThemeBody({ tripId: "trip_1", themePack: 1 }), invalidTheme)
+  assert.deepEqual(parseThemeBody({ tripId: 1, themePack: null }), invalidTheme)
+  assert.deepEqual(parseThemeBody(null), invalidTheme)
+  assert.deepEqual(parseThemeBody(["trip_1"]), invalidTheme)
 })

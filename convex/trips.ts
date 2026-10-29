@@ -4,7 +4,8 @@ import type { Id } from "./_generated/dataModel"
 import { internalQuery, mutation, query } from "./_generated/server"
 import type { MutationCtx } from "./_generated/server"
 import { requireAccess, userHasAccess } from "./access"
-import { checkOwner, getCurrentUserId, getMembership, requireMembership, requireOwner } from "./lib/auth"
+import { checkOwner, getCurrentUserId, getMembership, requireOwner } from "./lib/auth"
+import { parseThemePack, type ThemePackId } from "../lib/theme-packs"
 import { bundleItemValidator, getTripBundleForUser, listTripsForUser, serializeTrip, tripValidator } from "./lib/tripData"
 import { parseSearchQuery, searchTrips } from "./lib/tripSearch"
 import { themePackValidator } from "./lib/themePack"
@@ -288,6 +289,90 @@ export const create = mutation({
   },
 })
 
+type JoinResult =
+  | {
+      ok: true
+      tripId: Id<"trips">
+      joined: "inserted" | "already_member"
+      role: "owner" | "editor"
+      displayName: string
+    }
+  | { ok: false; error: "payment_required" | "name_required" | "invite_not_found" }
+
+type ThemeResult =
+  | { ok: true; tripId: Id<"trips">; themePack: ThemePackId | null }
+  | { ok: false; error: "not_found" | "invalid_pack" }
+
+export async function joinByInvite(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  inviteCode: string,
+  displayName: string,
+): Promise<JoinResult> {
+  if (!(await userHasAccess(ctx, userId))) {
+    return { ok: false, error: "payment_required" }
+  }
+  const name = displayName.trim()
+  const code = inviteCode.trim().toLowerCase()
+  if (!name || !code) {
+    return { ok: false, error: "name_required" }
+  }
+  const trip = await ctx.db
+    .query("trips")
+    .withIndex("by_invite_code", (q) => q.eq("inviteCode", code))
+    .unique()
+  if (!trip) {
+    return { ok: false, error: "invite_not_found" }
+  }
+  const existing = await getMembership(ctx, trip._id, userId)
+  if (existing) {
+    return {
+      ok: true,
+      tripId: trip._id,
+      joined: "already_member",
+      role: existing.role,
+      displayName: existing.displayName,
+    }
+  }
+  const inserted = await insertMember(ctx, trip._id, userId, "editor", name)
+  if (!inserted.ok) {
+    return { ok: false, error: "name_required" }
+  }
+  const membership = await getMembership(ctx, trip._id, userId)
+  if (!membership) {
+    throw new Error("Membership missing after insert.")
+  }
+  return {
+    ok: true,
+    tripId: trip._id,
+    joined: "inserted",
+    role: membership.role,
+    displayName: membership.displayName,
+  }
+}
+
+export async function applyThemePack(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  tripId: Id<"trips">,
+  themePack: string | null,
+): Promise<ThemeResult> {
+  const pack = themePack === null ? null : parseThemePack(themePack)
+  if (themePack !== null && pack === null) {
+    return { ok: false, error: "invalid_pack" }
+  }
+  const membership = await getMembership(ctx, tripId, userId)
+  if (!membership) {
+    return { ok: false, error: "not_found" }
+  }
+  const trip = await ctx.db.get(tripId)
+  if (!trip) {
+    return { ok: false, error: "not_found" }
+  }
+  await ctx.db.patch(tripId, { themePack: pack ?? undefined })
+  return { ok: true, tripId, themePack: pack }
+}
+
 export const join = mutation({
   args: {
     inviteCode: v.string(),
@@ -295,28 +380,22 @@ export const join = mutation({
   },
   returns: v.id("trips"),
   handler: async (ctx, args) => {
-    const userId = await requireAccess(ctx)
-    const displayName = args.displayName.trim()
-    const inviteCode = args.inviteCode.trim().toLowerCase()
-    if (!displayName || !inviteCode) {
+    const userId = await getCurrentUserId(ctx)
+    const result = await joinByInvite(ctx, userId, args.inviteCode, args.displayName)
+    if (result.ok) {
+      return result.tripId
+    }
+    if (result.error === "payment_required") {
+      throw new ConvexError("Payment required: lifetime access ($9.99 once)")
+    }
+    if (result.error === "name_required") {
       throw new Error("Invite code and display name are required.")
     }
-
-    const trip = await ctx.db
-      .query("trips")
-      .withIndex("by_invite_code", (q) => q.eq("inviteCode", inviteCode))
-      .unique()
-
-    if (!trip) {
+    if (result.error === "invite_not_found") {
       throw new Error("Invite code not found.")
     }
-
-    const inserted = await insertMember(ctx, trip._id, userId, "editor", displayName)
-    if (!inserted.ok) {
-      throw new Error("Invite code and display name are required.")
-    }
-
-    return trip._id
+    const unreachable: never = result.error
+    throw new Error(unreachable)
   },
 })
 
@@ -450,10 +529,14 @@ export const setThemePack = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.tripId)
-    await ctx.db.patch(args.tripId, {
-      themePack: args.themePack ?? undefined,
-    })
-    return null
+    const userId = await getCurrentUserId(ctx)
+    const result = await applyThemePack(ctx, userId, args.tripId, args.themePack)
+    if (result.ok) {
+      return null
+    }
+    if (result.error === "invalid_pack") {
+      throw new Error("Invalid theme pack.")
+    }
+    throw new ConvexError("Not a member of this trip")
   },
 })
