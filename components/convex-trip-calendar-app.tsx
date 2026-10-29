@@ -56,6 +56,7 @@ import { SegmentedControl, StatusBanner } from "@/components/ds"
 import { ThemePackPickerMenuItems } from "@/components/theme-pack-menu"
 import { useTripThemePack } from "@/components/use-trip-theme-pack"
 import { CaptureDock, type CaptureKind } from "./capture-dock"
+import { ConfirmQueue } from "./confirm-queue"
 import { CreateJoinScreen } from "./create-join-screen"
 import { ItemDialog } from "./item-dialog"
 import { LoginScreen } from "./login-screen"
@@ -73,6 +74,7 @@ const LAST_TRIP_KEY = "travel-calendar:last-trip-id"
 
 interface ConvexTripCalendarAppProps {
   joinCode?: string
+  confirmId?: string
 }
 
 type ConvexTripDoc = {
@@ -148,7 +150,7 @@ function LoadingJourney({ label = "Loading your trip", detail = "Pulling plans, 
   )
 }
 
-export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) {
+export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalendarAppProps) {
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth()
   const { signIn, signOut } = useAuthActions()
   // Calendar store no longer drives primary workspace chrome (Together Story).
@@ -166,6 +168,10 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
   const [autoJoinAttempted, setAutoJoinAttempted] = useState(false)
 
   const bundle = useQuery(api.trips.getBundle, activeTripId ? { tripId: activeTripId } : "skip")
+  const pendingQuery = useQuery(
+    api.proposals.pending,
+    isAuthenticated && me ? (confirmId ? { confirmId } : {}) : "skip",
+  )
 
   const createTrip = useMutation(api.trips.create)
   const joinTrip = useMutation(api.trips.join)
@@ -174,6 +180,8 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
   const createItem = useMutation(api.items.create)
   const updateItem = useMutation(api.items.update)
   const removeItem = useMutation(api.items.remove)
+  const confirmProposal = useMutation(api.proposals.confirm)
+  const rejectProposal = useMutation(api.proposals.reject)
   const saveNote = useMutation(api.notes.save)
   const addPacking = useMutation(api.packing.add)
   const addManyPacking = useMutation(api.packing.addMany)
@@ -248,20 +256,30 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
   const items: TripItem[] = useMemo(() => {
     if (!bundle) return []
     return withAuthorNames(
-      bundle.items.map((item) => ({
-        id: item._id,
-        tripId: item.tripId,
-        title: item.title,
-        notes: item.notes,
-        link: item.linkUrl ? { label: item.linkLabel ?? "Link", url: item.linkUrl } : undefined,
-        startDate: item.startDate,
-        endDate: item.endDate,
-        location: item.location,
-        locationTo: item.locationTo,
-        createdBy: item.createdBy,
-        createdAt: toIso(item._creationTime),
-        updatedAt: toIso(item._creationTime),
-      })),
+      bundle.items.map((item) => {
+        const proposed = item.proposedBy
+          ? members.find((member) => member.userId === item.proposedBy)?.displayName
+          : undefined
+        const confirmed = item.confirmedBy
+          ? members.find((member) => member.userId === item.confirmedBy)?.displayName
+          : undefined
+        return {
+          id: item._id,
+          tripId: item.tripId,
+          title: item.title,
+          notes: item.notes,
+          link: item.linkUrl ? { label: item.linkLabel ?? "Link", url: item.linkUrl } : undefined,
+          startDate: item.startDate,
+          endDate: item.endDate,
+          location: item.location,
+          locationTo: item.locationTo,
+          createdBy: item.createdBy,
+          createdAt: toIso(item._creationTime),
+          updatedAt: toIso(item._creationTime),
+          confirmLine:
+            proposed && confirmed ? `${proposed} proposed · ${confirmed} confirmed` : undefined,
+        }
+      }),
       members,
     )
   }, [bundle, members])
@@ -550,12 +568,13 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
     setIsMutating(true)
     setErrorMessage("")
     try {
-      const tripId = await createTrip({
+      const created = await createTrip({
         name: tripName.trim(),
         startDate: tripStart,
         endDate: tripEnd,
         displayName: displayName.trim(),
       })
+      const tripId = created.tripId
       setActiveTripId(tripId)
       setShowCreateJoin(false)
       if (typeof window !== "undefined") {
@@ -611,9 +630,9 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
         await updateItem({ itemId: existingItem.id as Id<"tripItems">, ...payload })
         setEmphasizeItemId(existingItem.id)
       } else {
-        const createdId = await createItem({ tripId: trip.id as Id<"trips">, ...payload })
-        if (typeof createdId === "string") {
-          setEmphasizeItemId(createdId)
+        const created = await createItem({ tripId: trip.id as Id<"trips">, ...payload })
+        if (typeof created.itemId === "string") {
+          setEmphasizeItemId(created.itemId)
         }
         setShareMessage("Added for both of you.")
         window.setTimeout(() => setShareMessage(""), 2000)
@@ -903,6 +922,46 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
     }
   }
 
+  async function handleConfirmProposal(proposalId: string) {
+    const name = (displayName.trim() || currentMember?.displayName || guessDisplayName(me)).trim()
+    setIsMutating(true)
+    setErrorMessage("")
+    try {
+      const result = await confirmProposal({
+        proposalId: proposalId as Id<"proposals">,
+        ...(name ? { displayName: name } : {}),
+      })
+      if (result.status === "confirmed" && result.target === "trip" && result.op === "add" && result.tripId) {
+        const tripId = String(result.tripId) as Id<"trips">
+        setActiveTripId(tripId)
+        setShowCreateJoin(false)
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(LAST_TRIP_KEY, tripId)
+        }
+      }
+      setShareMessage("Confirmed.")
+      window.setTimeout(() => setShareMessage(""), 2000)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to confirm.")
+    } finally {
+      setIsMutating(false)
+    }
+  }
+
+  async function handleRejectProposal(proposalId: string) {
+    setIsMutating(true)
+    setErrorMessage("")
+    try {
+      await rejectProposal({ proposalId: proposalId as Id<"proposals"> })
+      setShareMessage("Rejected.")
+      window.setTimeout(() => setShareMessage(""), 2000)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to reject.")
+    } finally {
+      setIsMutating(false)
+    }
+  }
+
   async function handleSignOut() {
     await signOut()
     setActiveTripId(null)
@@ -923,6 +982,19 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
       window.localStorage.setItem(LAST_TRIP_KEY, nextTripId)
     }
   }
+
+  const confirmQueue = (
+    <ConfirmQueue
+      rows={(pendingQuery ?? []).map((row) => ({
+        proposalId: row.proposalId,
+        text: row.text,
+        glanceUrl: row.glanceUrl,
+      }))}
+      highlightedId={confirmId}
+      onConfirm={(proposalId) => void handleConfirmProposal(proposalId)}
+      onReject={(proposalId) => void handleRejectProposal(proposalId)}
+    />
+  )
 
   if (authLoading) {
     return <LoadingJourney label="Checking sign-in" detail="Connecting to Convex Auth…" />
@@ -1010,6 +1082,7 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
             : undefined
         }
         onSignOut={() => void handleSignOut()}
+        notice={confirmQueue}
       />
     )
   }
@@ -1035,13 +1108,24 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
   }
 
   const dayCount = tripDayCount(trip.startDate, trip.endDate)
+  const tripProposer = bundle?.trip.proposedBy
+    ? members.find((member) => member.userId === bundle.trip.proposedBy)?.displayName
+    : undefined
+  const tripConfirmer = bundle?.trip.confirmedBy
+    ? members.find((member) => member.userId === bundle.trip.confirmedBy)?.displayName
+    : undefined
+  const tripAttribution =
+    tripProposer && tripConfirmer ? `${tripProposer} proposed · ${tripConfirmer} confirmed` : null
   const coverMeta = [
     formatTripDateRange(trip.startDate, trip.endDate),
     `${dayCount} day${dayCount === 1 ? "" : "s"}`,
     members.length > 1
       ? `you & ${members.find((m) => m.userId !== userId)?.displayName?.split(" ")[0] || "partner"}`
       : "you",
-  ].join(" · ")
+    tripAttribution,
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join(" · ")
   const packingChecked = packingItems.filter((item) => item.isChecked).length
   const notesCount = noteDraft.trim() ? 1 : 0
   const captureHint = storyMode === "today" ? "What’s happening today?" : "Add to the trip…"
@@ -1173,6 +1257,7 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
                 {errorMessage ? <StatusBanner tone="error">{errorMessage}</StatusBanner> : null}
               </div>
 
+              {confirmQueue}
               <TripStoryView
                 className="story-shell"
                 mode={storyMode}

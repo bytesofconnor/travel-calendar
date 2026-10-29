@@ -1,7 +1,7 @@
 import { v } from "convex/values"
 
 import { internalQuery } from "./_generated/server"
-import { getTripBundleForUser, listTripsForUser, tripValidator } from "./lib/tripData"
+import { bundleItemValidator, getTripBundleForUser, listTripsForUser, tripValidator } from "./lib/tripData"
 
 export const listTrips = internalQuery({
   args: { userId: v.id("users") },
@@ -28,22 +28,7 @@ export const getBundle = internalQuery({
           displayName: v.string(),
         }),
       ),
-      items: v.array(
-        v.object({
-          _id: v.id("tripItems"),
-          tripId: v.id("trips"),
-          title: v.string(),
-          notes: v.optional(v.string()),
-          linkLabel: v.optional(v.string()),
-          linkUrl: v.optional(v.string()),
-          startDate: v.string(),
-          endDate: v.string(),
-          location: v.string(),
-          locationTo: v.optional(v.string()),
-          createdBy: v.id("users"),
-          _creationTime: v.number(),
-        }),
-      ),
+      items: v.array(bundleItemValidator),
       note: v.union(
         v.object({
           _id: v.id("tripNotes"),

@@ -52,7 +52,7 @@ function PlanCard({
     <button
       type="button"
       onClick={onClick}
-      aria-label={`${kindLabel(kind)}: ${item.title}${meta ? `. ${meta}` : ""}`}
+      aria-label={`${kindLabel(kind)}: ${item.title}${meta ? `. ${meta}` : ""}${item.confirmLine ? `. ${item.confirmLine}` : ""}`}
       className={cn(
         "plan-card w-full",
         `plan-card--${kind}`,
@@ -69,6 +69,11 @@ function PlanCard({
             </span>
           ) : null}
         </span>
+        {item.confirmLine ? (
+          <span className="mt-0.5 block truncate text-right text-[11px] text-muted-foreground">
+            {item.confirmLine}
+          </span>
+        ) : null}
         <span className="plan-card__title">{item.title}</span>
         {meta ? <span className="plan-card__meta">{meta}</span> : null}
       </span>

@@ -18,6 +18,26 @@ export const tripValidator = v.object({
   coverImageSourceUrl: v.optional(v.string()),
   coverImageQuery: v.optional(v.string()),
   themePack: v.union(themePackValidator, v.null()),
+  archivedAt: v.optional(v.number()),
+  proposedBy: v.optional(v.id("users")),
+  confirmedBy: v.optional(v.id("users")),
+})
+
+export const bundleItemValidator = v.object({
+  _id: v.id("tripItems"),
+  tripId: v.id("trips"),
+  title: v.string(),
+  notes: v.optional(v.string()),
+  linkLabel: v.optional(v.string()),
+  linkUrl: v.optional(v.string()),
+  startDate: v.string(),
+  endDate: v.string(),
+  location: v.string(),
+  locationTo: v.optional(v.string()),
+  createdBy: v.id("users"),
+  _creationTime: v.number(),
+  proposedBy: v.optional(v.id("users")),
+  confirmedBy: v.optional(v.id("users")),
 })
 
 export function serializeTrip(trip: Doc<"trips">) {
@@ -34,6 +54,28 @@ export function serializeTrip(trip: Doc<"trips">) {
     coverImageSourceUrl: trip.coverImageSourceUrl,
     coverImageQuery: trip.coverImageQuery,
     themePack: parseThemePack(trip.themePack),
+    ...(trip.archivedAt !== undefined ? { archivedAt: trip.archivedAt } : {}),
+    ...(trip.proposedBy ? { proposedBy: trip.proposedBy } : {}),
+    ...(trip.confirmedBy ? { confirmedBy: trip.confirmedBy } : {}),
+  }
+}
+
+export function serializeItem(item: Doc<"tripItems">) {
+  return {
+    _id: item._id,
+    tripId: item.tripId,
+    title: item.title,
+    notes: item.notes,
+    linkLabel: item.linkLabel,
+    linkUrl: item.linkUrl,
+    startDate: item.startDate,
+    endDate: item.endDate,
+    location: item.location,
+    locationTo: item.locationTo,
+    createdBy: item.createdBy,
+    _creationTime: item._creationTime,
+    ...(item.proposedBy ? { proposedBy: item.proposedBy } : {}),
+    ...(item.confirmedBy ? { confirmedBy: item.confirmedBy } : {}),
   }
 }
 
@@ -46,7 +88,7 @@ export async function listTripsForUser(ctx: QueryCtx, userId: Id<"users">) {
   const trips: Array<ReturnType<typeof serializeTrip>> = []
   for (const membership of memberships) {
     const trip = await ctx.db.get(membership.tripId)
-    if (trip) {
+    if (trip && trip.archivedAt === undefined) {
       trips.push(serializeTrip(trip))
     }
   }
@@ -103,20 +145,7 @@ export async function getTripBundleForUser(
       role: member.role,
       displayName: member.displayName,
     })),
-    items: items.map((item) => ({
-      _id: item._id,
-      tripId: item.tripId,
-      title: item.title,
-      notes: item.notes,
-      linkLabel: item.linkLabel,
-      linkUrl: item.linkUrl,
-      startDate: item.startDate,
-      endDate: item.endDate,
-      location: item.location,
-      locationTo: item.locationTo,
-      createdBy: item.createdBy,
-      _creationTime: item._creationTime,
-    })),
+    items: items.map((item) => serializeItem(item)),
     note: note
       ? {
           _id: note._id,

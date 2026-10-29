@@ -44,6 +44,7 @@ export interface TripItem {
   createdAt: string
   updatedAt: string
   authorName?: string
+  confirmLine?: string
 }
 
 export interface TripNote {

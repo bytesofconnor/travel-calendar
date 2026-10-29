@@ -24,6 +24,7 @@ import type * as lib_themePack from "../lib/themePack.js";
 import type * as lib_tripData from "../lib/tripData.js";
 import type * as notes from "../notes.js";
 import type * as packing from "../packing.js";
+import type * as proposals from "../proposals.js";
 import type * as trips from "../trips.js";
 import type * as users from "../users.js";
 
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   "lib/tripData": typeof lib_tripData;
   notes: typeof notes;
   packing: typeof packing;
+  proposals: typeof proposals;
   trips: typeof trips;
   users: typeof users;
 }>;

@@ -90,6 +90,7 @@ export const resolveBearer = internalQuery({
     v.object({
       userId: v.id("users"),
       keyId: v.id("agentApiKeys"),
+      confirmEnabled: v.boolean(),
     }),
     v.null(),
   ),
@@ -106,7 +107,11 @@ export const resolveBearer = internalQuery({
     if (!key) {
       return null
     }
-    return { userId: key.userId, keyId: key._id }
+    return {
+      userId: key.userId,
+      keyId: key._id,
+      confirmEnabled: key.confirmEnabled === true,
+    }
   },
 })
 
@@ -146,6 +151,7 @@ async function createKeyForUser(ctx: MutationCtx, userId: Id<"users">, name: str
     keyPrefix: apiKeyPrefix(key),
     keyHash,
     createdAt: Date.now(),
+    confirmEnabled: false,
   })
 
   return { keyId, key, keyPrefix: apiKeyPrefix(key) }
