@@ -15,6 +15,7 @@ import {
   authorizeConfirm,
   decideConfirm,
   decideReject,
+  isUnmemberedTripAdd,
   markConfirmed,
   parseHost,
   partnerGate,
@@ -798,16 +799,9 @@ async function visiblePending(ctx: ReadCtx, userId: Id<"users">, confirmId: Id<"
       seen.set(row._id, row)
     }
   }
-  // A new trip has no members yet, so the glance id is the only way the other person can see that one row.
   if (confirmId) {
     const linked = await ctx.db.get(confirmId)
-    if (
-      linked &&
-      linked.status === "pending" &&
-      linked.target === "trip" &&
-      linked.op === "add" &&
-      linked.tripId === undefined
-    ) {
+    if (linked && isUnmemberedTripAdd(linked)) {
       seen.set(linked._id, linked)
     }
   }

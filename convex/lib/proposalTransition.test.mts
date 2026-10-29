@@ -10,6 +10,7 @@ import {
   authorizeConfirm,
   decideConfirm,
   decideReject,
+  isUnmemberedTripAdd,
   markConfirmed,
   parseHost,
   pendingFrom,
@@ -266,6 +267,17 @@ test("the other owner is pending_for ahead of an earlier editor", () => {
   assert.equal(response.glance_url, "https://www.travelcalendar.space/?confirm=jd7item")
   assert.equal(response.confirmed_by, null)
   assert.equal(response.scope_used, "propose")
+})
+
+test("only a pending trip add with no trip is visible from a glance link", () => {
+  assert.equal(isUnmemberedTripAdd(tripAdd()), true)
+  assert.equal(isUnmemberedTripAdd({ status: "pending", target: "trip", op: "add" }), true)
+  assert.equal(isUnmemberedTripAdd(itemAdd()), false)
+  assert.equal(isUnmemberedTripAdd({ status: "confirmed", target: "trip", op: "add", tripId: null }), false)
+  assert.equal(isUnmemberedTripAdd({ status: "rejected", target: "trip", op: "add" }), false)
+  assert.equal(isUnmemberedTripAdd({ status: "pending", target: "trip", op: "update", tripId }), false)
+  assert.equal(isUnmemberedTripAdd({ status: "pending", target: "item", op: "add", tripId }), false)
+  assert.equal(isUnmemberedTripAdd({ status: "pending", target: "trip", op: "add", tripId }), false)
 })
 
 test("parseHost trims, lowercases, and rejects an illegal name", () => {
