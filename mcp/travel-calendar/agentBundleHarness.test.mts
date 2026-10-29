@@ -9,15 +9,31 @@ if (registered instanceof Promise) {
   await registered
 }
 
-const { parseJoinBody, parseThemeBody } = await import("../../convex/lib/agentTripBody.ts")
+const { parseCreateBody, parseJoinBody, parseThemeBody, parseUpdateBody } = await import(
+  "../../convex/lib/agentTripBody.ts"
+)
+const { parseConfirmBody, parseItemBody, parseRejectBody } = await import("../../convex/lib/agentProposalBody.ts")
 const { getTripBundleForUser } = await import("../../convex/lib/tripData.ts")
 const { parseHost } = await import("../../convex/lib/proposalTransition.ts")
+const { confirmAgent, propose, rejectAgent } = await import("../../convex/proposals.ts")
 const { applyThemePack, joinByInvite } = await import("../../convex/trips.ts")
 
 process.env.TRAVEL_CALENDAR_SITE_URL = "https://example.convex.site"
 process.env.TRAVEL_CALENDAR_API_KEY = "tc_test"
 
-const { getTripBundle, tripsJoin, tripsSetThemePack } = await import("./server.mjs")
+const {
+  addItem,
+  confirmItem,
+  confirmTrip,
+  createTrip,
+  getTripBundle,
+  rejectTrip,
+  removeItem,
+  tripsJoin,
+  tripsSetThemePack,
+  updateItem,
+  updateTrip,
+} = await import("./server.mjs")
 
 type Key = {
   token: string
@@ -283,6 +299,7 @@ async function readJson(init: RequestInit | undefined) {
 export function createAgentBundleHarness(options: { keys: Key[]; trips?: TripSeed[] }) {
   const db = createMemoryDb()
   const tripIds: string[] = []
+  const itemIds: string[] = []
   for (const trip of options.trips ?? []) {
     const tripId = db.insert("trips", {
       name: trip.name,
@@ -307,14 +324,16 @@ export function createAgentBundleHarness(options: { keys: Key[]; trips?: TripSee
       updatedBy: trip.createdBy,
     })
     for (const item of trip.items ?? []) {
-      db.insert("tripItems", {
-        tripId,
-        title: item.title,
-        startDate: item.startDate,
-        endDate: item.endDate,
-        location: item.location,
-        createdBy: item.createdBy,
-      })
+      itemIds.push(
+        db.insert("tripItems", {
+          tripId,
+          title: item.title,
+          startDate: item.startDate,
+          endDate: item.endDate,
+          location: item.location,
+          createdBy: item.createdBy,
+        }),
+      )
     }
   }
 
@@ -407,15 +426,175 @@ export function createAgentBundleHarness(options: { keys: Key[]; trips?: TripSee
       return jsonResponse(bundle)
     }
 
+    if (method === "POST" && path === "/agent/v1/trips") {
+      const body = await readJson(init)
+      if (!body.ok) {
+        return body.response
+      }
+      const parsed = parseCreateBody(body.body)
+      if (!parsed.ok) {
+        return jsonResponse({ error: parsed.error }, 400)
+      }
+      const result = await propose(ctx, {
+        userId: userId as never,
+        host,
+        target: "trip",
+        op: "add",
+        name: parsed.value.name,
+        startDate: parsed.value.startDate,
+        endDate: parsed.value.endDate,
+        displayName: parsed.value.displayName,
+      })
+      return proposalResponse(result)
+    }
+
+    if (method === "PUT" && path.startsWith("/agent/v1/trips/")) {
+      const tripId = path.split("/").pop()
+      if (!tripId || tripId === "trips") {
+        return jsonResponse({ error: "tripId required" }, 400)
+      }
+      const body = await readJson(init)
+      if (!body.ok) {
+        return body.response
+      }
+      const parsed = parseUpdateBody(body.body)
+      if (!parsed.ok) {
+        return jsonResponse({ error: parsed.error }, 400)
+      }
+      const result = await propose(ctx, {
+        userId: userId as never,
+        host,
+        target: "trip",
+        op: "update",
+        tripId,
+        name: parsed.value.name,
+        startDate: parsed.value.startDate,
+        endDate: parsed.value.endDate,
+      })
+      return proposalResponse(result)
+    }
+
+    if (method === "POST" && path === "/agent/v1/items") {
+      const body = await readJson(init)
+      if (!body.ok) {
+        return body.response
+      }
+      const parsed = parseItemBody(body.body)
+      if (!parsed.ok) {
+        return jsonResponse({ error: parsed.error }, 400)
+      }
+      const value = parsed.value
+      const result = await propose(ctx, {
+        userId: userId as never,
+        host,
+        target: "item",
+        op: value.op,
+        tripId: value.op === "update" ? undefined : value.tripId,
+        itemId: value.op === "add" ? undefined : value.itemId,
+        title: value.op === "remove" ? undefined : value.title,
+        notes: value.op === "remove" ? undefined : value.notes,
+        linkLabel: value.op === "remove" ? undefined : value.linkLabel,
+        linkUrl: value.op === "remove" ? undefined : value.linkUrl,
+        startDate: value.op === "remove" ? undefined : value.startDate,
+        endDate: value.op === "remove" ? undefined : value.endDate,
+        location: value.op === "remove" ? undefined : value.location,
+        locationTo: value.op === "remove" ? undefined : value.locationTo,
+      })
+      return proposalResponse(result)
+    }
+
+    if (method === "POST" && path === "/agent/v1/confirm") {
+      const body = await readJson(init)
+      if (!body.ok) {
+        return body.response
+      }
+      const parsed = parseConfirmBody(body.body)
+      if (!parsed.ok) {
+        return jsonResponse({ error: parsed.error }, 400)
+      }
+      const result = await confirmAgent(ctx, {
+        userId: userId as never,
+        proposalId: parsed.value.proposalId as never,
+        expected: parsed.value.target,
+        displayName: parsed.value.displayName,
+        host,
+        confirmEnabled: key.confirmEnabled,
+      })
+      return proposalResponse(result)
+    }
+
+    if (method === "POST" && path === "/agent/v1/reject") {
+      const body = await readJson(init)
+      if (!body.ok) {
+        return body.response
+      }
+      const parsed = parseRejectBody(body.body)
+      if (!parsed.ok) {
+        return jsonResponse({ error: parsed.error }, 400)
+      }
+      const result = await rejectAgent(ctx, {
+        userId: userId as never,
+        proposalId: parsed.value.proposalId as never,
+        host,
+        confirmEnabled: key.confirmEnabled,
+      })
+      return proposalResponse(result)
+    }
+
     return jsonResponse({ error: "Not found" }, 404)
   }
 
-  return { fetch, tripIds }
+  return { fetch, tripIds, itemIds }
+}
+
+function proposalResponse(result: { ok: true; response: unknown } | { ok: false; error: string }) {
+  if (result.ok) {
+    return jsonResponse(result.response)
+  }
+  switch (result.error) {
+    case "propose_scope":
+      return jsonResponse({ error: "propose_scope" }, 403)
+    case "self_confirm":
+    case "no_partner":
+    case "not_pending_for":
+    case "wrong_tool":
+    case "target_missing":
+      return jsonResponse({ error: result.error }, 409)
+    case "not_owner":
+      return jsonResponse({ error: "Owner access required" }, 403)
+    case "trip_not_found":
+      return jsonResponse({ error: "Trip not found" }, 404)
+    case "item_not_found":
+      return jsonResponse({ error: "Item not found" }, 404)
+    case "proposal_not_found":
+      return jsonResponse({ error: "Proposal not found" }, 404)
+    case "name_required":
+      return jsonResponse({ error: "Trip name and display name are required." }, 400)
+    case "trip_name_required":
+      return jsonResponse({ error: "Trip name is required." }, 400)
+    case "title_required":
+      return jsonResponse({ error: "Title is required." }, 400)
+    case "display_name_required":
+      return jsonResponse({ error: "display_name_required" }, 400)
+    case "payment_required":
+      return jsonResponse(
+        {
+          error: "payment_required",
+          message: "Lifetime access required ($9.99 once).",
+          paymentUrl: null,
+        },
+        402,
+      )
+    case "host_required":
+      return jsonResponse({ error: "host_required" }, 400)
+    default:
+      return jsonResponse({ error: "Invalid proposal." }, 400)
+  }
 }
 
 const keys = [
   { token: "tc_ada", userId: "users_ada", confirmEnabled: false },
-  { token: "tc_bea", userId: "users_bea", confirmEnabled: false },
+  { token: "tc_bea", userId: "users_bea", confirmEnabled: true },
   { token: "tc_cam", userId: "users_cam", confirmEnabled: false },
 ]
 
@@ -514,6 +693,214 @@ test("trips_set_theme_pack null clears the pack in get_trip_bundle", async () =>
     assert.deepEqual(cleared, { tripId, themePack: null })
     const bundle = (await getTripBundle({ host: "grok", tripId })) as Bundle
     assert.equal(bundle.trip.themePack, null)
+  })
+})
+
+type Plan = Bundle & {
+  items: Array<{ title: string; startDate: string; endDate: string; location: string }>
+}
+
+function useKey(token: string) {
+  process.env.TRAVEL_CALENDAR_API_KEY = token
+}
+
+function coupleTrip(items?: ItemSeed[]): TripSeed {
+  return {
+    ...lisbonTrip(),
+    members: [
+      { userId: "users_ada", role: "owner", displayName: "Ada" },
+      { userId: "users_bea", role: "editor", displayName: "Bea" },
+    ],
+    ...(items ? { items } : {}),
+  }
+}
+
+const dinner: ItemSeed = {
+  title: "Dinner",
+  startDate: "2026-05-02",
+  endDate: "2026-05-02",
+  location: "Lisbon",
+  createdBy: "users_ada",
+}
+
+async function withTrips(trips: TripSeed[], run: (ids: { tripId: string; itemIds: string[] }) => Promise<void>) {
+  const previous = process.env.TRAVEL_CALENDAR_API_KEY
+  const harness = createAgentBundleHarness({ keys, trips })
+  const original = globalThis.fetch
+  globalThis.fetch = harness.fetch as typeof fetch
+  try {
+    await run({ tripId: harness.tripIds[0] ?? "", itemIds: harness.itemIds })
+  } finally {
+    globalThis.fetch = original
+    if (previous === undefined) {
+      delete process.env.TRAVEL_CALENDAR_API_KEY
+    } else {
+      process.env.TRAVEL_CALENDAR_API_KEY = previous
+    }
+  }
+}
+
+test("create_trip stays out of get_trip_bundle until a different person confirms", async () => {
+  await withTrips([], async () => {
+    useKey("tc_ada")
+    const proposed = await createTrip({
+      host: "grok",
+      name: "Lisbon",
+      startDate: "2026-05-01",
+      endDate: "2026-05-08",
+      displayName: "Ada",
+    })
+    assert.equal(proposed.status, "pending")
+    assert.equal(proposed.tripId, null)
+    useKey("tc_bea")
+    const confirmed = await confirmTrip({
+      host: "grok",
+      proposalId: proposed.proposalId,
+      displayName: "Bea",
+    })
+    assert.equal(confirmed.status, "confirmed")
+    assert.equal(typeof confirmed.tripId, "string")
+    useKey("tc_ada")
+    const bundle = (await getTripBundle({ host: "grok", tripId: confirmed.tripId })) as Plan
+    assert.equal(bundle.trip.name, "Lisbon")
+    assert.equal(bundle.trip.startDate, "2026-05-01")
+    assert.equal(bundle.trip.endDate, "2026-05-08")
+    const ada = bundle.members.find((member) => member.userId === "users_ada")
+    const bea = bundle.members.find((member) => member.userId === "users_bea")
+    assert.equal(ada?.role, "owner")
+    assert.equal(ada?.displayName, "Ada")
+    assert.equal(bea?.role, "editor")
+    assert.equal(bea?.displayName, "Bea")
+    assert.equal(bundle.members.length, 2)
+  })
+})
+
+test("update_trip changes get_trip_bundle only after a different person confirms", async () => {
+  await withTrips([coupleTrip()], async ({ tripId }) => {
+    useKey("tc_ada")
+    const before = (await getTripBundle({ host: "grok", tripId })) as Plan
+    assert.equal(before.trip.name, "Lisbon")
+    const proposed = await updateTrip({
+      host: "grok",
+      tripId,
+      name: "Porto",
+      startDate: "2026-06-01",
+      endDate: "2026-06-04",
+    })
+    assert.equal(proposed.status, "pending")
+    const pending = (await getTripBundle({ host: "grok", tripId })) as Plan
+    assert.equal(pending.trip.name, "Lisbon")
+    assert.equal(pending.trip.startDate, before.trip.startDate)
+    assert.equal(pending.trip.endDate, before.trip.endDate)
+    useKey("tc_bea")
+    const confirmed = await confirmTrip({ host: "grok", proposalId: proposed.proposalId })
+    assert.equal(confirmed.status, "confirmed")
+    useKey("tc_ada")
+    const after = (await getTripBundle({ host: "grok", tripId })) as Plan
+    assert.equal(after.trip.name, "Porto")
+    assert.equal(after.trip.startDate, "2026-06-01")
+    assert.equal(after.trip.endDate, "2026-06-04")
+  })
+})
+
+test("rejecting an update leaves get_trip_bundle unchanged", async () => {
+  await withTrips([coupleTrip()], async ({ tripId }) => {
+    useKey("tc_ada")
+    const before = (await getTripBundle({ host: "grok", tripId })) as Plan
+    const proposed = await updateTrip({
+      host: "grok",
+      tripId,
+      name: "Porto",
+      startDate: "2026-06-01",
+      endDate: "2026-06-04",
+    })
+    useKey("tc_bea")
+    const rejected = await rejectTrip({ host: "grok", proposalId: proposed.proposalId })
+    assert.equal(rejected.status, "rejected")
+    useKey("tc_ada")
+    const after = (await getTripBundle({ host: "grok", tripId })) as Plan
+    assert.equal(after.trip.name, before.trip.name)
+    assert.equal(after.trip.startDate, before.trip.startDate)
+    assert.equal(after.trip.endDate, before.trip.endDate)
+  })
+})
+
+test("items_add shows in get_trip_bundle only after a different person confirms", async () => {
+  await withTrips([coupleTrip()], async ({ tripId }) => {
+    useKey("tc_ada")
+    const before = (await getTripBundle({ host: "grok", tripId })) as Plan
+    assert.equal(before.items.length, 0)
+    const proposed = await addItem({
+      host: "grok",
+      tripId,
+      title: "Dinner",
+      startDate: "2026-05-02",
+      endDate: "2026-05-02",
+      location: "Lisbon",
+    })
+    assert.equal(proposed.status, "pending")
+    const pending = (await getTripBundle({ host: "grok", tripId })) as Plan
+    assert.equal(pending.items.length, 0)
+    useKey("tc_bea")
+    const confirmed = await confirmItem({ host: "grok", proposalId: proposed.proposalId })
+    assert.equal(confirmed.status, "confirmed")
+    useKey("tc_ada")
+    const after = (await getTripBundle({ host: "grok", tripId })) as Plan
+    assert.equal(after.items.length, 1)
+    assert.equal(after.items[0]?.title, "Dinner")
+    assert.equal(after.items[0]?.startDate, "2026-05-02")
+    assert.equal(after.items[0]?.endDate, "2026-05-02")
+    assert.equal(after.items[0]?.location, "Lisbon")
+  })
+})
+
+test("items_update changes get_trip_bundle only after a different person confirms", async () => {
+  await withTrips([coupleTrip([dinner])], async ({ tripId, itemIds }) => {
+    const itemId = itemIds[0]
+    assert.ok(itemId)
+    useKey("tc_ada")
+    const before = (await getTripBundle({ host: "grok", tripId })) as Plan
+    assert.equal(before.items[0]?.title, "Dinner")
+    const proposed = await updateItem({
+      host: "grok",
+      itemId,
+      title: "Lunch",
+      startDate: "2026-05-03",
+      endDate: "2026-05-03",
+      location: "Porto",
+    })
+    assert.equal(proposed.status, "pending")
+    const pending = (await getTripBundle({ host: "grok", tripId })) as Plan
+    assert.equal(pending.items[0]?.title, "Dinner")
+    assert.equal(pending.items[0]?.location, "Lisbon")
+    useKey("tc_bea")
+    const confirmed = await confirmItem({ host: "grok", proposalId: proposed.proposalId })
+    assert.equal(confirmed.status, "confirmed")
+    useKey("tc_ada")
+    const after = (await getTripBundle({ host: "grok", tripId })) as Plan
+    assert.equal(after.items.length, 1)
+    assert.equal(after.items[0]?.title, "Lunch")
+    assert.equal(after.items[0]?.startDate, "2026-05-03")
+    assert.equal(after.items[0]?.location, "Porto")
+  })
+})
+
+test("items_remove drops the item from get_trip_bundle only after a different person confirms", async () => {
+  await withTrips([coupleTrip([dinner])], async ({ tripId, itemIds }) => {
+    const itemId = itemIds[0]
+    assert.ok(itemId)
+    useKey("tc_ada")
+    const proposed = await removeItem({ host: "grok", tripId, itemId })
+    assert.equal(proposed.status, "pending")
+    const pending = (await getTripBundle({ host: "grok", tripId })) as Plan
+    assert.equal(pending.items.length, 1)
+    assert.equal(pending.items[0]?.title, "Dinner")
+    useKey("tc_bea")
+    const confirmed = await confirmItem({ host: "grok", proposalId: proposed.proposalId })
+    assert.equal(confirmed.status, "confirmed")
+    useKey("tc_ada")
+    const after = (await getTripBundle({ host: "grok", tripId })) as Plan
+    assert.equal(after.items.length, 0)
   })
 })
 

@@ -297,6 +297,30 @@ export async function getTripBundle(input) {
   })
 }
 
+export async function addItem(input) {
+  return await proposeItem(input, "add")
+}
+
+export async function updateItem(input) {
+  return await proposeItem(input, "update")
+}
+
+export async function removeItem(input) {
+  return await proposeItem(input, "remove")
+}
+
+export async function confirmTrip(input) {
+  return await confirmTarget(input, "trip")
+}
+
+export async function confirmItem(input) {
+  return await confirmTarget(input, "item")
+}
+
+export async function rejectTrip(input) {
+  return await rejectProposal(input)
+}
+
 export async function confirmPending(input) {
   const host = requireHost(input)
   return await agentFetch("/agent/v1/confirm/pending", { method: "GET", host })
@@ -470,14 +494,14 @@ const toolRegistry = [
       { proposalId: proposalIdField, displayName: displayNameField },
       ["proposalId"],
     ),
-    call: (args) => confirmTarget(args, "trip"),
+    call: (args) => confirmTrip(args),
   },
   {
     name: "trips_reject",
     description:
       "Reject a pending trip proposal, or withdraw one you proposed. A confirmed proposal stays confirmed. Requires lifetime access and host.",
     inputSchema: toolSchema({ proposalId: proposalIdField }, ["proposalId"]),
-    call: (args) => rejectProposal(args),
+    call: (args) => rejectTrip(args),
   },
   {
     name: "items_list",
@@ -503,19 +527,19 @@ const toolRegistry = [
     name: "items_add",
     description: `Propose adding a calendar item. ${secondPropose} Requires lifetime access and host.`,
     inputSchema: toolSchema(itemProperties, ["tripId", "title", "startDate", "endDate", "location"]),
-    call: (args) => proposeItem(args, "add"),
+    call: (args) => addItem(args),
   },
   {
     name: "items_update",
     description: `Propose replacing a calendar item. Send the full field set. ${secondPropose} Requires lifetime access and host.`,
     inputSchema: toolSchema(itemProperties, ["itemId", "title", "startDate", "endDate", "location"]),
-    call: (args) => proposeItem(args, "update"),
+    call: (args) => updateItem(args),
   },
   {
     name: "items_remove",
     description: `Propose removing a calendar item. The item stays until a different partner confirms. ${secondPropose} Requires lifetime access and host.`,
     inputSchema: toolSchema({ tripId: tripIdField, itemId: itemIdField }, ["tripId", "itemId"]),
-    call: (args) => proposeItem(args, "remove"),
+    call: (args) => removeItem(args),
   },
   {
     name: "items_propose",
@@ -536,7 +560,7 @@ const toolRegistry = [
     name: "items_confirm",
     description: `Confirm a pending item proposal. ${proposeOnly} You cannot confirm your own proposal. Confirming an already confirmed proposal returns that row and does not apply it again. Requires lifetime access and host.`,
     inputSchema: toolSchema({ proposalId: proposalIdField }, ["proposalId"]),
-    call: (args) => confirmTarget(args, "item"),
+    call: (args) => confirmItem(args),
   },
   {
     name: "confirm_pending",
