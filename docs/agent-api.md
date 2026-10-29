@@ -2,15 +2,17 @@
 
 HTTP surface for agents and MCP. Auth is a personal API key (`tc_…`).
 
-Every `/agent/v1` route except `OPTIONS` requires `X-Travel-Calendar-Host`. Trim, lowercase, 1 to 64 characters, matching `/^[a-z0-9][a-z0-9._-]{0,63}$/`. Missing or illegal is `400` `{ "error": "host_required" }`. The header is not a JSON field. `POST /agent/v1/trips` and `PUT /agent/v1/trips/:tripId` keep their locked bodies.
+Every `/agent/v1` route except `OPTIONS` requires `X-Travel-Calendar-Host`. Trim, lowercase, 1 to 64 characters, matching `/^[a-z0-9][a-z0-9._-]{0,63}$/`. Missing or illegal is `400` `{ "error": "host_required" }`. The header is not a JSON field. `POST /agent/v1/trips`, `PUT /agent/v1/trips/:tripId`, `POST /agent/v1/join`, and `POST /agent/v1/theme` keep their locked bodies.
 
 `Access-Control-Allow-Methods` is `GET, POST, PUT, OPTIONS`. `Access-Control-Allow-Headers` includes `Authorization`, `Content-Type`, and `X-Travel-Calendar-Host`.
 
-**Lifetime access ($9.99 once)** is required to propose a trip or item, to confirm or reject, and to read trip data. `PUT /agent/v1/trips/:tripId` does not check lifetime access. The API key's user must own the trip when a name, date, or archive proposal is applied. Reads and paywalled writes return `402` with a Stripe `paymentUrl` when the user has not paid.
+**Lifetime access ($9.99 once)** is required to propose a trip or item, to confirm or reject, to read trip data, and to join with an invite code. `PUT /agent/v1/trips/:tripId` does not check lifetime access. `POST /agent/v1/theme` does not check it either. Join checks access once, inside the writer. The HTTP handler does not check access a second time. The API key's user must own the trip when a name, date, or archive proposal is applied. Any member can set the theme pack. Reads and paywalled writes return `402` with a Stripe `paymentUrl` when the user has not paid.
 
 A new key has `confirmEnabled: false`. Absent or false is propose-only. `POST /agent/v1/confirm` then returns `403` `{ "error": "propose_scope" }`. The website confirm buttons do not use the key.
 
-Agent writes insert a pending proposal. They do not insert or patch the trip or item. A second propose inserts a second pending row. The shared plan changes when a different person confirms. Confirm and reject of a row that is already confirmed or rejected return that row and do not apply it again.
+Trip and item writes insert a pending proposal. They do not insert or patch the trip or item. A second propose inserts a second pending row. The shared plan changes when a different person confirms. Confirm and reject of a row that is already confirmed or rejected return that row and do not apply it again.
+
+`POST /agent/v1/join` and `POST /agent/v1/theme` write the membership or the theme pack immediately. They do not insert a proposal. Join success is `tripId`, `joined`, `role`, and `displayName`. Theme success is `tripId` and `themePack`.
 
 Base URL: `https://<deployment>.convex.site`
 
@@ -47,7 +49,7 @@ Agent flow:
 1. Call `check_access` or `GET /agent/v1/access`
 2. If `granted: false`, open or complete `paymentUrl` (Payment Link; `client_reference_id` is the Convex user id)
 3. Stripe webhook `POST /stripe/webhook` grants access on `checkout.session.completed`
-4. Retry trip reads and propose calls
+4. Retry trip reads, propose calls, and join
 
 ### Paywalled routes return 402 when unpaid
 
@@ -59,11 +61,11 @@ Agent flow:
 }
 ```
 
-`PUT /agent/v1/trips/:tripId` does not return this body when the user has not paid.
+`PUT /agent/v1/trips/:tripId` and `POST /agent/v1/theme` do not return this body when the user has not paid. `POST /agent/v1/join` does.
 
 ## Write response
 
-Propose, confirm, and reject return this object. `glance_url` is set only while `status` is `pending`. It is `https://www.travelcalendar.space/?confirm=<proposalId>`. `pending_for` is the other member who can confirm, or `null` when no partner is named yet. `confirmed_by` is `null` until the row is confirmed. `scope_used` is `propose` on propose, `confirm` on an agent confirm, and `member` on a website confirm or reject.
+Propose, confirm, and reject return this object. Join and theme do not. `glance_url` is set only while `status` is `pending`. It is `https://www.travelcalendar.space/?confirm=<proposalId>`. `pending_for` is the other member who can confirm, or `null` when no partner is named yet. `confirmed_by` is `null` until the row is confirmed. `scope_used` is `propose` on propose, `confirm` on an agent confirm, and `member` on a website confirm or reject.
 
 ```json
 {
@@ -154,6 +156,75 @@ Errors:
 - An extra key, including `tripId`, `userId`, or `host`, a missing field, or a non-string value is `400` `{ "error": "Invalid trip fields." }`.
 - An empty trimmed name is `400` `{ "error": "Trip name is required." }`.
 - An editor, at propose or at apply, is `403` `{ "error": "Owner access required" }`. Apply leaves the proposal pending.
+- A missing trip or a non-member is `404` `{ "error": "Trip not found" }`.
+
+### `POST /agent/v1/join`
+
+Joins the API key's user to a trip. Writes the membership immediately. Requires lifetime access. The check runs once in the writer.
+
+The body is exactly these strings.
+
+```json
+{
+  "inviteCode": "abc",
+  "displayName": "Ada"
+}
+```
+
+The server trims the display name. It trims the invite code and lowercases it before lookup. A new member is an editor. A user who already belongs to the trip keeps the stored role and display name. An owner who submits their own code stays owner. Roles are `owner` and `editor`.
+
+Success is `200` and this object.
+
+```json
+{
+  "tripId": "<trips._id>",
+  "joined": "inserted",
+  "role": "editor",
+  "displayName": "Ada"
+}
+```
+
+`joined` is `inserted` or `already_member`. On `already_member`, `role` and `displayName` are the stored values.
+
+Errors:
+
+- Missing or illegal host is `400` `{ "error": "host_required" }`.
+- Invalid JSON is `400` `{ "error": "Invalid JSON." }`.
+- An extra key, including `userId` or `host`, a missing field, or a non-string value is `400` `{ "error": "Invalid join fields." }`.
+- An empty trimmed invite code or display name is `400` `{ "error": "Invite code and display name are required." }`.
+- An unknown invite code is `404` `{ "error": "Invite code not found." }`.
+- An unpaid user gets the `402` body above.
+
+### `POST /agent/v1/theme`
+
+Sets `themePack` on a trip, or clears it. Any member can call it. Lifetime access is not required. The trip id is a body field, not a path segment.
+
+The body is exactly `tripId` (string) and `themePack` (string or null).
+
+```json
+{
+  "tripId": "<trips._id>",
+  "themePack": "dusk-rose"
+}
+```
+
+`themePack` null clears the field. Known pack ids are `golden-hour`, `dusk-rose`, `coastal-infra`, and `sage-coast`. The server accepts or rejects the id with `parseThemePack`.
+
+Success is `200` and this object. `themePack` is `null` when the field was cleared.
+
+```json
+{
+  "tripId": "<trips._id>",
+  "themePack": "dusk-rose"
+}
+```
+
+Errors:
+
+- Missing or illegal host is `400` `{ "error": "host_required" }`.
+- Invalid JSON is `400` `{ "error": "Invalid JSON." }`.
+- An extra key, a missing field, a non-string `tripId`, or a `themePack` that is neither a string nor null is `400` `{ "error": "Invalid theme fields." }`.
+- A string that is not a known pack id is `400` `{ "error": "Invalid theme fields." }`.
 - A missing trip or a non-member is `404` `{ "error": "Trip not found" }`.
 
 ### `POST /agent/v1/archive`
@@ -261,9 +332,9 @@ When `STRIPE_PAYMENT_LINK` is **unset** on Convex, access checks are off (local 
 
 See [mcp/travel-calendar/README.md](../mcp/travel-calendar/README.md). One registry drives list and call. Every tool requires `host` and sends it as `X-Travel-Calendar-Host`.
 
-Tools: `check_access`, `list_trips`, `trips_get`, `trips_search`, `create_trip`, `update_trip`, `trips_archive`, `trips_propose`, `trips_confirm`, `trips_reject`, `items_list`, `items_get`, `items_add`, `items_update`, `items_remove`, `items_propose`, `items_confirm`, `confirm_pending`, `get_trip_bundle`.
+Tools: `check_access`, `list_trips`, `trips_get`, `trips_search`, `trips_join`, `trips_set_theme_pack`, `create_trip`, `update_trip`, `trips_archive`, `trips_propose`, `trips_confirm`, `trips_reject`, `items_list`, `items_get`, `items_add`, `items_update`, `items_remove`, `items_propose`, `items_confirm`, `confirm_pending`, `get_trip_bundle`.
 
-`create_trip`, `update_trip`, `trips_archive`, and `trips_propose` call one trip propose function. `items_add`, `items_update`, `items_remove`, and `items_propose` call one item propose function.
+`trips_join` calls `POST /agent/v1/join`. `trips_set_theme_pack` calls `POST /agent/v1/theme`. Those two responses omit `proposed_by`, `confirmed_by`, and `pending_for`. The MCP server checks `host`, a non-empty invite code, and the pack id with zod before fetch. `host` is still only the header. `create_trip`, `update_trip`, `trips_archive`, and `trips_propose` call one trip propose function. `items_add`, `items_update`, `items_remove`, and `items_propose` call one item propose function.
 
 ## Non-goals
 
