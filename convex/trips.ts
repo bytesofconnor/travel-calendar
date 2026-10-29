@@ -222,20 +222,9 @@ export const setThemePack = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     await requireMembership(ctx, args.tripId)
-    if (args.themePack === null) {
-      const trip = await ctx.db.get(args.tripId)
-      if (!trip) {
-        throw new Error("Trip not found.")
-      }
-      // patch cannot delete a field. Rewrite the row without themePack.
-      const { _id, _creationTime, themePack, ...rest } = trip
-      void _id
-      void _creationTime
-      void themePack
-      await ctx.db.replace(args.tripId, rest)
-      return null
-    }
-    await ctx.db.patch(args.tripId, { themePack: args.themePack })
+    await ctx.db.patch(args.tripId, {
+      themePack: args.themePack ?? undefined,
+    })
     return null
   },
 })

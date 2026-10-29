@@ -8,7 +8,6 @@ export const THEME_PACKS = [
 export type ThemePack = (typeof THEME_PACKS)[number]
 export type ThemePackId = ThemePack["id"]
 
-// Length 4 is the product. A fifth id fails this assignment.
 type ThemePackCount = (typeof THEME_PACKS)["length"]
 const themePackCountCheck: ThemePackCount extends 4 ? "four" : never = "four"
 void themePackCountCheck

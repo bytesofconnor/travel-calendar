@@ -14,6 +14,11 @@ function fail(message: string): never {
   process.exit(1)
 }
 
+function declaresToken(css: string, token: string): boolean {
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  return new RegExp(`(?:^|\\n)\\s*${escaped}\\s*:`).test(css)
+}
+
 const expected = renderThemePackCss()
 if (process.argv.includes("--write")) {
   writeFileSync(cssPath, expected)
@@ -59,9 +64,8 @@ for (const snippet of [
   }
 }
 
-// `--color-background: var(--background)` does not contain `--background:`.
 for (const token of ladderTokenNames()) {
-  if (globals.includes(`${token}:`)) {
+  if (declaresToken(globals, token)) {
     fail(`app/globals.css still declares ${token}`)
   }
   const alias = `--color-${token.slice(2)}: var(${token})`
