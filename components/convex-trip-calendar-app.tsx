@@ -50,6 +50,7 @@ import {
   tripDayCount,
 } from "@/lib/trip-kind"
 import { formatTripDateRange } from "@/lib/format-dates"
+import { oauthRedirectTo } from "@/lib/oauth-redirect"
 import { SegmentedControl, StatusBanner } from "@/components/ds"
 import { CaptureDock, type CaptureKind } from "./capture-dock"
 import { CreateJoinScreen } from "./create-join-screen"
@@ -459,7 +460,7 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
     setAuthMessage("")
     setErrorMessage("")
     try {
-      await signIn("google")
+      await signIn("google", { redirectTo: oauthRedirectTo(window.location.href) })
     } catch (error) {
       setErrorMessage(authErrorMessage(error, "Unable to sign in with Google."))
       setIsSigningInWithGoogle(false)

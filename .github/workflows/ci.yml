@@ -73,6 +73,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Test invite join return
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test lib/oauth-redirect.test.mts
+
       - name: Install MCP dependencies
         working-directory: mcp/travel-calendar
         run: pnpm install --frozen-lockfile
