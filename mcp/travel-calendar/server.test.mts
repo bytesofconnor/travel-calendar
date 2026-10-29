@@ -6,7 +6,7 @@ import test from "node:test"
 process.env.TRAVEL_CALENDAR_SITE_URL = "https://example.convex.site"
 process.env.TRAVEL_CALENDAR_API_KEY = "tc_test"
 
-const { createTrip, updateTrip } = await import("./server.mjs")
+const { createTrip, updateTrip, confirmPending } = await import("./server.mjs")
 
 const directory = fileURLToPath(new URL(".", import.meta.url))
 const originalFetch = globalThis.fetch
@@ -66,6 +66,7 @@ test("create_trip POSTs /agent/v1/trips with the bearer token and trip fields", 
   }
   try {
     const result = await createTrip({
+      host: "grok",
       name: "Lisbon",
       startDate: "2026-05-01",
       endDate: "2026-05-08",
@@ -83,6 +84,7 @@ test("create_trip POSTs /agent/v1/trips with the bearer token and trip fields", 
     assert.equal(init.headers.Authorization, "Bearer tc_test")
     assert.equal(init.headers.Accept, "application/json")
     assert.equal(init.headers["Content-Type"], "application/json")
+    assert.equal(init.headers["X-Travel-Calendar-Host"], "grok")
     const body = jsonBody(init.body)
     assert.deepEqual(body, {
       name: "Lisbon",
@@ -92,6 +94,7 @@ test("create_trip POSTs /agent/v1/trips with the bearer token and trip fields", 
     })
     assert.ok(body !== null && typeof body === "object")
     assert.equal(Object.hasOwn(body, "userId"), false)
+    assert.equal(Object.hasOwn(body, "host"), false)
   } finally {
     restoreFetch()
   }
@@ -105,6 +108,7 @@ test("update_trip PUTs the encoded trip id and omits tripId and userId", async (
   }
   try {
     const result = await updateTrip({
+      host: "grok",
       tripId: " jd7/abc ",
       name: "Porto",
       startDate: "2026-06-01",
@@ -121,6 +125,7 @@ test("update_trip PUTs the encoded trip id and omits tripId and userId", async (
     assert.ok(isHeaderRecord(init.headers))
     assert.equal(init.headers.Authorization, "Bearer tc_test")
     assert.equal(init.headers["Content-Type"], "application/json")
+    assert.equal(init.headers["X-Travel-Calendar-Host"], "grok")
     const body = jsonBody(init.body)
     assert.deepEqual(body, {
       name: "Porto",
@@ -130,6 +135,7 @@ test("update_trip PUTs the encoded trip id and omits tripId and userId", async (
     assert.ok(body !== null && typeof body === "object")
     assert.equal(Object.hasOwn(body, "tripId"), false)
     assert.equal(Object.hasOwn(body, "userId"), false)
+    assert.equal(Object.hasOwn(body, "host"), false)
   } finally {
     restoreFetch()
   }
@@ -150,6 +156,7 @@ test("a 402 payment_required body throws an error that includes the payment URL"
     await assert.rejects(
       () =>
         createTrip({
+          host: "grok",
           name: "Lisbon",
           startDate: "2026-05-01",
           endDate: "2026-05-08",
@@ -161,6 +168,85 @@ test("a 402 payment_required body throws an error that includes the payment URL"
         return true
       },
     )
+  } finally {
+    restoreFetch()
+  }
+})
+
+test("create_trip throws host_required before fetch when host is missing", async () => {
+  let called = false
+  globalThis.fetch = async () => {
+    called = true
+    return new Response("{}", { status: 200 })
+  }
+  try {
+    await assert.rejects(
+      () =>
+        createTrip({
+          name: "Lisbon",
+          startDate: "2026-05-01",
+          endDate: "2026-05-08",
+          displayName: "Ada",
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error)
+        assert.equal(error.message, "host_required")
+        return true
+      },
+    )
+    assert.equal(called, false)
+  } finally {
+    restoreFetch()
+  }
+})
+
+test("update_trip throws host_required before fetch when host is missing", async () => {
+  let called = false
+  globalThis.fetch = async () => {
+    called = true
+    return new Response("{}", { status: 200 })
+  }
+  try {
+    await assert.rejects(
+      () =>
+        updateTrip({
+          tripId: "jd7trip",
+          name: "Porto",
+          startDate: "2026-06-01",
+          endDate: "2026-06-04",
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error)
+        assert.equal(error.message, "host_required")
+        return true
+      },
+    )
+    assert.equal(called, false)
+  } finally {
+    restoreFetch()
+  }
+})
+
+test("confirm_pending GETs /agent/v1/confirm/pending with the host header", async () => {
+  const calls: Array<{ url: string; init: RequestInit | undefined }> = []
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init })
+    return new Response(JSON.stringify({ proposals: [] }), { status: 200 })
+  }
+  try {
+    const result = await confirmPending({ host: "grok", userId: "user_1" })
+    assert.deepEqual(result, { proposals: [] })
+    const call = calls[0]
+    assert.ok(call)
+    const init = call.init
+    assert.ok(init)
+    assert.equal(call.url, "https://example.convex.site/agent/v1/confirm/pending")
+    assert.equal(init.method, "GET")
+    assert.equal(init.body, undefined)
+    assert.ok(isHeaderRecord(init.headers))
+    assert.equal(init.headers.Authorization, "Bearer tc_test")
+    assert.equal(init.headers["X-Travel-Calendar-Host"], "grok")
+    assert.equal(init.headers["Content-Type"], undefined)
   } finally {
     restoreFetch()
   }

@@ -10,6 +10,12 @@ import {
 
 const siteUrl = (process.env.TRAVEL_CALENDAR_SITE_URL ?? "").replace(/\/$/, "")
 const apiKey = process.env.TRAVEL_CALENDAR_API_KEY ?? ""
+const HOST_HEADER = "X-Travel-Calendar-Host"
+const HOST_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/
+
+const secondPropose =
+  "A second call inserts a second pending row. Nothing becomes the shared plan until a different person confirms."
+const proposeOnly = "A propose-only key cannot confirm."
 
 function isProcessEntry() {
   const entry = process.argv[1]
@@ -30,10 +36,23 @@ if (isProcessEntry() && (!siteUrl || !apiKey)) {
   process.exit(1)
 }
 
+function requireHost(input) {
+  if (typeof input?.host !== "string") {
+    throw new Error("host_required")
+  }
+  const host = input.host.trim().toLowerCase()
+  if (!HOST_PATTERN.test(host)) {
+    throw new Error("host_required")
+  }
+  return host
+}
+
 async function agentFetch(path, init) {
+  const host = requireHost(init)
   const headers = {
     Authorization: `Bearer ${apiKey}`,
     Accept: "application/json",
+    [HOST_HEADER]: host,
   }
   const method = init?.method ?? "GET"
   let payload
@@ -74,46 +93,405 @@ async function agentFetch(path, init) {
   return body
 }
 
-export async function createTrip(input) {
-  if (
-    typeof input?.name !== "string" ||
-    typeof input?.startDate !== "string" ||
-    typeof input?.endDate !== "string" ||
-    typeof input?.displayName !== "string"
-  ) {
-    throw new Error("Invalid trip fields.")
+function requireId(input, field) {
+  if (typeof input?.[field] !== "string" || !input[field].trim()) {
+    throw new Error(`${field} is required`)
   }
-  return await agentFetch("/agent/v1/trips", {
+  return input[field].trim()
+}
+
+function requireTripFields(input, fields) {
+  for (const field of fields) {
+    if (typeof input?.[field] !== "string") {
+      throw new Error("Invalid trip fields.")
+    }
+  }
+}
+
+async function proposeTrip(input, op) {
+  const host = requireHost(input)
+  if (op === "add") {
+    requireTripFields(input, ["name", "startDate", "endDate", "displayName"])
+    return await agentFetch("/agent/v1/trips", {
+      method: "POST",
+      host,
+      body: {
+        name: input.name,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        displayName: input.displayName,
+      },
+    })
+  }
+  if (op === "update") {
+    const tripId = requireId(input, "tripId")
+    requireTripFields(input, ["name", "startDate", "endDate"])
+    return await agentFetch(`/agent/v1/trips/${encodeURIComponent(tripId)}`, {
+      method: "PUT",
+      host,
+      body: {
+        name: input.name,
+        startDate: input.startDate,
+        endDate: input.endDate,
+      },
+    })
+  }
+  if (op === "archive") {
+    const tripId = requireId(input, "tripId")
+    return await agentFetch("/agent/v1/archive", {
+      method: "POST",
+      host,
+      body: { tripId },
+    })
+  }
+  throw new Error("Invalid trip fields.")
+}
+
+function optionalItemFields(input) {
+  const body = {}
+  for (const field of ["notes", "linkLabel", "linkUrl", "locationTo"]) {
+    if (input?.[field] === undefined) {
+      continue
+    }
+    if (typeof input[field] !== "string") {
+      throw new Error("Invalid item fields.")
+    }
+    body[field] = input[field]
+  }
+  return body
+}
+
+function itemContent(input) {
+  for (const field of ["title", "startDate", "endDate", "location"]) {
+    if (typeof input?.[field] !== "string") {
+      throw new Error("Invalid item fields.")
+    }
+  }
+  return {
+    title: input.title,
+    startDate: input.startDate,
+    endDate: input.endDate,
+    location: input.location,
+    ...optionalItemFields(input),
+  }
+}
+
+async function proposeItem(input, op) {
+  const host = requireHost(input)
+  if (op === "add") {
+    if (typeof input?.tripId !== "string") {
+      throw new Error("Invalid item fields.")
+    }
+    return await agentFetch("/agent/v1/items", {
+      method: "POST",
+      host,
+      body: { op: "add", tripId: input.tripId, ...itemContent(input) },
+    })
+  }
+  if (op === "update") {
+    if (typeof input?.itemId !== "string") {
+      throw new Error("Invalid item fields.")
+    }
+    return await agentFetch("/agent/v1/items", {
+      method: "POST",
+      host,
+      body: { op: "update", itemId: input.itemId, ...itemContent(input) },
+    })
+  }
+  if (op === "remove") {
+    if (typeof input?.tripId !== "string" || typeof input?.itemId !== "string") {
+      throw new Error("Invalid item fields.")
+    }
+    return await agentFetch("/agent/v1/items", {
+      method: "POST",
+      host,
+      body: { op: "remove", tripId: input.tripId, itemId: input.itemId },
+    })
+  }
+  throw new Error("Invalid item fields.")
+}
+
+async function confirmTarget(input, target) {
+  const host = requireHost(input)
+  if (typeof input?.proposalId !== "string" || !input.proposalId) {
+    throw new Error("Invalid confirm fields.")
+  }
+  const body = { proposalId: input.proposalId, target }
+  if (input.displayName !== undefined) {
+    if (typeof input.displayName !== "string") {
+      throw new Error("Invalid confirm fields.")
+    }
+    body.displayName = input.displayName
+  }
+  return await agentFetch("/agent/v1/confirm", { method: "POST", host, body })
+}
+
+async function rejectProposal(input) {
+  const host = requireHost(input)
+  if (typeof input?.proposalId !== "string" || !input.proposalId) {
+    throw new Error("Invalid reject fields.")
+  }
+  return await agentFetch("/agent/v1/reject", {
     method: "POST",
-    body: {
-      name: input.name,
-      startDate: input.startDate,
-      endDate: input.endDate,
-      displayName: input.displayName,
-    },
+    host,
+    body: { proposalId: input.proposalId },
   })
 }
 
-export async function updateTrip(input) {
-  if (typeof input?.tripId !== "string" || !input.tripId.trim()) {
-    throw new Error("tripId is required")
+function searchPath(input) {
+  const params = new URLSearchParams()
+  for (const field of ["date", "place", "status"]) {
+    if (input?.[field] === undefined) {
+      continue
+    }
+    if (typeof input[field] !== "string") {
+      throw new Error("Invalid search.")
+    }
+    params.set(field, input[field])
   }
-  if (
-    typeof input.name !== "string" ||
-    typeof input.startDate !== "string" ||
-    typeof input.endDate !== "string"
-  ) {
-    throw new Error("Invalid trip fields.")
-  }
-  return await agentFetch(`/agent/v1/trips/${encodeURIComponent(input.tripId.trim())}`, {
-    method: "PUT",
-    body: {
-      name: input.name,
-      startDate: input.startDate,
-      endDate: input.endDate,
-    },
-  })
+  const query = params.toString()
+  return query ? `/agent/v1/search/trips?${query}` : "/agent/v1/search/trips"
 }
+
+export async function createTrip(input) {
+  return await proposeTrip(input, "add")
+}
+
+export async function updateTrip(input) {
+  return await proposeTrip(input, "update")
+}
+
+export async function confirmPending(input) {
+  const host = requireHost(input)
+  return await agentFetch("/agent/v1/confirm/pending", { method: "GET", host })
+}
+
+const hostField = {
+  type: "string",
+  description: "Agent host name. Sent as X-Travel-Calendar-Host, never in the JSON body.",
+}
+
+function toolSchema(properties, required) {
+  return {
+    type: "object",
+    properties: { host: hostField, ...properties },
+    required: ["host", ...required],
+    additionalProperties: false,
+  }
+}
+
+const tripIdField = { type: "string", description: "Convex trip document id" }
+const itemIdField = { type: "string", description: "Convex trip item document id" }
+const proposalIdField = { type: "string", description: "Proposal id" }
+const dateField = { type: "string", description: "Date, YYYY-MM-DD" }
+const displayNameField = {
+  type: "string",
+  description: "Name stored on the membership when a trip add is confirmed",
+}
+
+const itemProperties = {
+  tripId: tripIdField,
+  itemId: itemIdField,
+  title: { type: "string" },
+  startDate: dateField,
+  endDate: dateField,
+  location: { type: "string" },
+  notes: { type: "string" },
+  linkLabel: { type: "string" },
+  linkUrl: { type: "string" },
+  locationTo: { type: "string" },
+}
+
+const toolRegistry = [
+  {
+    name: "check_access",
+    description:
+      "Check whether lifetime access is granted. If payment is required, returns a Stripe paymentUrl ($9.99 once). Requires host.",
+    inputSchema: toolSchema({}, []),
+    call: (args) => agentFetch("/agent/v1/access", { method: "GET", host: requireHost(args) }),
+  },
+  {
+    name: "list_trips",
+    description:
+      "List trips the authenticated user can access. Skips archived trips. Requires lifetime access and host.",
+    inputSchema: toolSchema({}, []),
+    call: (args) => agentFetch("/agent/v1/trips", { method: "GET", host: requireHost(args) }),
+  },
+  {
+    name: "trips_get",
+    description:
+      "Load one trip by id, including an archived trip. Requires lifetime access and host.",
+    inputSchema: toolSchema({ tripId: tripIdField }, ["tripId"]),
+    call: (args) =>
+      agentFetch(`/agent/v1/trip/${encodeURIComponent(requireId(args, "tripId"))}`, {
+        method: "GET",
+        host: requireHost(args),
+      }),
+  },
+  {
+    name: "trips_search",
+    description:
+      "Filter trips by date (YYYY-MM-DD, inclusive on the trip or an item), place (location or locationTo), or status (active or archived). Omitted status means active. No date, place, or status returns no trips. Pending is not a trip status. Requires lifetime access and host.",
+    inputSchema: toolSchema(
+      {
+        date: dateField,
+        place: { type: "string" },
+        status: { type: "string", description: "active or archived" },
+      },
+      [],
+    ),
+    call: (args) => agentFetch(searchPath(args), { method: "GET", host: requireHost(args) }),
+  },
+  {
+    name: "create_trip",
+    description: `Propose a new trip. Does not insert the trip until a different person confirms. ${secondPropose} Requires lifetime access and host. displayName is stored on the owner membership when the proposal is confirmed.`,
+    inputSchema: toolSchema(
+      {
+        name: { type: "string" },
+        startDate: dateField,
+        endDate: dateField,
+        displayName: displayNameField,
+      },
+      ["name", "startDate", "endDate", "displayName"],
+    ),
+    call: (args) => createTrip(args),
+  },
+  {
+    name: "update_trip",
+    description: `Propose replacing the trip name, start date, and end date. Send all three. ${secondPropose} The API key's user must be an owner when the proposal is applied. Does not check lifetime access. Requires host.`,
+    inputSchema: toolSchema(
+      {
+        tripId: tripIdField,
+        name: { type: "string" },
+        startDate: dateField,
+        endDate: dateField,
+      },
+      ["tripId", "name", "startDate", "endDate"],
+    ),
+    call: (args) => updateTrip(args),
+  },
+  {
+    name: "trips_archive",
+    description: `Propose archiving a trip. The trip stays active until a different partner confirms. ${secondPropose} Requires lifetime access and host.`,
+    inputSchema: toolSchema({ tripId: tripIdField }, ["tripId"]),
+    call: (args) => proposeTrip(args, "archive"),
+  },
+  {
+    name: "trips_propose",
+    description: `Propose a trip add, update, or archive. op is add, update, or archive. Same propose path as create_trip, update_trip, and trips_archive. ${secondPropose} Requires host.`,
+    inputSchema: toolSchema(
+      {
+        op: { type: "string", description: "add, update, or archive" },
+        tripId: tripIdField,
+        name: { type: "string" },
+        startDate: dateField,
+        endDate: dateField,
+        displayName: displayNameField,
+      },
+      ["op"],
+    ),
+    call: (args) => {
+      const op = args?.op
+      if (op !== "add" && op !== "update" && op !== "archive") {
+        throw new Error("Invalid trip fields.")
+      }
+      return proposeTrip(args, op)
+    },
+  },
+  {
+    name: "trips_confirm",
+    description: `Confirm a pending trip proposal. ${proposeOnly} You cannot confirm your own proposal. Trip add requires displayName. Confirming an already confirmed proposal returns that row and does not insert the trip again. Requires lifetime access and host.`,
+    inputSchema: toolSchema(
+      { proposalId: proposalIdField, displayName: displayNameField },
+      ["proposalId"],
+    ),
+    call: (args) => confirmTarget(args, "trip"),
+  },
+  {
+    name: "trips_reject",
+    description:
+      "Reject a pending trip proposal, or withdraw one you proposed. A confirmed proposal stays confirmed. Requires lifetime access and host.",
+    inputSchema: toolSchema({ proposalId: proposalIdField }, ["proposalId"]),
+    call: (args) => rejectProposal(args),
+  },
+  {
+    name: "items_list",
+    description: "List calendar items on a trip. Requires lifetime access and host.",
+    inputSchema: toolSchema({ tripId: tripIdField }, ["tripId"]),
+    call: (args) =>
+      agentFetch(`/agent/v1/items?tripId=${encodeURIComponent(requireId(args, "tripId"))}`, {
+        method: "GET",
+        host: requireHost(args),
+      }),
+  },
+  {
+    name: "items_get",
+    description: "Load one calendar item by id. Requires lifetime access and host.",
+    inputSchema: toolSchema({ itemId: itemIdField }, ["itemId"]),
+    call: (args) =>
+      agentFetch(`/agent/v1/item/${encodeURIComponent(requireId(args, "itemId"))}`, {
+        method: "GET",
+        host: requireHost(args),
+      }),
+  },
+  {
+    name: "items_add",
+    description: `Propose adding a calendar item. ${secondPropose} Requires lifetime access and host.`,
+    inputSchema: toolSchema(itemProperties, ["tripId", "title", "startDate", "endDate", "location"]),
+    call: (args) => proposeItem(args, "add"),
+  },
+  {
+    name: "items_update",
+    description: `Propose replacing a calendar item. Send the full field set. ${secondPropose} Requires lifetime access and host.`,
+    inputSchema: toolSchema(itemProperties, ["itemId", "title", "startDate", "endDate", "location"]),
+    call: (args) => proposeItem(args, "update"),
+  },
+  {
+    name: "items_remove",
+    description: `Propose removing a calendar item. The item stays until a different partner confirms. ${secondPropose} Requires lifetime access and host.`,
+    inputSchema: toolSchema({ tripId: tripIdField, itemId: itemIdField }, ["tripId", "itemId"]),
+    call: (args) => proposeItem(args, "remove"),
+  },
+  {
+    name: "items_propose",
+    description: `Propose an item add, update, or remove. op is add, update, or remove. Same propose path as items_add, items_update, and items_remove. ${secondPropose} Requires lifetime access and host.`,
+    inputSchema: toolSchema(
+      { op: { type: "string", description: "add, update, or remove" }, ...itemProperties },
+      ["op"],
+    ),
+    call: (args) => {
+      const op = args?.op
+      if (op !== "add" && op !== "update" && op !== "remove") {
+        throw new Error("Invalid item fields.")
+      }
+      return proposeItem(args, op)
+    },
+  },
+  {
+    name: "items_confirm",
+    description: `Confirm a pending item proposal. ${proposeOnly} You cannot confirm your own proposal. Confirming an already confirmed proposal returns that row and does not apply it again. Requires lifetime access and host.`,
+    inputSchema: toolSchema({ proposalId: proposalIdField }, ["proposalId"]),
+    call: (args) => confirmTarget(args, "item"),
+  },
+  {
+    name: "confirm_pending",
+    description:
+      "List pending proposals this user can see. Each row has row_text, glance_url, proposed_by, confirmed_by, and pending_for. Requires lifetime access and host.",
+    inputSchema: toolSchema({}, []),
+    call: (args) => confirmPending(args),
+  },
+  {
+    name: "get_trip_bundle",
+    description:
+      "Load a trip bundle: trip metadata, members, calendar items, notes, and packing list. An archived trip is included when requested by id. Requires lifetime access and host.",
+    inputSchema: toolSchema({ tripId: tripIdField }, ["tripId"]),
+    call: (args) =>
+      agentFetch(`/agent/v1/trips/${encodeURIComponent(requireId(args, "tripId"))}`, {
+        method: "GET",
+        host: requireHost(args),
+      }),
+  },
+]
 
 const server = new Server(
   { name: "travel-calendar", version: "0.1.0" },
@@ -121,130 +499,24 @@ const server = new Server(
 )
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [
-    {
-      name: "check_access",
-      description:
-        "Check whether lifetime access is granted. If payment is required, returns a Stripe paymentUrl agents can open/complete ($9.99 once).",
-      inputSchema: {
-        type: "object",
-        properties: {},
-        additionalProperties: false,
-      },
-    },
-    {
-      name: "list_trips",
-      description:
-        "List trips the authenticated Travel Calendar user can access (read-only). Requires lifetime access.",
-      inputSchema: {
-        type: "object",
-        properties: {},
-        additionalProperties: false,
-      },
-    },
-    {
-      name: "get_trip_bundle",
-      description:
-        "Load a trip bundle: trip metadata, members, calendar items, notes, and packing list (read-only). Requires lifetime access.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          tripId: {
-            type: "string",
-            description: "Convex trip document id",
-          },
-        },
-        required: ["tripId"],
-        additionalProperties: false,
-      },
-    },
-    {
-      name: "create_trip",
-      description:
-        "Create a trip for the API key's user. Requires lifetime access. displayName is stored on the owner membership, not taken from the API key label. Returns tripId for get_trip_bundle. A second call creates a second trip.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          name: { type: "string" },
-          startDate: { type: "string", description: "Start date, YYYY-MM-DD" },
-          endDate: { type: "string", description: "End date, YYYY-MM-DD" },
-          displayName: {
-            type: "string",
-            description: "Name stored on the owner membership",
-          },
-        },
-        required: ["name", "startDate", "endDate", "displayName"],
-        additionalProperties: false,
-      },
-    },
-    {
-      name: "update_trip",
-      description:
-        "Replace the trip name, start date, and end date. Send all three. The API key's user must be the owner. Does not check lifetime access. The same values twice leave the same trip. Partners see the change on reload and in get_trip_bundle.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          tripId: {
-            type: "string",
-            description: "Convex trip document id",
-          },
-          name: { type: "string" },
-          startDate: { type: "string", description: "Start date, YYYY-MM-DD" },
-          endDate: { type: "string", description: "End date, YYYY-MM-DD" },
-        },
-        required: ["tripId", "name", "startDate", "endDate"],
-        additionalProperties: false,
-      },
-    },
-  ],
+  tools: toolRegistry.map(({ name, description, inputSchema }) => ({
+    name,
+    description,
+    inputSchema,
+  })),
 }))
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params
-
+  const tool = toolRegistry.find((entry) => entry.name === name)
   try {
-    if (name === "check_access") {
-      const data = await agentFetch("/agent/v1/access")
-      return {
-        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
-      }
+    if (!tool) {
+      throw new Error(`Unknown tool: ${name}`)
     }
-
-    if (name === "list_trips") {
-      const data = await agentFetch("/agent/v1/trips")
-      return {
-        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
-      }
+    const data = await tool.call(args ?? {})
+    return {
+      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
     }
-
-    if (name === "get_trip_bundle") {
-      const tripId = args?.tripId
-      if (typeof tripId !== "string" || !tripId.trim()) {
-        throw new Error("tripId is required")
-      }
-      const data = await agentFetch(
-        `/agent/v1/trips/${encodeURIComponent(tripId.trim())}`,
-      )
-      return {
-        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
-      }
-    }
-
-    if (name === "create_trip") {
-      const data = await createTrip(args)
-      return {
-        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
-      }
-    }
-
-    if (name === "update_trip") {
-      const data = await updateTrip(args)
-      return {
-        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
-      }
-    }
-
-    throw new Error(`Unknown tool: ${name}`)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return {
