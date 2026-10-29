@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { ArrowLeft, Loader2, LogOut } from "lucide-react"
 
 import { LandingMastMedia } from "@/components/landing-mast-media"
@@ -28,6 +29,7 @@ interface CreateJoinScreenProps {
   onJoin: () => void
   onBackToTrips?: () => void
   onSignOut: () => void
+  notice?: ReactNode
 }
 
 export function CreateJoinScreen({
@@ -50,12 +52,14 @@ export function CreateJoinScreen({
   onJoin,
   onBackToTrips,
   onSignOut,
+  notice,
 }: CreateJoinScreenProps) {
   const canCreate = Boolean(displayName.trim() && tripName.trim() && tripStart && tripEnd)
   const canJoin = Boolean(displayName.trim() && joinInput.trim())
 
   return (
     <main id="main-content" className="together-story create-join">
+      {notice}
       <div className="create-join__mast">
         <LandingMastMedia />
         <div className="create-join__mast-bar">
