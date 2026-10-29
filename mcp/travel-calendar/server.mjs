@@ -48,10 +48,14 @@ function requireHost(input) {
   return host
 }
 
+function currentApiKey() {
+  return process.env.TRAVEL_CALENDAR_API_KEY ?? ""
+}
+
 async function agentFetch(path, init) {
   const host = requireHost(init)
   const headers = {
-    Authorization: `Bearer ${apiKey}`,
+    Authorization: `Bearer ${currentApiKey()}`,
     Accept: "application/json",
     [HOST_HEADER]: host,
   }
@@ -283,6 +287,13 @@ export async function tripsSetThemePack(input) {
       tripId: parsed.tripId,
       themePack: parsed.themePack,
     },
+  })
+}
+
+export async function getTripBundle(input) {
+  return await agentFetch(`/agent/v1/trips/${encodeURIComponent(requireId(input, "tripId"))}`, {
+    method: "GET",
+    host: requireHost(input),
   })
 }
 
@@ -539,11 +550,7 @@ const toolRegistry = [
     description:
       "Load a trip bundle: trip metadata, members, calendar items, notes, and packing list. An archived trip is included when requested by id. Requires lifetime access and host.",
     inputSchema: toolSchema({ tripId: tripIdField }, ["tripId"]),
-    call: (args) =>
-      agentFetch(`/agent/v1/trips/${encodeURIComponent(requireId(args, "tripId"))}`, {
-        method: "GET",
-        host: requireHost(args),
-      }),
+    call: (args) => getTripBundle(args),
   },
 ]
 
