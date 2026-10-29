@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { searchTrips, type SearchItem, type SearchTrip } from "./tripSearch.ts"
+import { parseSearchQuery, searchTrips, type SearchItem, type SearchTrip } from "./tripSearch.ts"
 
 const lisbon: SearchTrip = {
   id: "trip_lisbon",
@@ -84,6 +84,15 @@ test("omitted status means active, and archived is a separate filter", () => {
     status: "archived",
   })
   assert.deepEqual(datedArchived.map((trip) => trip.id), ["trip_porto"])
+})
+
+test("pending is not a trip status", () => {
+  assert.deepEqual(parseSearchQuery({ status: "pending" }), {
+    ok: false,
+    error: "status_is_trip_status",
+  })
+  assert.deepEqual(parseSearchQuery({ date: "2026-05-02", place: "Lisbon" }).ok, true)
+  assert.deepEqual(parseSearchQuery({ date: "May 2" }), { ok: false, error: "invalid_date" })
 })
 
 test("a call with no date, place, or status returns nothing", () => {

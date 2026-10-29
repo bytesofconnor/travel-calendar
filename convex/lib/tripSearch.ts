@@ -6,6 +6,32 @@ export type SearchQuery = {
   status?: TripStatusFilter
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+export function parseSearchQuery(params: {
+  date?: string | null
+  place?: string | null
+  status?: string | null
+}): { ok: true; query: SearchQuery } | { ok: false; error: "status_is_trip_status" | "invalid_date" } {
+  const date = params.date?.trim() || undefined
+  const place = params.place?.trim() || undefined
+  const status = params.status?.trim() || undefined
+  if (status !== undefined && status !== "active" && status !== "archived") {
+    return { ok: false, error: "status_is_trip_status" }
+  }
+  if (date !== undefined && !ISO_DATE.test(date)) {
+    return { ok: false, error: "invalid_date" }
+  }
+  return {
+    ok: true,
+    query: {
+      date,
+      place,
+      status,
+    },
+  }
+}
+
 export type SearchTrip = {
   id: string
   name: string

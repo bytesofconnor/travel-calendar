@@ -550,12 +550,13 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
     setIsMutating(true)
     setErrorMessage("")
     try {
-      const tripId = await createTrip({
+      const created = await createTrip({
         name: tripName.trim(),
         startDate: tripStart,
         endDate: tripEnd,
         displayName: displayName.trim(),
       })
+      const tripId = created.tripId
       setActiveTripId(tripId)
       setShowCreateJoin(false)
       if (typeof window !== "undefined") {
@@ -611,9 +612,9 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
         await updateItem({ itemId: existingItem.id as Id<"tripItems">, ...payload })
         setEmphasizeItemId(existingItem.id)
       } else {
-        const createdId = await createItem({ tripId: trip.id as Id<"trips">, ...payload })
-        if (typeof createdId === "string") {
-          setEmphasizeItemId(createdId)
+        const created = await createItem({ tripId: trip.id as Id<"trips">, ...payload })
+        if (typeof created.itemId === "string") {
+          setEmphasizeItemId(created.itemId)
         }
         setShareMessage("Added for both of you.")
         window.setTimeout(() => setShareMessage(""), 2000)
