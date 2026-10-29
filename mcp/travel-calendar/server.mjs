@@ -7,6 +7,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js"
+import { parseJoinToolInput, parseThemeToolInput, themePackIds } from "./toolInputs.mjs"
 
 const siteUrl = (process.env.TRAVEL_CALENDAR_SITE_URL ?? "").replace(/\/$/, "")
 const apiKey = process.env.TRAVEL_CALENDAR_API_KEY ?? ""
@@ -47,10 +48,14 @@ function requireHost(input) {
   return host
 }
 
+function currentApiKey() {
+  return process.env.TRAVEL_CALENDAR_API_KEY ?? ""
+}
+
 async function agentFetch(path, init) {
   const host = requireHost(init)
   const headers = {
-    Authorization: `Bearer ${apiKey}`,
+    Authorization: `Bearer ${currentApiKey()}`,
     Accept: "application/json",
     [HOST_HEADER]: host,
   }
@@ -261,6 +266,61 @@ export async function updateTrip(input) {
   return await proposeTrip(input, "update")
 }
 
+export async function tripsJoin(input) {
+  const parsed = parseJoinToolInput(input)
+  return await agentFetch("/agent/v1/join", {
+    method: "POST",
+    host: parsed.host,
+    body: {
+      inviteCode: parsed.inviteCode,
+      displayName: parsed.displayName,
+    },
+  })
+}
+
+export async function tripsSetThemePack(input) {
+  const parsed = parseThemeToolInput(input)
+  return await agentFetch("/agent/v1/theme", {
+    method: "POST",
+    host: parsed.host,
+    body: {
+      tripId: parsed.tripId,
+      themePack: parsed.themePack,
+    },
+  })
+}
+
+export async function getTripBundle(input) {
+  return await agentFetch(`/agent/v1/trips/${encodeURIComponent(requireId(input, "tripId"))}`, {
+    method: "GET",
+    host: requireHost(input),
+  })
+}
+
+export async function addItem(input) {
+  return await proposeItem(input, "add")
+}
+
+export async function updateItem(input) {
+  return await proposeItem(input, "update")
+}
+
+export async function removeItem(input) {
+  return await proposeItem(input, "remove")
+}
+
+export async function confirmTrip(input) {
+  return await confirmTarget(input, "trip")
+}
+
+export async function confirmItem(input) {
+  return await confirmTarget(input, "item")
+}
+
+export async function rejectTrip(input) {
+  return await rejectProposal(input)
+}
+
 export async function confirmPending(input) {
   const host = requireHost(input)
   return await agentFetch("/agent/v1/confirm/pending", { method: "GET", host })
@@ -343,6 +403,35 @@ const toolRegistry = [
     call: (args) => agentFetch(searchPath(args), { method: "GET", host: requireHost(args) }),
   },
   {
+    name: "trips_join",
+    description:
+      "Join a trip with an invite code. The membership is written immediately. A second call keeps the stored role and display name. An owner who submits their own code stays owner. Requires host.",
+    inputSchema: toolSchema(
+      {
+        inviteCode: { type: "string", description: "Invite code" },
+        displayName: { type: "string", description: "Name stored when this user is a new member" },
+      },
+      ["inviteCode", "displayName"],
+    ),
+    call: (args) => tripsJoin(args),
+  },
+  {
+    name: "trips_set_theme_pack",
+    description:
+      "Set the trip theme pack, or pass null to clear it. Any member can set it. There is no paywall. A missing trip or a non-member is Trip not found. Requires host.",
+    inputSchema: toolSchema(
+      {
+        tripId: tripIdField,
+        themePack: {
+          anyOf: [{ type: "string", enum: themePackIds }, { type: "null" }],
+          description: "Theme pack id, or null to clear the pack",
+        },
+      },
+      ["tripId", "themePack"],
+    ),
+    call: (args) => tripsSetThemePack(args),
+  },
+  {
     name: "create_trip",
     description: `Propose a new trip. Does not insert the trip until a different person confirms. ${secondPropose} Requires lifetime access and host. displayName is stored on the owner membership when the proposal is confirmed.`,
     inputSchema: toolSchema(
@@ -405,14 +494,14 @@ const toolRegistry = [
       { proposalId: proposalIdField, displayName: displayNameField },
       ["proposalId"],
     ),
-    call: (args) => confirmTarget(args, "trip"),
+    call: (args) => confirmTrip(args),
   },
   {
     name: "trips_reject",
     description:
       "Reject a pending trip proposal, or withdraw one you proposed. A confirmed proposal stays confirmed. Requires lifetime access and host.",
     inputSchema: toolSchema({ proposalId: proposalIdField }, ["proposalId"]),
-    call: (args) => rejectProposal(args),
+    call: (args) => rejectTrip(args),
   },
   {
     name: "items_list",
@@ -438,19 +527,19 @@ const toolRegistry = [
     name: "items_add",
     description: `Propose adding a calendar item. ${secondPropose} Requires lifetime access and host.`,
     inputSchema: toolSchema(itemProperties, ["tripId", "title", "startDate", "endDate", "location"]),
-    call: (args) => proposeItem(args, "add"),
+    call: (args) => addItem(args),
   },
   {
     name: "items_update",
     description: `Propose replacing a calendar item. Send the full field set. ${secondPropose} Requires lifetime access and host.`,
     inputSchema: toolSchema(itemProperties, ["itemId", "title", "startDate", "endDate", "location"]),
-    call: (args) => proposeItem(args, "update"),
+    call: (args) => updateItem(args),
   },
   {
     name: "items_remove",
     description: `Propose removing a calendar item. The item stays until a different partner confirms. ${secondPropose} Requires lifetime access and host.`,
     inputSchema: toolSchema({ tripId: tripIdField, itemId: itemIdField }, ["tripId", "itemId"]),
-    call: (args) => proposeItem(args, "remove"),
+    call: (args) => removeItem(args),
   },
   {
     name: "items_propose",
@@ -471,7 +560,7 @@ const toolRegistry = [
     name: "items_confirm",
     description: `Confirm a pending item proposal. ${proposeOnly} You cannot confirm your own proposal. Confirming an already confirmed proposal returns that row and does not apply it again. Requires lifetime access and host.`,
     inputSchema: toolSchema({ proposalId: proposalIdField }, ["proposalId"]),
-    call: (args) => confirmTarget(args, "item"),
+    call: (args) => confirmItem(args),
   },
   {
     name: "confirm_pending",
@@ -485,11 +574,7 @@ const toolRegistry = [
     description:
       "Load a trip bundle: trip metadata, members, calendar items, notes, and packing list. An archived trip is included when requested by id. Requires lifetime access and host.",
     inputSchema: toolSchema({ tripId: tripIdField }, ["tripId"]),
-    call: (args) =>
-      agentFetch(`/agent/v1/trips/${encodeURIComponent(requireId(args, "tripId"))}`, {
-        method: "GET",
-        host: requireHost(args),
-      }),
+    call: (args) => getTripBundle(args),
   },
 ]
 

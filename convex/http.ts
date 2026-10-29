@@ -12,7 +12,7 @@ import {
   parseItemBody,
   parseRejectBody,
 } from "./lib/agentProposalBody"
-import { parseCreateBody, parseUpdateBody } from "./lib/agentTripBody"
+import { parseCreateBody, parseJoinBody, parseThemeBody, parseUpdateBody } from "./lib/agentTripBody"
 import { parseHost } from "./lib/proposalTransition"
 import { parseSearchQuery } from "./lib/tripSearch"
 import { verifyStripeSignature } from "./lib/stripeWebhook"
@@ -105,7 +105,7 @@ function optionsPrefix(pathPrefix: string) {
   })
 }
 
-async function begin(ctx: ActionCtx, request: Request, paywall: boolean) {
+async function openAgent(ctx: ActionCtx, request: Request) {
   const header = request.headers.get("X-Travel-Calendar-Host")
   const host = header === null ? null : parseHost(header)
   if (!host) {
@@ -115,15 +115,21 @@ async function begin(ctx: ActionCtx, request: Request, paywall: boolean) {
   if (!resolved.ok) {
     return resolved
   }
-  if (paywall) {
-    const access = await ctx.runQuery(internal.access.checkForUser, {
-      userId: resolved.principal.userId,
-    })
-    if (!access.granted) {
-      return { ok: false as const, response: paymentRequired(resolved.principal.userId) }
-    }
-  }
   return { ok: true as const, host, principal: resolved.principal }
+}
+
+async function openPaidAgent(ctx: ActionCtx, request: Request) {
+  const opened = await openAgent(ctx, request)
+  if (!opened.ok) {
+    return opened
+  }
+  const access = await ctx.runQuery(internal.access.checkForUser, {
+    userId: opened.principal.userId,
+  })
+  if (!access.granted) {
+    return { ok: false as const, response: paymentRequired(opened.principal.userId) }
+  }
+  return opened
 }
 
 async function readJson(request: Request) {
@@ -225,6 +231,8 @@ http.route({
 })
 
 options("/agent/v1/trips")
+options("/agent/v1/join")
+options("/agent/v1/theme")
 options("/agent/v1/access")
 options("/agent/v1/archive")
 options("/agent/v1/confirm")
@@ -240,7 +248,7 @@ http.route({
   path: "/agent/v1/access",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
-    const opened = await begin(ctx, request, false)
+    const opened = await openAgent(ctx, request)
     if (!opened.ok) {
       return opened.response
     }
@@ -260,7 +268,7 @@ http.route({
   path: "/agent/v1/trips",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
-    const opened = await begin(ctx, request, true)
+    const opened = await openPaidAgent(ctx, request)
     if (!opened.ok) {
       return opened.response
     }
@@ -275,7 +283,7 @@ http.route({
   path: "/agent/v1/trips",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const opened = await begin(ctx, request, true)
+    const opened = await openPaidAgent(ctx, request)
     if (!opened.ok) {
       return opened.response
     }
@@ -305,7 +313,7 @@ http.route({
   pathPrefix: "/agent/v1/trips/",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
-    const opened = await begin(ctx, request, true)
+    const opened = await openPaidAgent(ctx, request)
     if (!opened.ok) {
       return opened.response
     }
@@ -328,7 +336,7 @@ http.route({
   pathPrefix: "/agent/v1/trips/",
   method: "PUT",
   handler: httpAction(async (ctx, request) => {
-    const opened = await begin(ctx, request, false)
+    const opened = await openAgent(ctx, request)
     if (!opened.ok) {
       return opened.response
     }
@@ -362,7 +370,7 @@ http.route({
   pathPrefix: "/agent/v1/trip/",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
-    const opened = await begin(ctx, request, true)
+    const opened = await openPaidAgent(ctx, request)
     if (!opened.ok) {
       return opened.response
     }
@@ -385,7 +393,7 @@ http.route({
   path: "/agent/v1/search/trips",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
-    const opened = await begin(ctx, request, true)
+    const opened = await openPaidAgent(ctx, request)
     if (!opened.ok) {
       return opened.response
     }
@@ -413,10 +421,83 @@ http.route({
 })
 
 http.route({
+  path: "/agent/v1/join",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const opened = await openAgent(ctx, request)
+    if (!opened.ok) {
+      return opened.response
+    }
+    const body = await readJson(request)
+    if (!body.ok) {
+      return body.response
+    }
+    const parsed = parseJoinBody(body.body)
+    if (!parsed.ok) {
+      return jsonResponse({ error: parsed.error }, 400)
+    }
+    const result = await ctx.runMutation(internal.trips.joinForAgent, {
+      userId: opened.principal.userId,
+      inviteCode: parsed.value.inviteCode,
+      displayName: parsed.value.displayName,
+    })
+    if (!result.ok) {
+      if (result.error === "payment_required") {
+        return paymentRequired(opened.principal.userId)
+      }
+      if (result.error === "invite_not_found") {
+        return jsonResponse({ error: "Invite code not found." }, 404)
+      }
+      return jsonResponse({ error: "Invite code and display name are required." }, 400)
+    }
+    return jsonResponse({
+      tripId: result.tripId,
+      joined: result.joined,
+      role: result.role,
+      displayName: result.displayName,
+    })
+  }),
+})
+
+http.route({
+  path: "/agent/v1/theme",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const opened = await openAgent(ctx, request)
+    if (!opened.ok) {
+      return opened.response
+    }
+    const body = await readJson(request)
+    if (!body.ok) {
+      return body.response
+    }
+    const parsed = parseThemeBody(body.body)
+    if (!parsed.ok) {
+      return jsonResponse({ error: parsed.error }, 400)
+    }
+    const result = await ctx.runMutation(internal.trips.setThemePackForAgent, {
+      userId: opened.principal.userId,
+      tripId: parsed.value.tripId,
+      themePack: parsed.value.themePack,
+    })
+    if (!result.ok) {
+      if (result.error === "not_found") {
+        return jsonResponse({ error: "Trip not found" }, 404)
+      }
+      return jsonResponse({ error: "Invalid theme fields." }, 400)
+    }
+    return jsonResponse({
+      tripId: result.tripId,
+      themePack: result.themePack,
+    })
+  }),
+})
+
+http.route({
   path: "/agent/v1/archive",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const opened = await begin(ctx, request, true)
+    const opened = await openPaidAgent(ctx, request)
     if (!opened.ok) {
       return opened.response
     }
@@ -443,7 +524,7 @@ http.route({
   path: "/agent/v1/confirm",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const opened = await begin(ctx, request, true)
+    const opened = await openPaidAgent(ctx, request)
     if (!opened.ok) {
       return opened.response
     }
@@ -474,7 +555,7 @@ http.route({
   path: "/agent/v1/reject",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const opened = await begin(ctx, request, true)
+    const opened = await openPaidAgent(ctx, request)
     if (!opened.ok) {
       return opened.response
     }
@@ -500,7 +581,7 @@ http.route({
   path: "/agent/v1/confirm/pending",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
-    const opened = await begin(ctx, request, true)
+    const opened = await openPaidAgent(ctx, request)
     if (!opened.ok) {
       return opened.response
     }
@@ -515,7 +596,7 @@ http.route({
   path: "/agent/v1/items",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
-    const opened = await begin(ctx, request, true)
+    const opened = await openPaidAgent(ctx, request)
     if (!opened.ok) {
       return opened.response
     }
@@ -538,7 +619,7 @@ http.route({
   path: "/agent/v1/items",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const opened = await begin(ctx, request, true)
+    const opened = await openPaidAgent(ctx, request)
     if (!opened.ok) {
       return opened.response
     }
@@ -578,7 +659,7 @@ http.route({
   pathPrefix: "/agent/v1/item/",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
-    const opened = await begin(ctx, request, true)
+    const opened = await openPaidAgent(ctx, request)
     if (!opened.ok) {
       return opened.response
     }

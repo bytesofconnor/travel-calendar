@@ -34,8 +34,8 @@ Vercel project `travelcalendar.space` builds the Next app. `scripts/vercel-ignor
 
 ## MCP
 
-Trip and item tools live in [`mcp/travel-calendar`](mcp/travel-calendar/README.md). Every call sends `host` as `X-Travel-Calendar-Host`. Writes propose a change. A different person confirms it before it becomes the shared plan. `confirm_pending` returns a glance link. `trips_search` filters by date, place, or status. A propose-only key cannot confirm.
+Trip and item tools live in [`mcp/travel-calendar`](mcp/travel-calendar/README.md). Every call sends `host` as `X-Travel-Calendar-Host`. `create_trip`, `update_trip`, and the item write tools propose a change. A different person confirms it before it becomes the shared plan. `trips_join` and `trips_set_theme_pack` write immediately. `confirm_pending` returns a glance link. `trips_search` filters by date, place, or status. A propose-only key cannot confirm.
 
-Tools: `check_access`, `list_trips`, `trips_get`, `trips_search`, `create_trip`, `update_trip`, `trips_archive`, `trips_propose`, `trips_confirm`, `trips_reject`, `items_list`, `items_get`, `items_add`, `items_update`, `items_remove`, `items_propose`, `items_confirm`, `confirm_pending`, `get_trip_bundle`.
+Tools: `check_access`, `list_trips`, `trips_get`, `trips_search`, `trips_join`, `trips_set_theme_pack`, `create_trip`, `update_trip`, `trips_archive`, `trips_propose`, `trips_confirm`, `trips_reject`, `items_list`, `items_get`, `items_add`, `items_update`, `items_remove`, `items_propose`, `items_confirm`, `confirm_pending`, `get_trip_bundle`.
 
 That package pins the same pnpm as the root (`packageManager`) and has its own lockfile.

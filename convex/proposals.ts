@@ -590,7 +590,7 @@ function itemFields(args: {
   }
 }
 
-async function propose(
+export async function propose(
   ctx: MutationCtx,
   args: {
     userId: Id<"users">
@@ -904,6 +904,43 @@ export const proposeFromAgent = internalMutation({
   },
 })
 
+export async function confirmAgent(
+  ctx: MutationCtx,
+  args: {
+    userId: Id<"users">
+    proposalId: Id<"proposals">
+    expected: "trip" | "item"
+    displayName?: string
+    host: string
+    confirmEnabled: boolean
+  },
+): Promise<ShellResult> {
+  if (!(await userHasAccess(ctx, args.userId))) {
+    return fail("payment_required")
+  }
+  const host = parseHost(args.host)
+  if (!host) {
+    return fail("host_required")
+  }
+  const authorized = authorizeConfirm({
+    kind: "agent",
+    userId: asUserId(args.userId),
+    host,
+    confirmEnabled: args.confirmEnabled,
+  })
+  if (!authorized.ok) {
+    return fail("propose_scope")
+  }
+  return await runConfirm(
+    ctx,
+    args.proposalId,
+    authorized.actor,
+    args.expected,
+    args.displayName ?? null,
+    "confirm",
+  )
+}
+
 export const confirmFromAgent = internalMutation({
   args: {
     userId: v.id("users"),
@@ -915,32 +952,33 @@ export const confirmFromAgent = internalMutation({
   },
   returns: shellResult,
   handler: async (ctx, args) => {
-    if (!(await userHasAccess(ctx, args.userId))) {
-      return fail("payment_required")
-    }
-    const host = parseHost(args.host)
-    if (!host) {
-      return fail("host_required")
-    }
-    const authorized = authorizeConfirm({
-      kind: "agent",
-      userId: asUserId(args.userId),
-      host,
-      confirmEnabled: args.confirmEnabled,
-    })
-    if (!authorized.ok) {
-      return fail("propose_scope")
-    }
-    return await runConfirm(
-      ctx,
-      args.proposalId,
-      authorized.actor,
-      args.expected,
-      args.displayName ?? null,
-      "confirm",
-    )
+    return await confirmAgent(ctx, args)
   },
 })
+
+export async function rejectAgent(
+  ctx: MutationCtx,
+  args: {
+    userId: Id<"users">
+    proposalId: Id<"proposals">
+    host: string
+    confirmEnabled: boolean
+  },
+): Promise<ShellResult> {
+  if (!(await userHasAccess(ctx, args.userId))) {
+    return fail("payment_required")
+  }
+  const host = parseHost(args.host)
+  if (!host) {
+    return fail("host_required")
+  }
+  return await runReject(
+    ctx,
+    args.proposalId,
+    { kind: "agent", userId: asUserId(args.userId), host, confirmEnabled: args.confirmEnabled },
+    "propose",
+  )
+}
 
 export const rejectFromAgent = internalMutation({
   args: {
@@ -951,19 +989,7 @@ export const rejectFromAgent = internalMutation({
   },
   returns: shellResult,
   handler: async (ctx, args) => {
-    if (!(await userHasAccess(ctx, args.userId))) {
-      return fail("payment_required")
-    }
-    const host = parseHost(args.host)
-    if (!host) {
-      return fail("host_required")
-    }
-    return await runReject(
-      ctx,
-      args.proposalId,
-      { kind: "agent", userId: asUserId(args.userId), host, confirmEnabled: args.confirmEnabled },
-      "propose",
-    )
+    return await rejectAgent(ctx, args)
   },
 })
 

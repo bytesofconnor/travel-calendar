@@ -6,6 +6,8 @@ MCP server for the Travel Calendar agent HTTP API. One tool list drives list and
 - `list_trips`
 - `trips_get`
 - `trips_search`
+- `trips_join`
+- `trips_set_theme_pack`
 - `create_trip`
 - `update_trip`
 - `trips_archive`
@@ -22,7 +24,9 @@ MCP server for the Travel Calendar agent HTTP API. One tool list drives list and
 - `confirm_pending`
 - `get_trip_bundle`
 
-`create_trip`, `update_trip`, `trips_archive`, and `trips_propose` propose a trip change. They do not insert the trip. A second call inserts a second pending row. The trip changes after a different person confirms. `items_add`, `items_update`, `items_remove`, and `items_propose` do the same for items. `confirm_pending` returns each pending row with `row_text` and `glance_url`. `trips_search` filters by date, place, or status (`active` or `archived`). A key with `confirmEnabled` false cannot confirm. `update_trip` does not check lifetime access. The other tools that read or write do.
+`trips_join` joins a trip with an invite code and writes the membership immediately. A second call keeps the stored role and display name. `trips_set_theme_pack` sets the trip theme pack, or clears it when `themePack` is null. Any member can set it. Zod in `toolInputs.mjs` checks `host`, a non-empty invite code, and the pack id before fetch. An unknown pack throws `Invalid theme pack.` The HTTP route still checks the pack with `parseThemePack`.
+
+`create_trip`, `update_trip`, `trips_archive`, and `trips_propose` propose a trip change. They do not insert the trip. A second call inserts a second pending row. The trip changes after a different person confirms. `items_add`, `items_update`, `items_remove`, and `items_propose` do the same for items. `confirm_pending` returns each pending row with `row_text` and `glance_url`. `trips_search` filters by date, place, or status (`active` or `archived`). A key with `confirmEnabled` false cannot confirm. `update_trip` and `trips_set_theme_pack` do not check lifetime access. `trips_join` does. The other tools that read or write do.
 
 ## 1. Create an API key
 
@@ -36,7 +40,7 @@ Save the returned `key` (`tc_…`). It is shown only once.
 
 ## Access
 
-Lifetime access ($9.99 once) is required for reads, proposes other than `update_trip`, confirm, and reject. `update_trip` does not check it. Use `check_access` first. If the user has not paid, complete the returned Stripe `paymentUrl`, then retry. A new key is propose-only.
+Lifetime access ($9.99 once) is required for reads, for proposes other than `update_trip`, for confirm, for reject, and for `trips_join`. `update_trip` and `trips_set_theme_pack` do not check it. Use `check_access` first. If the user has not paid, complete the returned Stripe `paymentUrl`, then retry. A new key is propose-only.
 
 ```bash
 cd mcp/travel-calendar
@@ -92,4 +96,20 @@ curl -sS -X PUT -H "Authorization: Bearer tc_…" \
 curl -sS -H "Authorization: Bearer tc_…" \
   -H "X-Travel-Calendar-Host: grok" \
   https://determined-anaconda-212.convex.site/agent/v1/confirm/pending
+```
+
+```bash
+curl -sS -H "Authorization: Bearer tc_…" \
+  -H "X-Travel-Calendar-Host: grok" \
+  -H "Content-Type: application/json" \
+  -d '{"inviteCode":"abc","displayName":"Ada"}' \
+  https://determined-anaconda-212.convex.site/agent/v1/join
+```
+
+```bash
+curl -sS -H "Authorization: Bearer tc_…" \
+  -H "X-Travel-Calendar-Host: grok" \
+  -H "Content-Type: application/json" \
+  -d '{"tripId":"TRIP_ID","themePack":"dusk-rose"}' \
+  https://determined-anaconda-212.convex.site/agent/v1/theme
 ```
