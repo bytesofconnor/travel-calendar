@@ -48,6 +48,19 @@ for (const pageDef of pages) {
   })
 }
 
+test("invite link keeps join on the login screen", async ({ page }) => {
+  const response = await page.goto("/?join=ab12cd34ef56", {
+    waitUntil: "domcontentloaded",
+  })
+
+  expect(response?.status()).toBe(200)
+  await expect(
+    page.getByRole("heading", { name: "Plan the trip together", level: 1 }),
+  ).toBeVisible()
+  await expect(page.getByRole("button", { name: "Continue with Google" })).toBeVisible()
+  await expect(page).toHaveURL(/[?&]join=ab12cd34ef56(?:&|$)/)
+})
+
 test("robots and sitemap use the canonical host", async ({ request }) => {
   const robots = await request.get("/robots.txt")
   expect(robots.status()).toBe(200)

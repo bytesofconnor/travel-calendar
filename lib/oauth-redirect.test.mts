@@ -9,6 +9,9 @@ const SITE = "https://www.travelcalendar.space"
 const INVITE = "ab12cd34ef56"
 const INVITE_URL = `${SITE}/?join=${INVITE}`
 
+process.env.SITE_URL = SITE
+process.env.CONVEX_SITE_URL = "https://bright-mouse-917.convex.site"
+
 type Redirects = {
   redirectAbsoluteUrl: (
     config: object,
@@ -37,39 +40,28 @@ const require = createRequire(
 )
 
 async function returnUrlAfterGoogle(redirectTo: string | undefined) {
-  const previousSite = process.env.SITE_URL
-  const previousConvexSite = process.env.CONVEX_SITE_URL
-  process.env.SITE_URL = SITE
-  process.env.CONVEX_SITE_URL = "https://bright-mouse-917.convex.site"
-  try {
-    const redirects = (await import(
-      new URL("../node_modules/@convex-dev/auth/dist/server/implementation/redirects.js", import.meta.url).href
-    )) as Redirects
-    let carried = redirectTo
-    if (redirectTo !== undefined) {
-      const signin = new URL("https://bright-mouse-917.convex.site/api/auth/signin/google")
-      signin.searchParams.set("redirectTo", redirectTo)
-      const fromQuery = signin.searchParams.get("redirectTo")
-      assert.equal(fromQuery, redirectTo)
-      const cookies = (await import(
-        new URL("../node_modules/@convex-dev/auth/dist/server/cookies.js", import.meta.url).href
-      )) as Cookies
-      const baked = cookies.redirectToParamCookie("google", fromQuery ?? "")
-      const cookie = require("cookie") as CookieLib
-      const pair = cookie.serialize(baked.name, baked.value, baked.options).split(";")[0] ?? ""
-      carried = cookie.parse(pair)[baked.name]
-    }
-    const destination = await redirects.redirectAbsoluteUrl({}, { redirectTo: carried })
-    const withCode = redirects.setURLSearchParam(destination, "code", "verifier")
-    const back = new URL(withCode)
-    back.searchParams.delete("code")
-    return back
-  } finally {
-    if (previousSite === undefined) delete process.env.SITE_URL
-    else process.env.SITE_URL = previousSite
-    if (previousConvexSite === undefined) delete process.env.CONVEX_SITE_URL
-    else process.env.CONVEX_SITE_URL = previousConvexSite
+  const redirects = (await import(
+    new URL("../node_modules/@convex-dev/auth/dist/server/implementation/redirects.js", import.meta.url).href
+  )) as Redirects
+  let carried = redirectTo
+  if (redirectTo !== undefined) {
+    const signin = new URL("https://bright-mouse-917.convex.site/api/auth/signin/google")
+    signin.searchParams.set("redirectTo", redirectTo)
+    const fromQuery = signin.searchParams.get("redirectTo")
+    assert.equal(fromQuery, redirectTo)
+    const cookies = (await import(
+      new URL("../node_modules/@convex-dev/auth/dist/server/cookies.js", import.meta.url).href
+    )) as Cookies
+    const baked = cookies.redirectToParamCookie("google", fromQuery ?? "")
+    const cookie = require("cookie") as CookieLib
+    const pair = cookie.serialize(baked.name, baked.value, baked.options).split(";")[0] ?? ""
+    carried = cookie.parse(pair)[baked.name]
   }
+  const destination = await redirects.redirectAbsoluteUrl({}, { redirectTo: carried })
+  const withCode = redirects.setURLSearchParam(destination, "code", "verifier")
+  const back = new URL(withCode)
+  back.searchParams.delete("code")
+  return back
 }
 
 test("an invite link returns to SITE_URL with join after Google", async () => {
