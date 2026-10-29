@@ -98,6 +98,20 @@ export type RejectedProposal = ProposalBase & {
 
 export type Proposal = PendingProposal | ConfirmedProposal | RejectedProposal
 
+export function isUnmemberedTripAdd(row: {
+  status: string
+  target: string
+  op: string
+  tripId?: string | null
+}): boolean {
+  return (
+    row.status === "pending" &&
+    row.target === "trip" &&
+    row.op === "add" &&
+    (row.tripId === undefined || row.tripId === null)
+  )
+}
+
 export type Member = {
   userId: UserId
   role: "owner" | "editor"
@@ -105,7 +119,6 @@ export type Member = {
   joinedAt: number
 }
 
-/** Propose-only keys are not members of this union. */
 export type ConfirmActor =
   | { kind: "member"; userId: UserId }
   | { kind: "agent"; userId: UserId; host: Host; confirmEnabled: true }
