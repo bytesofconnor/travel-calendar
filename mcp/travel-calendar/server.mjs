@@ -7,6 +7,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js"
+import { parseJoinToolInput, parseThemeToolInput, themePackIds } from "./toolInputs.mjs"
 
 const siteUrl = (process.env.TRAVEL_CALENDAR_SITE_URL ?? "").replace(/\/$/, "")
 const apiKey = process.env.TRAVEL_CALENDAR_API_KEY ?? ""
@@ -261,6 +262,30 @@ export async function updateTrip(input) {
   return await proposeTrip(input, "update")
 }
 
+export async function tripsJoin(input) {
+  const parsed = parseJoinToolInput(input)
+  return await agentFetch("/agent/v1/join", {
+    method: "POST",
+    host: parsed.host,
+    body: {
+      inviteCode: parsed.inviteCode,
+      displayName: parsed.displayName,
+    },
+  })
+}
+
+export async function tripsSetThemePack(input) {
+  const parsed = parseThemeToolInput(input)
+  return await agentFetch("/agent/v1/theme", {
+    method: "POST",
+    host: parsed.host,
+    body: {
+      tripId: parsed.tripId,
+      themePack: parsed.themePack,
+    },
+  })
+}
+
 export async function confirmPending(input) {
   const host = requireHost(input)
   return await agentFetch("/agent/v1/confirm/pending", { method: "GET", host })
@@ -341,6 +366,35 @@ const toolRegistry = [
       [],
     ),
     call: (args) => agentFetch(searchPath(args), { method: "GET", host: requireHost(args) }),
+  },
+  {
+    name: "trips_join",
+    description:
+      "Join a trip with an invite code. The membership is written immediately. A second call keeps the stored role and display name. An owner who submits their own code stays owner. Requires host.",
+    inputSchema: toolSchema(
+      {
+        inviteCode: { type: "string", description: "Invite code" },
+        displayName: { type: "string", description: "Name stored when this user is a new member" },
+      },
+      ["inviteCode", "displayName"],
+    ),
+    call: (args) => tripsJoin(args),
+  },
+  {
+    name: "trips_set_theme_pack",
+    description:
+      "Set the trip theme pack, or pass null to clear it. Any member can set it. There is no paywall. A missing trip or a non-member is Trip not found. Requires host.",
+    inputSchema: toolSchema(
+      {
+        tripId: tripIdField,
+        themePack: {
+          anyOf: [{ type: "string", enum: themePackIds }, { type: "null" }],
+          description: "Theme pack id, or null to clear the pack",
+        },
+      },
+      ["tripId", "themePack"],
+    ),
+    call: (args) => tripsSetThemePack(args),
   },
   {
     name: "create_trip",

@@ -6,7 +6,7 @@ import test from "node:test"
 process.env.TRAVEL_CALENDAR_SITE_URL = "https://example.convex.site"
 process.env.TRAVEL_CALENDAR_API_KEY = "tc_test"
 
-const { createTrip, updateTrip, confirmPending } = await import("./server.mjs")
+const { confirmPending, createTrip, tripsJoin, tripsSetThemePack, updateTrip } = await import("./server.mjs")
 
 const directory = fileURLToPath(new URL(".", import.meta.url))
 const originalFetch = globalThis.fetch
@@ -220,6 +220,127 @@ test("update_trip throws host_required before fetch when host is missing", async
         assert.equal(error.message, "host_required")
         return true
       },
+    )
+    assert.equal(called, false)
+  } finally {
+    restoreFetch()
+  }
+})
+
+test("trips_join POSTs /agent/v1/join with the host header and the invite body", async () => {
+  const calls: Array<{ url: string; init: RequestInit | undefined }> = []
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init })
+    return new Response(
+      JSON.stringify({ tripId: "trip_1", joined: "inserted", role: "editor", displayName: "Ada" }),
+      { status: 200 },
+    )
+  }
+  try {
+    const result = await tripsJoin({
+      host: "grok",
+      inviteCode: "AbC",
+      displayName: "Ada",
+      userId: "user_1",
+    })
+    assert.deepEqual(result, {
+      tripId: "trip_1",
+      joined: "inserted",
+      role: "editor",
+      displayName: "Ada",
+    })
+    const call = calls[0]
+    assert.ok(call)
+    const init = call.init
+    assert.ok(init)
+    assert.equal(call.url, "https://example.convex.site/agent/v1/join")
+    assert.equal(init.method, "POST")
+    assert.ok(isHeaderRecord(init.headers))
+    assert.equal(init.headers.Authorization, "Bearer tc_test")
+    assert.equal(init.headers["Content-Type"], "application/json")
+    assert.equal(init.headers["X-Travel-Calendar-Host"], "grok")
+    const body = jsonBody(init.body)
+    assert.deepEqual(body, { inviteCode: "AbC", displayName: "Ada" })
+    assert.ok(body !== null && typeof body === "object")
+    assert.equal(Object.hasOwn(body, "host"), false)
+    assert.equal(Object.hasOwn(body, "userId"), false)
+  } finally {
+    restoreFetch()
+  }
+})
+
+test("trips_set_theme_pack POSTs /agent/v1/theme with the pack in the body", async () => {
+  const calls: Array<{ url: string; init: RequestInit | undefined }> = []
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init })
+    return new Response(JSON.stringify({ tripId: "jd7/abc", themePack: "dusk-rose" }), { status: 200 })
+  }
+  try {
+    const result = await tripsSetThemePack({
+      host: "grok",
+      tripId: "jd7/abc",
+      themePack: "dusk-rose",
+      userId: "user_1",
+    })
+    assert.deepEqual(result, { tripId: "jd7/abc", themePack: "dusk-rose" })
+    const call = calls[0]
+    assert.ok(call)
+    const init = call.init
+    assert.ok(init)
+    assert.equal(call.url, "https://example.convex.site/agent/v1/theme")
+    assert.equal(init.method, "POST")
+    assert.ok(isHeaderRecord(init.headers))
+    assert.equal(init.headers.Authorization, "Bearer tc_test")
+    assert.equal(init.headers["X-Travel-Calendar-Host"], "grok")
+    const body = jsonBody(init.body)
+    assert.deepEqual(body, { tripId: "jd7/abc", themePack: "dusk-rose" })
+    assert.ok(body !== null && typeof body === "object")
+    assert.equal(Object.hasOwn(body, "host"), false)
+    assert.equal(Object.hasOwn(body, "tripId"), true)
+    assert.equal(Object.hasOwn(body, "userId"), false)
+  } finally {
+    restoreFetch()
+  }
+})
+
+test("trips_set_theme_pack sends null when the pack is cleared", async () => {
+  const calls: Array<{ url: string; init: RequestInit | undefined }> = []
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init })
+    return new Response(JSON.stringify({ tripId: "trip_1", themePack: null }), { status: 200 })
+  }
+  try {
+    await tripsSetThemePack({ host: "grok", tripId: "trip_1", themePack: null })
+    const call = calls[0]
+    assert.ok(call)
+    const init = call.init
+    assert.ok(init)
+    assert.equal(call.url, "https://example.convex.site/agent/v1/theme")
+    assert.equal(init.method, "POST")
+    assert.ok(isHeaderRecord(init.headers))
+    assert.equal(init.headers["X-Travel-Calendar-Host"], "grok")
+    assert.deepEqual(jsonBody(init.body), { tripId: "trip_1", themePack: null })
+  } finally {
+    restoreFetch()
+  }
+})
+
+test("trips_join and trips_set_theme_pack reject bad input before fetch", async () => {
+  let called = false
+  globalThis.fetch = async () => {
+    called = true
+    return new Response("{}", { status: 200 })
+  }
+  try {
+    await assert.rejects(() => tripsJoin({ host: "bad host", inviteCode: "abc", displayName: "Ada" }), {
+      message: "host_required",
+    })
+    await assert.rejects(() => tripsJoin({ host: "grok", inviteCode: "  ", displayName: "Ada" }), {
+      message: "invite_code_required",
+    })
+    await assert.rejects(
+      () => tripsSetThemePack({ host: "grok", tripId: "trip_1", themePack: "not-a-pack" }),
+      { message: "Invalid theme pack." },
     )
     assert.equal(called, false)
   } finally {
