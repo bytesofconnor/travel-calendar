@@ -67,7 +67,7 @@ export default defineSchema({
     method: v.union(v.literal("stripe"), v.literal("code")),
   }).index("by_user", ["userId"]),
 
-  /** Personal API keys for agent / MCP read access. Raw key shown once at create. */
+  /** Personal API keys for the MCP server. Keys can read member trips, create a trip, and update a trip the user owns. Raw key shown once at create. */
   agentApiKeys: defineTable({
     userId: v.id("users"),
     name: v.string(),

@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values"
 
 import type { Id } from "./_generated/dataModel"
-import { mutation, query } from "./_generated/server"
+import { internalMutation, mutation, query } from "./_generated/server"
 import type { MutationCtx } from "./_generated/server"
 import { requireAccess, userHasAccess } from "./access"
 import { checkOwner, getCurrentUserId, requireOwner } from "./lib/auth"
@@ -295,6 +295,64 @@ export const update = mutation({
     const userId = await getCurrentUserId(ctx)
     throwUpdateFailure(await patchTrip(ctx, userId, args))
     return null
+  },
+})
+
+const createTripResult = v.union(
+  v.object({
+    ok: v.literal(true),
+    tripId: v.id("trips"),
+  }),
+  v.object({
+    ok: v.literal(false),
+    error: v.union(v.literal("name_required"), v.literal("payment_required")),
+  }),
+)
+
+const updateTripResult = v.union(
+  v.object({
+    ok: v.literal(true),
+  }),
+  v.object({
+    ok: v.literal(false),
+    error: v.union(v.literal("name_required"), v.literal("not_found"), v.literal("not_owner")),
+  }),
+)
+
+export const createForAgent = internalMutation({
+  args: {
+    userId: v.id("users"),
+    name: v.string(),
+    startDate: v.string(),
+    endDate: v.string(),
+    displayName: v.string(),
+  },
+  returns: createTripResult,
+  handler: async (ctx, args) => {
+    return await createTripForUser(ctx, args.userId, args)
+  },
+})
+
+export const updateForAgent = internalMutation({
+  args: {
+    userId: v.id("users"),
+    tripId: v.string(),
+    name: v.string(),
+    startDate: v.string(),
+    endDate: v.string(),
+  },
+  returns: updateTripResult,
+  handler: async (ctx, args): Promise<UpdateTripResult> => {
+    const tripId = ctx.db.normalizeId("trips", args.tripId)
+    if (!tripId) {
+      return { ok: false, error: "not_found" }
+    }
+    return await patchTrip(ctx, args.userId, {
+      tripId,
+      name: args.name,
+      startDate: args.startDate,
+      endDate: args.endDate,
+    })
   },
 })
 
