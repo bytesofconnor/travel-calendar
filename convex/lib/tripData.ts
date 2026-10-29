@@ -1,5 +1,24 @@
+import { v } from "convex/values"
+
 import type { Doc, Id } from "../_generated/dataModel"
 import type { QueryCtx } from "../_generated/server"
+import { parseThemePack } from "../../lib/theme-packs"
+import { themePackValidator } from "./themePack"
+
+export const tripValidator = v.object({
+  _id: v.id("trips"),
+  name: v.string(),
+  inviteCode: v.string(),
+  startDate: v.string(),
+  endDate: v.string(),
+  createdBy: v.id("users"),
+  _creationTime: v.number(),
+  coverImageUrl: v.optional(v.string()),
+  coverImagePhotographer: v.optional(v.string()),
+  coverImageSourceUrl: v.optional(v.string()),
+  coverImageQuery: v.optional(v.string()),
+  themePack: v.union(themePackValidator, v.null()),
+})
 
 export function serializeTrip(trip: Doc<"trips">) {
   return {
@@ -14,6 +33,7 @@ export function serializeTrip(trip: Doc<"trips">) {
     coverImagePhotographer: trip.coverImagePhotographer,
     coverImageSourceUrl: trip.coverImageSourceUrl,
     coverImageQuery: trip.coverImageQuery,
+    themePack: parseThemePack(trip.themePack),
   }
 }
 

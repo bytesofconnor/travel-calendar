@@ -51,7 +51,10 @@ import {
 } from "@/lib/trip-kind"
 import { formatTripDateRange } from "@/lib/format-dates"
 import { oauthRedirectTo } from "@/lib/oauth-redirect"
+import { parseThemePack } from "@/lib/theme-packs"
 import { SegmentedControl, StatusBanner } from "@/components/ds"
+import { ThemePackPickerMenuItems } from "@/components/theme-pack-menu"
+import { useTripThemePack } from "@/components/use-trip-theme-pack"
 import { CaptureDock, type CaptureKind } from "./capture-dock"
 import { CreateJoinScreen } from "./create-join-screen"
 import { ItemDialog } from "./item-dialog"
@@ -84,6 +87,7 @@ type ConvexTripDoc = {
   coverImagePhotographer?: string
   coverImageSourceUrl?: string
   coverImageQuery?: string
+  themePack: string | null
 }
 
 function toIso(ms: number) {
@@ -103,6 +107,7 @@ function mapTrip(doc: ConvexTripDoc): Trip {
     coverImagePhotographer: doc.coverImagePhotographer,
     coverImageSourceUrl: doc.coverImageSourceUrl,
     coverImageQuery: doc.coverImageQuery,
+    themePack: parseThemePack(doc.themePack),
   }
 }
 
@@ -220,6 +225,12 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
   const syncedNoteTripIdRef = useRef<string | null>(null)
 
   const allTrips = useMemo(() => (tripsQuery ?? []).map(mapTrip), [tripsQuery])
+  const paywalled = Boolean(access && access.required && !access.granted)
+  const workspacePack =
+    isAuthenticated && !paywalled && !showCreateJoin && activeTripId
+      ? (allTrips.find((candidate) => candidate.id === activeTripId)?.themePack ?? null)
+      : null
+  useTripThemePack(workspacePack)
 
   const trip = useMemo(() => (bundle?.trip ? mapTrip(bundle.trip) : null), [bundle?.trip])
 
@@ -1116,7 +1127,7 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
                             <Ellipsis className="h-4 w-4" aria-hidden="true" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuContent align="end" className="w-60">
                           <DropdownMenuItem onSelect={() => setTripsOpen(true)}>
                             All trips
                           </DropdownMenuItem>
@@ -1130,6 +1141,11 @@ export function ConvexTripCalendarApp({ joinCode }: ConvexTripCalendarAppProps) 
                             New or join
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
+                          <ThemePackPickerMenuItems
+                            tripId={trip.id as Id<"trips">}
+                            themePack={trip.themePack}
+                            onError={setErrorMessage}
+                          />
                           {currentMember?.role === "owner" ? (
                             <DropdownMenuItem onSelect={() => setIsEditingTripDetails(true)}>
                               <Pencil className="h-4 w-4" />

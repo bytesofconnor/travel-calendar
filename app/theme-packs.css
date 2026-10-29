@@ -1,0 +1,141 @@
+:root {
+  --background: oklch(0.991 var(--c-paper, 0.002) var(--h-paper, 240));
+  --foreground: oklch(0.16 0.015 var(--h-ink, 255));
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.2 0.02 var(--h-ink, 255));
+  --secondary: oklch(0.965 0.004 var(--h-paper, 240));
+  --secondary-foreground: oklch(0.22 0.015 var(--h-ink, 255));
+  --muted: oklch(0.965 0.003 var(--h-paper, 240));
+  --muted-foreground: oklch(0.42 0.02 var(--h-paper, 250));
+  --accent: var(--secondary);
+  --accent-foreground: var(--primary);
+  --border: oklch(0.91 0.006 var(--h-paper, 240));
+  --input: var(--muted);
+  --ring: oklch(0.55 0.04 var(--h-ring, 240));
+  --sidebar: oklch(0.985 0.002 var(--h-paper, 240));
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--secondary);
+  --sidebar-accent-foreground: var(--secondary-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --kind-flight: oklch(0.44 0.13 var(--h-flight, 240));
+  --kind-stay: oklch(0.42 0.15 var(--h-stay, 295));
+  --kind-place: oklch(0.4 0.12 var(--h-place, 155));
+  --kind-note: oklch(0.46 0.13 var(--h-note, 70));
+  --kind-ask: oklch(0.48 0.15 var(--h-ask, 350));
+  --together: oklch(0.68 0.14 var(--h-together, 40));
+  --together-foreground: oklch(0.16 0.03 var(--h-together, 40));
+  --partner: var(--together);
+}
+
+.dark {
+  --background: oklch(0.145 var(--c-paper-dark, 0.012) var(--h-paper, 255));
+  --foreground: oklch(0.96 0.005 var(--h-ink, 240));
+  --card: oklch(0.19 0.012 var(--h-paper, 255));
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: var(--foreground);
+  --secondary: oklch(0.22 0.012 var(--h-paper, 255));
+  --secondary-foreground: oklch(0.92 0.005 var(--h-ink, 240));
+  --muted: var(--secondary);
+  --muted-foreground: oklch(0.72 0.02 var(--h-paper, 250));
+  --accent: oklch(0.24 0.014 var(--h-paper, 255));
+  --accent-foreground: var(--primary);
+  --border: oklch(0.3 0.015 var(--h-paper, 255));
+  --input: var(--muted);
+  --ring: oklch(0.55 0.06 var(--h-ring, 240));
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--secondary);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --kind-flight: oklch(0.78 0.1 var(--h-flight, 240));
+  --kind-stay: oklch(0.78 0.12 var(--h-stay, 295));
+  --kind-place: oklch(0.78 0.1 var(--h-place, 155));
+  --kind-note: oklch(0.82 0.1 var(--h-note, 75));
+  --kind-ask: oklch(0.8 0.1 var(--h-ask, 350));
+  --together: oklch(0.78 0.12 var(--h-together, 40));
+  --together-foreground: oklch(0.16 0.02 var(--h-together, 40));
+  --partner: var(--together);
+}
+
+html[data-theme="golden-hour"] {
+  --h-paper: 72;
+  --h-ink: 55;
+  --h-ring: 32;
+  --h-flight: 245;
+  --h-stay: 320;
+  --h-place: 125;
+  --h-note: 78;
+  --h-ask: 355;
+  --h-together: 32;
+  --c-paper: 0.012;
+  --c-paper-dark: 0.02;
+}
+
+html[data-theme="dusk-rose"] {
+  --h-paper: 8;
+  --h-ink: 12;
+  --h-ring: 50;
+  --h-flight: 230;
+  --h-stay: 345;
+  --h-place: 155;
+  --h-note: 80;
+  --h-ask: 300;
+  --h-together: 50;
+  --c-paper: 0.01;
+  --c-paper-dark: 0.018;
+}
+
+html[data-theme="coastal-infra"] {
+  --h-paper: 240;
+  --h-ink: 250;
+  --h-ring: 215;
+  --h-flight: 215;
+  --h-stay: 285;
+  --h-place: 160;
+  --h-note: 250;
+  --h-ask: 330;
+  --h-together: 25;
+  --c-paper: 0;
+  --c-paper-dark: 0.008;
+}
+
+html[data-theme="sage-coast"] {
+  --h-paper: 150;
+  --h-ink: 165;
+  --h-ring: 78;
+  --h-flight: 225;
+  --h-stay: 290;
+  --h-place: 152;
+  --h-note: 85;
+  --h-ask: 350;
+  --h-together: 78;
+  --c-paper: 0.01;
+  --c-paper-dark: 0.016;
+}
+
+[data-pack-swatch="golden-hour"] {
+  background: oklch(0.68 0.14 32);
+}
+
+[data-pack-swatch="dusk-rose"] {
+  background: oklch(0.68 0.14 50);
+}
+
+[data-pack-swatch="coastal-infra"] {
+  background: oklch(0.68 0.14 25);
+}
+
+[data-pack-swatch="sage-coast"] {
+  background: oklch(0.68 0.14 78);
+}

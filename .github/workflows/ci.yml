@@ -86,6 +86,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Check theme packs
+        run: pnpm theme-packs:check
+
       - name: Typecheck
         run: pnpm typecheck
 

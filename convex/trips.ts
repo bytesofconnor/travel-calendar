@@ -4,8 +4,9 @@ import type { Id } from "./_generated/dataModel"
 import { internalMutation, mutation, query } from "./_generated/server"
 import type { MutationCtx } from "./_generated/server"
 import { requireAccess, userHasAccess } from "./access"
-import { checkOwner, getCurrentUserId, requireOwner } from "./lib/auth"
-import { getTripBundleForUser, listTripsForUser } from "./lib/tripData"
+import { checkOwner, getCurrentUserId, requireMembership, requireOwner } from "./lib/auth"
+import { getTripBundleForUser, listTripsForUser, tripValidator } from "./lib/tripData"
+import { themePackValidator } from "./lib/themePack"
 
 type TripScheduleInput = {
   name: string
@@ -34,20 +35,6 @@ function generateInviteCode() {
   crypto.getRandomValues(bytes)
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")
 }
-
-const tripValidator = v.object({
-  _id: v.id("trips"),
-  name: v.string(),
-  inviteCode: v.string(),
-  startDate: v.string(),
-  endDate: v.string(),
-  createdBy: v.id("users"),
-  _creationTime: v.number(),
-  coverImageUrl: v.optional(v.string()),
-  coverImagePhotographer: v.optional(v.string()),
-  coverImageSourceUrl: v.optional(v.string()),
-  coverImageQuery: v.optional(v.string()),
-})
 
 const memberValidator = v.object({
   _id: v.id("tripMembers"),
@@ -369,6 +356,21 @@ export const updateCover = mutation({
     await requireOwner(ctx, args.tripId)
     const { tripId, ...cover } = args
     await ctx.db.patch(tripId, cover)
+    return null
+  },
+})
+
+export const setThemePack = mutation({
+  args: {
+    tripId: v.id("trips"),
+    themePack: v.union(themePackValidator, v.null()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireMembership(ctx, args.tripId)
+    await ctx.db.patch(args.tripId, {
+      themePack: args.themePack ?? undefined,
+    })
     return null
   },
 })
