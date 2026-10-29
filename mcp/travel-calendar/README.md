@@ -1,14 +1,28 @@
 # Travel Calendar MCP
 
-MCP server for the Travel Calendar agent HTTP API.
+MCP server for the Travel Calendar agent HTTP API. One tool list drives list and call. Every tool takes `host`. The server sends it as `X-Travel-Calendar-Host` and does not put it in the JSON body.
 
 - `check_access`
 - `list_trips`
-- `get_trip_bundle`
+- `trips_get`
+- `trips_search`
 - `create_trip`
 - `update_trip`
+- `trips_archive`
+- `trips_propose`
+- `trips_confirm`
+- `trips_reject`
+- `items_list`
+- `items_get`
+- `items_add`
+- `items_update`
+- `items_remove`
+- `items_propose`
+- `items_confirm`
+- `confirm_pending`
+- `get_trip_bundle`
 
-`create_trip` requires lifetime access and returns `tripId`. `update_trip` replaces the name, start date, and end date. The API key's user must own the trip. Both members see that change on reload and in `get_trip_bundle`.
+`create_trip`, `update_trip`, `trips_archive`, and `trips_propose` propose a trip change. They do not insert the trip. A second call inserts a second pending row. The trip changes after a different person confirms. `items_add`, `items_update`, `items_remove`, and `items_propose` do the same for items. `confirm_pending` returns each pending row with `row_text` and `glance_url`. `trips_search` filters by date, place, or status (`active` or `archived`). A key with `confirmEnabled` false cannot confirm. `update_trip` does not check lifetime access. The other tools that read or write do.
 
 ## 1. Create an API key
 
@@ -22,7 +36,7 @@ Save the returned `key` (`tc_…`). It is shown only once.
 
 ## Access
 
-Lifetime access ($9.99 once) is required for `list_trips`, `get_trip_bundle`, and `create_trip`. `update_trip` does not check it. Use `check_access` first. If the user has not paid, complete the returned Stripe `paymentUrl`, then retry.
+Lifetime access ($9.99 once) is required for reads, proposes other than `update_trip`, confirm, and reject. `update_trip` does not check it. Use `check_access` first. If the user has not paid, complete the returned Stripe `paymentUrl`, then retry. A new key is propose-only.
 
 ```bash
 cd mcp/travel-calendar
@@ -54,11 +68,13 @@ Add to your MCP config (path absolute):
 
 ```bash
 curl -sS -H "Authorization: Bearer tc_…" \
+  -H "X-Travel-Calendar-Host: grok" \
   https://determined-anaconda-212.convex.site/agent/v1/trips
 ```
 
 ```bash
 curl -sS -H "Authorization: Bearer tc_…" \
+  -H "X-Travel-Calendar-Host: grok" \
   -H "Content-Type: application/json" \
   -d '{"name":"Lisbon","startDate":"2026-05-01","endDate":"2026-05-08","displayName":"Ada"}' \
   https://determined-anaconda-212.convex.site/agent/v1/trips
@@ -66,7 +82,14 @@ curl -sS -H "Authorization: Bearer tc_…" \
 
 ```bash
 curl -sS -X PUT -H "Authorization: Bearer tc_…" \
+  -H "X-Travel-Calendar-Host: grok" \
   -H "Content-Type: application/json" \
   -d '{"name":"Porto","startDate":"2026-06-01","endDate":"2026-06-04"}' \
   https://determined-anaconda-212.convex.site/agent/v1/trips/TRIP_ID
+```
+
+```bash
+curl -sS -H "Authorization: Bearer tc_…" \
+  -H "X-Travel-Calendar-Host: grok" \
+  https://determined-anaconda-212.convex.site/agent/v1/confirm/pending
 ```

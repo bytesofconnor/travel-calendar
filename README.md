@@ -32,6 +32,10 @@ Convex production deploys from `main` when `convex/**` changes (`.github/workflo
 
 Vercel project `travelcalendar.space` builds the Next app. `scripts/vercel-ignore-build.sh` skips preview builds for `dependabot/` and `cursor/` branches, and skips a build when the commit does not change the app. `ourcalendar.space` and `www.ourcalendar.space` 308 to https://www.travelcalendar.space and keep the path and query.
 
-## MCP sketch
+## MCP
 
-Read-only trip tools live in [`mcp/travel-calendar`](mcp/travel-calendar/README.md). That package pins the same pnpm as the root (`packageManager`) and has its own lockfile.
+Trip and item tools live in [`mcp/travel-calendar`](mcp/travel-calendar/README.md). Every call sends `host` as `X-Travel-Calendar-Host`. Writes propose a change. A different person confirms it before it becomes the shared plan. `confirm_pending` returns a glance link. `trips_search` filters by date, place, or status. A propose-only key cannot confirm.
+
+Tools: `check_access`, `list_trips`, `trips_get`, `trips_search`, `create_trip`, `update_trip`, `trips_archive`, `trips_propose`, `trips_confirm`, `trips_reject`, `items_list`, `items_get`, `items_add`, `items_update`, `items_remove`, `items_propose`, `items_confirm`, `confirm_pending`, `get_trip_bundle`.
+
+That package pins the same pnpm as the root (`packageManager`) and has its own lockfile.
