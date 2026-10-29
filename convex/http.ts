@@ -3,8 +3,10 @@ import { httpRouter } from "convex/server"
 import { internal } from "./_generated/api"
 import type { Id } from "./_generated/dataModel"
 import { httpAction } from "./_generated/server"
+import type { ActionCtx } from "./_generated/server"
 import { paymentUrlForUser } from "./access"
 import { auth } from "./auth"
+import { parseCreateBody, parseUpdateBody } from "./lib/agentTripBody"
 import { verifyStripeSignature } from "./lib/stripeWebhook"
 
 const http = httpRouter()
@@ -45,6 +47,34 @@ function paymentRequired(userId: Id<"users">) {
     },
     402,
   )
+}
+
+async function resolveAgent(ctx: ActionCtx, request: Request) {
+  const token = extractBearer(request)
+  if (!token) {
+    return { ok: false as const, response: jsonResponse({ error: "Missing Bearer token" }, 401) }
+  }
+
+  const resolved = await ctx.runQuery(internal.agentKeys.resolveBearer, {
+    bearerToken: token,
+  })
+  if (!resolved) {
+    return { ok: false as const, response: jsonResponse({ error: "Invalid API key" }, 401) }
+  }
+
+  await ctx.runMutation(internal.agentKeys.touchLastUsed, {
+    keyId: resolved.keyId,
+  })
+
+  return { ok: true as const, principal: resolved }
+}
+
+function tripIdFromRequest(request: Request) {
+  const tripId = new URL(request.url).pathname.replace(/\/+$/, "").split("/").pop()
+  if (!tripId || tripId === "trips") {
+    return null
+  }
+  return tripId
 }
 
 http.route({
@@ -112,24 +142,13 @@ http.route({
   path: "/agent/v1/access",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
-    const token = extractBearer(request)
-    if (!token) {
-      return jsonResponse({ error: "Missing Bearer token" }, 401)
+    const resolved = await resolveAgent(ctx, request)
+    if (!resolved.ok) {
+      return resolved.response
     }
-
-    const resolved = await ctx.runQuery(internal.agentKeys.resolveBearer, {
-      bearerToken: token,
-    })
-    if (!resolved) {
-      return jsonResponse({ error: "Invalid API key" }, 401)
-    }
-
-    await ctx.runMutation(internal.agentKeys.touchLastUsed, {
-      keyId: resolved.keyId,
-    })
 
     const access = await ctx.runQuery(internal.access.checkForUser, {
-      userId: resolved.userId,
+      userId: resolved.principal.userId,
     })
 
     return jsonResponse({
@@ -143,33 +162,71 @@ http.route({
   path: "/agent/v1/trips",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
-    const token = extractBearer(request)
-    if (!token) {
-      return jsonResponse({ error: "Missing Bearer token" }, 401)
+    const resolved = await resolveAgent(ctx, request)
+    if (!resolved.ok) {
+      return resolved.response
     }
-
-    const resolved = await ctx.runQuery(internal.agentKeys.resolveBearer, {
-      bearerToken: token,
-    })
-    if (!resolved) {
-      return jsonResponse({ error: "Invalid API key" }, 401)
-    }
-
-    await ctx.runMutation(internal.agentKeys.touchLastUsed, {
-      keyId: resolved.keyId,
-    })
 
     const access = await ctx.runQuery(internal.access.checkForUser, {
-      userId: resolved.userId,
+      userId: resolved.principal.userId,
     })
     if (!access.granted) {
-      return paymentRequired(resolved.userId)
+      return paymentRequired(resolved.principal.userId)
     }
 
     const trips = await ctx.runQuery(internal.agentReads.listTrips, {
-      userId: resolved.userId,
+      userId: resolved.principal.userId,
     })
     return jsonResponse({ trips })
+  }),
+})
+
+http.route({
+  path: "/agent/v1/trips",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const resolved = await resolveAgent(ctx, request)
+    if (!resolved.ok) {
+      return resolved.response
+    }
+
+    const access = await ctx.runQuery(internal.access.checkForUser, {
+      userId: resolved.principal.userId,
+    })
+    if (!access.granted) {
+      return paymentRequired(resolved.principal.userId)
+    }
+
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return jsonResponse({ error: "Invalid JSON." }, 400)
+    }
+
+    const parsed = parseCreateBody(body)
+    if (!parsed.ok) {
+      return jsonResponse({ error: parsed.error }, 400)
+    }
+
+    const result = await ctx.runMutation(internal.trips.createForAgent, {
+      userId: resolved.principal.userId,
+      name: parsed.value.name,
+      startDate: parsed.value.startDate,
+      endDate: parsed.value.endDate,
+      displayName: parsed.value.displayName,
+    })
+    if (result.ok) {
+      return jsonResponse({ tripId: result.tripId })
+    }
+    if (result.error === "payment_required") {
+      return paymentRequired(resolved.principal.userId)
+    }
+    if (result.error === "name_required") {
+      return jsonResponse({ error: "Trip name and display name are required." }, 400)
+    }
+    const unreachable: never = result.error
+    throw new Error(unreachable)
   }),
 })
 
@@ -185,38 +242,25 @@ http.route({
   pathPrefix: "/agent/v1/trips/",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
-    const token = extractBearer(request)
-    if (!token) {
-      return jsonResponse({ error: "Missing Bearer token" }, 401)
+    const resolved = await resolveAgent(ctx, request)
+    if (!resolved.ok) {
+      return resolved.response
     }
-
-    const resolved = await ctx.runQuery(internal.agentKeys.resolveBearer, {
-      bearerToken: token,
-    })
-    if (!resolved) {
-      return jsonResponse({ error: "Invalid API key" }, 401)
-    }
-
-    await ctx.runMutation(internal.agentKeys.touchLastUsed, {
-      keyId: resolved.keyId,
-    })
 
     const access = await ctx.runQuery(internal.access.checkForUser, {
-      userId: resolved.userId,
+      userId: resolved.principal.userId,
     })
     if (!access.granted) {
-      return paymentRequired(resolved.userId)
+      return paymentRequired(resolved.principal.userId)
     }
 
-    const url = new URL(request.url)
-    const tripId = url.pathname.replace(/\/+$/, "").split("/").pop()
-
-    if (!tripId || tripId === "trips") {
+    const tripId = tripIdFromRequest(request)
+    if (!tripId) {
       return jsonResponse({ error: "tripId required" }, 400)
     }
 
     const bundle = await ctx.runQuery(internal.agentReads.getBundle, {
-      userId: resolved.userId,
+      userId: resolved.principal.userId,
       tripId: tripId as Id<"trips">,
     })
 
@@ -225,6 +269,56 @@ http.route({
     }
 
     return jsonResponse(bundle)
+  }),
+})
+
+http.route({
+  pathPrefix: "/agent/v1/trips/",
+  method: "PUT",
+  handler: httpAction(async (ctx, request) => {
+    const resolved = await resolveAgent(ctx, request)
+    if (!resolved.ok) {
+      return resolved.response
+    }
+
+    const tripId = tripIdFromRequest(request)
+    if (!tripId) {
+      return jsonResponse({ error: "tripId required" }, 400)
+    }
+
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return jsonResponse({ error: "Invalid JSON." }, 400)
+    }
+
+    const parsed = parseUpdateBody(body)
+    if (!parsed.ok) {
+      return jsonResponse({ error: parsed.error }, 400)
+    }
+
+    const result = await ctx.runMutation(internal.trips.updateForAgent, {
+      userId: resolved.principal.userId,
+      tripId,
+      name: parsed.value.name,
+      startDate: parsed.value.startDate,
+      endDate: parsed.value.endDate,
+    })
+    if (result.ok) {
+      return jsonResponse({ ok: true })
+    }
+    if (result.error === "name_required") {
+      return jsonResponse({ error: "Trip name is required." }, 400)
+    }
+    if (result.error === "not_owner") {
+      return jsonResponse({ error: "Owner access required" }, 403)
+    }
+    if (result.error === "not_found") {
+      return jsonResponse({ error: "Trip not found" }, 404)
+    }
+    const unreachable: never = result.error
+    throw new Error(unreachable)
   }),
 })
 
