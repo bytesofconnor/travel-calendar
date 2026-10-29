@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values"
 
 import type { Id } from "./_generated/dataModel"
-import { internalQuery, mutation, query } from "./_generated/server"
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server"
 import type { MutationCtx } from "./_generated/server"
 import { requireAccess, userHasAccess } from "./access"
 import { checkOwner, getCurrentUserId, getMembership, requireOwner } from "./lib/auth"
@@ -538,5 +538,55 @@ export const setThemePack = mutation({
       throw new Error("Invalid theme pack.")
     }
     throw new ConvexError("Not a member of this trip")
+  },
+})
+
+export const joinForAgent = internalMutation({
+  args: {
+    userId: v.id("users"),
+    inviteCode: v.string(),
+    displayName: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      ok: v.literal(true),
+      tripId: v.id("trips"),
+      joined: v.union(v.literal("inserted"), v.literal("already_member")),
+      role: v.union(v.literal("owner"), v.literal("editor")),
+      displayName: v.string(),
+    }),
+    v.object({
+      ok: v.literal(false),
+      error: v.union(v.literal("payment_required"), v.literal("name_required"), v.literal("invite_not_found")),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    return await joinByInvite(ctx, args.userId, args.inviteCode, args.displayName)
+  },
+})
+
+export const setThemePackForAgent = internalMutation({
+  args: {
+    userId: v.id("users"),
+    tripId: v.string(),
+    themePack: v.union(v.string(), v.null()),
+  },
+  returns: v.union(
+    v.object({
+      ok: v.literal(true),
+      tripId: v.id("trips"),
+      themePack: v.union(themePackValidator, v.null()),
+    }),
+    v.object({
+      ok: v.literal(false),
+      error: v.union(v.literal("not_found"), v.literal("invalid_pack")),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const tripId = ctx.db.normalizeId("trips", args.tripId)
+    if (!tripId) {
+      return { ok: false as const, error: "not_found" as const }
+    }
+    return await applyThemePack(ctx, args.userId, tripId, args.themePack)
   },
 })

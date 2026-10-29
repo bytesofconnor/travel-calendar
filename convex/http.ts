@@ -12,7 +12,7 @@ import {
   parseItemBody,
   parseRejectBody,
 } from "./lib/agentProposalBody"
-import { parseCreateBody, parseUpdateBody } from "./lib/agentTripBody"
+import { parseCreateBody, parseJoinBody, parseThemeBody, parseUpdateBody } from "./lib/agentTripBody"
 import { parseHost } from "./lib/proposalTransition"
 import { parseSearchQuery } from "./lib/tripSearch"
 import { verifyStripeSignature } from "./lib/stripeWebhook"
@@ -225,6 +225,8 @@ http.route({
 })
 
 options("/agent/v1/trips")
+options("/agent/v1/join")
+options("/agent/v1/theme")
 options("/agent/v1/access")
 options("/agent/v1/archive")
 options("/agent/v1/confirm")
@@ -409,6 +411,81 @@ http.route({
       }),
     )
     return jsonResponse({ trips })
+  }),
+})
+
+http.route({
+  path: "/agent/v1/join",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    // joinByInvite checks access once. Checking it here as well can drift.
+    const opened = await begin(ctx, request, false)
+    if (!opened.ok) {
+      return opened.response
+    }
+    const body = await readJson(request)
+    if (!body.ok) {
+      return body.response
+    }
+    const parsed = parseJoinBody(body.body)
+    if (!parsed.ok) {
+      return jsonResponse({ error: parsed.error }, 400)
+    }
+    const result = await ctx.runMutation(internal.trips.joinForAgent, {
+      userId: opened.principal.userId,
+      inviteCode: parsed.value.inviteCode,
+      displayName: parsed.value.displayName,
+    })
+    if (!result.ok) {
+      if (result.error === "payment_required") {
+        return paymentRequired(opened.principal.userId)
+      }
+      if (result.error === "invite_not_found") {
+        return jsonResponse({ error: "Invite code not found." }, 404)
+      }
+      return jsonResponse({ error: "Invite code and display name are required." }, 400)
+    }
+    return jsonResponse({
+      tripId: result.tripId,
+      joined: result.joined,
+      role: result.role,
+      displayName: result.displayName,
+    })
+  }),
+})
+
+http.route({
+  path: "/agent/v1/theme",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    // Same as trips.setThemePack: any member, and access is not required.
+    const opened = await begin(ctx, request, false)
+    if (!opened.ok) {
+      return opened.response
+    }
+    const body = await readJson(request)
+    if (!body.ok) {
+      return body.response
+    }
+    const parsed = parseThemeBody(body.body)
+    if (!parsed.ok) {
+      return jsonResponse({ error: parsed.error }, 400)
+    }
+    const result = await ctx.runMutation(internal.trips.setThemePackForAgent, {
+      userId: opened.principal.userId,
+      tripId: parsed.value.tripId,
+      themePack: parsed.value.themePack,
+    })
+    if (!result.ok) {
+      if (result.error === "not_found") {
+        return jsonResponse({ error: "Trip not found" }, 404)
+      }
+      return jsonResponse({ error: "Invalid theme fields." }, 400)
+    }
+    return jsonResponse({
+      tripId: result.tripId,
+      themePack: result.themePack,
+    })
   }),
 })
 
