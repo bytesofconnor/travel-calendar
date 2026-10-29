@@ -23,6 +23,28 @@ export default defineConfig([
       "react-hooks/purity": "warn",
     },
   },
+  {
+    files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "convex/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "@/lib/theme-pack-css",
+                "@/lib/theme-pack-css.ts",
+                "**/theme-pack-css",
+                "**/theme-pack-css.ts",
+              ],
+              message:
+                "Import the pack id from @/lib/theme-packs. scripts/check-theme-packs.ts is the CSS caller.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   globalIgnores([
     ".next/**",
     "out/**",

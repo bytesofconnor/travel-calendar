@@ -7,6 +7,7 @@ import { ConvexClientProvider } from '@/components/convex-client-provider'
 import { SkipLink } from '@/components/ds'
 import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
+import './theme-packs.css'
 
 const instrumentSerif = Instrument_Serif({
   subsets: ['latin'],

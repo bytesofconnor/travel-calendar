@@ -13,6 +13,8 @@
     "start": "next start --port 59316",
     "lint": "eslint .",
     "typecheck": "pnpm exec next typegen && pnpm exec tsc --noEmit",
+    "theme-packs:write": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-theme-packs.ts --write",
+    "theme-packs:check": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-theme-packs.ts",
     "test:smoke": "playwright test"
   },
   "dependencies": {
