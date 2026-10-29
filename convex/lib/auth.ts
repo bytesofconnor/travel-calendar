@@ -47,13 +47,37 @@ export async function requireMembership(
   return membership
 }
 
+type OwnerCheck =
+  | { ok: true; membership: Doc<"tripMembers"> }
+  | { ok: false; error: "not_found" | "not_owner" }
+
+export async function checkOwner(
+  ctx: Ctx,
+  tripId: Id<"trips">,
+  userId: Id<"users">,
+): Promise<OwnerCheck> {
+  const membership = await getMembership(ctx, tripId, userId)
+  if (!membership) {
+    return { ok: false, error: "not_found" }
+  }
+  if (membership.role !== "owner") {
+    return { ok: false, error: "not_owner" }
+  }
+  return { ok: true, membership }
+}
+
 export async function requireOwner(
   ctx: Ctx,
   tripId: Id<"trips">,
+  userId?: Id<"users">,
 ): Promise<Doc<"tripMembers">> {
-  const membership = await requireMembership(ctx, tripId)
-  if (membership.role !== "owner") {
+  const resolvedUserId = userId ?? (await getCurrentUserId(ctx))
+  const check = await checkOwner(ctx, tripId, resolvedUserId)
+  if (!check.ok && check.error === "not_owner") {
     throw new ConvexError("Owner access required")
   }
-  return membership
+  if (!check.ok) {
+    throw new ConvexError("Not a member of this trip")
+  }
+  return check.membership
 }
