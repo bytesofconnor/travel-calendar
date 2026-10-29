@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-/**
- * Travel Calendar MCP server.
- *
- * Env:
- *   TRAVEL_CALENDAR_SITE_URL  e.g. https://determined-anaconda-212.convex.site
- *   TRAVEL_CALENDAR_API_KEY   tc_... personal key from agentKeys:createForUser
- */
-
 import { realpathSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { Server } from "@modelcontextprotocol/sdk/server/index.js"
