@@ -14,22 +14,25 @@ Landing may diverge intentionally.
 5. **Primitives before one-offs** — use `@/components/ui/*` and `@/components/ds/*`; avoid raw buttons without focus rings.
 6. **Accessible by default** — labeled controls, keyboard operable, live regions for status/errors.
 
-## Tokens (`app/globals.css`)
+## Tokens
 
 | Token | Role |
 |-------|------|
 | `--background` | Foam in light (cool paper) / deep editor |
-| `--foreground` | Ink (cover type always) |
+| `--foreground` | Ink |
+| `--cover-chrome` | Cover and mast. Cover type is the light type on this token. |
 | `--card` | Raised surface |
 | `--primary` | Ink CTA / capture + |
-| `--brand` | Ocean teal — wordmark stitch only |
+| `--brand` | Ocean teal, wordmark stitch only |
 | `--kind-flight` … `--kind-ask` | Kind spectrum (see Together Story spec) |
 | `--together` / `--live` / `--partner` | Invite · presence · avatars |
 | `--muted-foreground` | Secondary text |
 | `--border` | Hairlines |
 | `--radius` | 0.5rem base (cards ~14px) |
 
-**Foam** is the paper / near-white surface. **Ink** is type and chrome (`--foreground`, `--primary`). Brand is **theme packs**, not one locked palette: the same tokens remap per `data-theme` (or equivalent) on the trip or couple preference. Named packs: **Golden Hour** (amber + coral), **Dusk Rose** (muted rose + peach), **Coastal Infra** (white + sky + one coral), **Sage Coast** (foam + sage green + sky blue + sand tan + ink). Invite stays `--together`. Kind rails stay `--kind-flight` / `--kind-stay` / `--kind-place`. Couples pick a preset. Optional warmer/cooler bias is Later. Hex pickers and per-card colors are out of scope.
+**Foam** is the paper / near-white surface. **Ink** is type and chrome (`--foreground`, `--primary`). Cover type stays the light type on `--cover-chrome`.
+
+Brand is four theme packs. `data-theme` on `html` selects the pack. The trip field `themePack` stores it. Either member can set it. An unset field keeps the current map. The packs are **Golden Hour** (amber + coral), **Dusk Rose** (muted rose + peach), **Coastal Infra** (white + sky + one coral), and **Sage Coast** (foam + sage green + sky blue + sand tan + ink). Invite uses `--together`. Kind rails stay flight, stay, and place. `--brand`, `--live`, and cover chrome stay in `app/globals.css`. The semantic ladder is generated into `app/theme-packs.css`. Optional warmer/cooler bias is Later. Hex pickers and per-card colors are out of scope.
 
 Display: Instrument Serif for trip title, place chapters, capture prompt. UI: DM Sans 11–14px (Geist optional later). **No third family.**
 
