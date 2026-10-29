@@ -20,6 +20,7 @@ import type * as lib_apiKeys from "../lib/apiKeys.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_customFunctions from "../lib/customFunctions.js";
 import type * as lib_stripeWebhook from "../lib/stripeWebhook.js";
+import type * as lib_themePack from "../lib/themePack.js";
 import type * as lib_tripData from "../lib/tripData.js";
 import type * as notes from "../notes.js";
 import type * as packing from "../packing.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/customFunctions": typeof lib_customFunctions;
   "lib/stripeWebhook": typeof lib_stripeWebhook;
+  "lib/themePack": typeof lib_themePack;
   "lib/tripData": typeof lib_tripData;
   notes: typeof notes;
   packing: typeof packing;

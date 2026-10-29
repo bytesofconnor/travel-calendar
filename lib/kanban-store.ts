@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import { defaultTripDates } from "@/lib/format-dates"
+import type { ThemePackId } from "@/lib/theme-packs"
 
 export type Location = string
 
@@ -18,6 +19,7 @@ export interface Trip {
   coverImagePhotographer?: string
   coverImageSourceUrl?: string
   coverImageQuery?: string
+  themePack: ThemePackId | null
 }
 
 export interface TripMember {

@@ -1,21 +1,7 @@
 import { v } from "convex/values"
 
 import { internalQuery } from "./_generated/server"
-import { getTripBundleForUser, listTripsForUser } from "./lib/tripData"
-
-const tripValidator = v.object({
-  _id: v.id("trips"),
-  name: v.string(),
-  inviteCode: v.string(),
-  startDate: v.string(),
-  endDate: v.string(),
-  createdBy: v.id("users"),
-  _creationTime: v.number(),
-  coverImageUrl: v.optional(v.string()),
-  coverImagePhotographer: v.optional(v.string()),
-  coverImageSourceUrl: v.optional(v.string()),
-  coverImageQuery: v.optional(v.string()),
-})
+import { getTripBundleForUser, listTripsForUser, tripValidator } from "./lib/tripData"
 
 export const listTrips = internalQuery({
   args: { userId: v.id("users") },

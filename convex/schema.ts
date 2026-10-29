@@ -2,6 +2,8 @@ import { defineSchema, defineTable } from "convex/server"
 import { authTables } from "@convex-dev/auth/server"
 import { v } from "convex/values"
 
+import { themePackValidator } from "./lib/themePack"
+
 export default defineSchema({
   ...authTables,
 
@@ -15,6 +17,7 @@ export default defineSchema({
     coverImagePhotographer: v.optional(v.string()),
     coverImageSourceUrl: v.optional(v.string()),
     coverImageQuery: v.optional(v.string()),
+    themePack: v.optional(themePackValidator),
   })
     .index("by_invite_code", ["inviteCode"])
     .index("by_created_by", ["createdBy"]),

@@ -1,29 +1,16 @@
 import { v } from "convex/values"
 
 import { mutation, query } from "./_generated/server"
-import { requireOwner } from "./lib/auth"
+import { requireMembership, requireOwner } from "./lib/auth"
 import { requireAccess } from "./access"
-import { getTripBundleForUser, listTripsForUser } from "./lib/tripData"
+import { getTripBundleForUser, listTripsForUser, tripValidator } from "./lib/tripData"
+import { themePackValidator } from "./lib/themePack"
 
 function generateInviteCode() {
   const bytes = new Uint8Array(6)
   crypto.getRandomValues(bytes)
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")
 }
-
-const tripValidator = v.object({
-  _id: v.id("trips"),
-  name: v.string(),
-  inviteCode: v.string(),
-  startDate: v.string(),
-  endDate: v.string(),
-  createdBy: v.id("users"),
-  _creationTime: v.number(),
-  coverImageUrl: v.optional(v.string()),
-  coverImagePhotographer: v.optional(v.string()),
-  coverImageSourceUrl: v.optional(v.string()),
-  coverImageQuery: v.optional(v.string()),
-})
 
 const memberValidator = v.object({
   _id: v.id("tripMembers"),
@@ -223,6 +210,32 @@ export const updateCover = mutation({
     await requireOwner(ctx, args.tripId)
     const { tripId, ...cover } = args
     await ctx.db.patch(tripId, cover)
+    return null
+  },
+})
+
+export const setThemePack = mutation({
+  args: {
+    tripId: v.id("trips"),
+    themePack: v.union(themePackValidator, v.null()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireMembership(ctx, args.tripId)
+    if (args.themePack === null) {
+      const trip = await ctx.db.get(args.tripId)
+      if (!trip) {
+        throw new Error("Trip not found.")
+      }
+      // patch cannot delete a field. Rewrite the row without themePack.
+      const { _id, _creationTime, themePack, ...rest } = trip
+      void _id
+      void _creationTime
+      void themePack
+      await ctx.db.replace(args.tripId, rest)
+      return null
+    }
+    await ctx.db.patch(args.tripId, { themePack: args.themePack })
     return null
   },
 })
