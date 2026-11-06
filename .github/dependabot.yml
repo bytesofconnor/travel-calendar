@@ -11,6 +11,12 @@ updates:
         applies-to: version-updates
         patterns: ["*"]
         update-types: [major, minor, patch]
+    # Ignore typescript 7.x. typescript-eslint rejects TS 7.0, so pnpm lint exits 2.
+    # https://github.com/typescript-eslint/typescript-eslint/issues/10940
+    # https://github.com/bytesofconnor/travel-calendar/pull/28
+    ignore:
+      - dependency-name: "typescript"
+        versions: ["7.x"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
