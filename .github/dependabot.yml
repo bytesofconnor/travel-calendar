@@ -11,12 +11,25 @@ updates:
         applies-to: version-updates
         patterns: ["*"]
         update-types: [major, minor, patch]
-    # Ignore typescript 7.x. typescript-eslint rejects TS 7.0, so pnpm lint exits 2.
+    # These majors fail CI on the grouped bump in pull request 28.
+    # typescript 7.x: typescript-eslint rejects TS 7.0, so pnpm lint exits 2.
     # https://github.com/typescript-eslint/typescript-eslint/issues/10940
+    # @convex-dev/eslint-plugin 5.x errors on process.env and on indexes.
+    # react-day-picker 10.x drops calendar classNames.table.
+    # recharts 3.x changes Tooltip payload types.
+    # react-resizable-panels 4.x removes PanelGroup and PanelResizeHandle.
     # https://github.com/bytesofconnor/travel-calendar/pull/28
     ignore:
       - dependency-name: "typescript"
         versions: ["7.x"]
+      - dependency-name: "@convex-dev/eslint-plugin"
+        versions: ["5.x"]
+      - dependency-name: "react-day-picker"
+        versions: ["10.x"]
+      - dependency-name: "recharts"
+        versions: ["3.x"]
+      - dependency-name: "react-resizable-panels"
+        versions: ["4.x"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
