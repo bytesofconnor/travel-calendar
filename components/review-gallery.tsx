@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, type ReactNode } from "react"
-import { ChevronDown, Ellipsis } from "lucide-react"
+import { Ellipsis } from "lucide-react"
 
 import type { Id } from "@/convex/_generated/dataModel"
 import { CaptureDock } from "@/components/capture-dock"
@@ -16,8 +16,8 @@ import { TripCover, SpectrumHairline } from "@/components/trip-cover"
 import { TripStoryView } from "@/components/trip-story-view"
 import { TripsSheet } from "@/components/trips-sheet"
 import { useTripThemePack } from "@/components/use-trip-theme-pack"
-import { SegmentedControl } from "@/components/ds"
 import { Button } from "@/components/ui/button"
+import { StoryChrome } from "@/components/story-chrome"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -141,39 +141,15 @@ function TripFrame({
               <SpectrumHairline />
               <header className="border-b border-border/80 bg-background">
                 <div className="story-shell">
-                  <div className="story-chrome">
-                    <SegmentedControl
-                      label="Trip view"
-                      value={mode}
-                      onChange={() => {}}
-                      className="story-segment"
-                      options={[
-                        { value: "trip", label: "Trip" },
-                        { value: "today", label: "Today" },
-                      ]}
-                    />
-                    <button
-                      type="button"
-                      className="story-chrome__hit rounded-lg text-muted-foreground"
-                      aria-label="All trips"
-                    >
-                      <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    </button>
-                    <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                      <div className="flex items-center pl-1" role="group" aria-label="Travelers">
-                        <span className="avatar-you flex h-9 w-9 items-center justify-center rounded-full text-[12px] font-bold">
-                          C
-                        </span>
-                        <span className="avatar-partner -ml-2.5 flex h-9 w-9 items-center justify-center rounded-full border-2 border-background text-[12px] font-bold">
-                          A
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        className="btn-together inline-flex h-11 min-w-[4.75rem] items-center justify-center rounded-full px-4 text-[13px] font-bold tracking-tight"
-                      >
-                        Invite
-                      </button>
+                  <StoryChrome
+                    mode={mode}
+                    onModeChange={() => {}}
+                    onOpenTrips={() => {}}
+                    onInvite={() => {}}
+                    youInitial="C"
+                    partnerInitial="A"
+                    partnerName="Alex"
+                    menu={
                       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
                         <DropdownMenuTrigger asChild>
                           <Button
@@ -200,8 +176,8 @@ function TripFrame({
                           <DropdownMenuItem>Sign out</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </div>
-                  </div>
+                    }
+                  />
                 </div>
               </header>
             </div>
