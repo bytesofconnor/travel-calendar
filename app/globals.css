@@ -116,9 +116,6 @@
     min-height: 100dvh;
     overscroll-behavior: none;
   }
-  :focus-visible {
-    outline: none;
-  }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   [role="tab"],
@@ -308,7 +305,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    min-height: 2.5rem;
+    min-height: 2.75rem;
     border: none;
     background: transparent;
     padding: 0.25rem 0.35rem;
@@ -612,6 +609,7 @@
   }
 
   .story-chrome-sticky {
+    top: env(safe-area-inset-top, 0px);
     background: var(--background);
   }
 
@@ -756,6 +754,7 @@
 
   .story-chrome {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.4rem;
     min-height: 3.25rem;
@@ -780,7 +779,7 @@
   }
 
   .story-segment .mara-segment__btn {
-    min-height: 2.35rem;
+    min-height: 2.75rem;
     min-width: 3.25rem;
     padding: 0.4rem 0.85rem;
     font-size: 0.8125rem;
@@ -1076,18 +1075,10 @@
 
   .capture-dock__chips {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 0.45rem;
     margin-top: 0.55rem;
     padding: 0 0.1rem;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .capture-dock__chips::-webkit-scrollbar {
-    display: none;
   }
 
   .arrive-list {

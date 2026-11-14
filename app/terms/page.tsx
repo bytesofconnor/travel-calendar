@@ -84,7 +84,7 @@ export default function TermsPage() {
           </div>
 
           <div className="mt-10">
-            <Link className="text-sm font-medium text-primary underline underline-offset-4" href="/">
+            <Link className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-4" href="/">
               Return to Travel Calendar
             </Link>
           </div>

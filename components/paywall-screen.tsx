@@ -95,7 +95,7 @@ export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallS
             <button
               type="button"
               onClick={() => setShowCodeInput(true)}
-              className="w-full text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="flex min-h-11 w-full items-center justify-center text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               Have a code?
             </button>

@@ -13,14 +13,12 @@ import {
   Pencil,
   Plane,
   PlusCircle,
-  Users,
   X,
 } from "lucide-react"
 
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,7 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
+import { EditTripDialog } from "./edit-trip-dialog"
 import {
   DEFAULT_TRIP_END,
   DEFAULT_TRIP_NAME,
@@ -1149,7 +1147,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
                 />
               ) : null}
 
-              <div className="story-chrome-sticky sticky top-0 z-20">
+              <div className="story-chrome-sticky sticky z-20">
                 <SpectrumHairline />
                 <header className="border-b border-border/80 bg-background">
                   <div className="story-shell">
@@ -1204,14 +1202,14 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
                           <Button
                             type="button"
                             variant="ghost"
-                            size="icon"
+                            size="icon-lg"
                             className="story-chrome__hit text-muted-foreground hover:text-foreground"
                             aria-label="More actions"
                           >
                             <Ellipsis className="h-4 w-4" aria-hidden="true" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-60">
+                        <DropdownMenuContent align="end" collisionPadding={8} className="w-60">
                           <DropdownMenuItem onSelect={() => setTripsOpen(true)}>
                             All trips
                           </DropdownMenuItem>
@@ -1448,78 +1446,35 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
         currentUserId={userId}
       />
 
-      <Dialog open={isEditingTripDetails} onOpenChange={setIsEditingTripDetails}>
-        <DialogContent className="w-[calc(100vw-1rem)] max-w-md overflow-hidden rounded-3xl p-0">
-          <DialogHeader className="border-b border-border px-5 py-4">
-            <DialogTitle className="text-base font-medium">Edit trip details</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 px-5 py-5">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Trip name</label>
-              <Input
-                value={tripName}
-                onChange={(event) => setTripName(event.target.value)}
-                placeholder="Trip name"
-                className="h-11 border-0 bg-secondary/50 text-base"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Start date</label>
-                <Input
-                  type="date"
-                  value={tripStart}
-                  onChange={(event) => {
-                    setTripStart(event.target.value)
-                    if (!tripEnd || event.target.value > tripEnd) {
-                      setTripEnd(event.target.value)
-                    }
-                  }}
-                  className="h-11 border-0 bg-secondary/50 text-base"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">End date</label>
-                <Input
-                  type="date"
-                  value={tripEnd}
-                  min={tripStart}
-                  onChange={(event) => setTripEnd(event.target.value)}
-                  className="h-11 border-0 bg-secondary/50 text-base"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center justify-end gap-2 border-t border-border bg-background/96 px-5 py-4">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setTripName(trip.name)
-                setTripStart(trip.startDate)
-                setTripEnd(trip.endDate)
-                setIsEditingTripDetails(false)
-              }}
-              disabled={isMutating}
-              className="h-11 rounded-xl"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => void handleSaveTripDetails()}
-              disabled={
-                isMutating ||
-                !tripName.trim() ||
-                !tripStart ||
-                !tripEnd ||
-                (tripName.trim() === trip.name && tripStart === trip.startDate && tripEnd === trip.endDate)
-              }
-              className="h-11 rounded-xl"
-            >
-              {isMutating ? "Saving..." : "Save"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <EditTripDialog
+        open={isEditingTripDetails}
+        onOpenChange={setIsEditingTripDetails}
+        tripName={tripName}
+        onTripNameChange={setTripName}
+        tripStart={tripStart}
+        onTripStartChange={(value) => {
+          setTripStart(value)
+          if (!tripEnd || value > tripEnd) {
+            setTripEnd(value)
+          }
+        }}
+        tripEnd={tripEnd}
+        onTripEndChange={setTripEnd}
+        onCancel={() => {
+          setTripName(trip.name)
+          setTripStart(trip.startDate)
+          setTripEnd(trip.endDate)
+          setIsEditingTripDetails(false)
+        }}
+        onSave={() => void handleSaveTripDetails()}
+        saveDisabled={
+          !tripName.trim() ||
+          !tripStart ||
+          !tripEnd ||
+          (tripName.trim() === trip.name && tripStart === trip.startDate && tripEnd === trip.endDate)
+        }
+        isSaving={isMutating}
+      />
     </>
   )
 }
