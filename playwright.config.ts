@@ -1,4 +1,4 @@
-import { defineConfig } from "@playwright/test"
+import { defineConfig, devices } from "@playwright/test"
 
 const baseURL = "http://127.0.0.1:59316"
 const convexUrl =
@@ -17,18 +17,37 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "desktop",
+      name: "chromium",
       use: {
         browserName: "chromium",
         viewport: { width: 1280, height: 800 },
       },
     },
     {
-      name: "mobile",
+      name: "firefox",
       use: {
-        browserName: "chromium",
-        viewport: { width: 390, height: 844 },
+        browserName: "firefox",
+        viewport: { width: 1280, height: 800 },
       },
+    },
+    {
+      name: "webkit",
+      use: {
+        browserName: "webkit",
+        viewport: { width: 1280, height: 800 },
+      },
+    },
+    {
+      name: "mobile-webkit",
+      use: { ...devices["iPhone 14"], browserName: "webkit" },
+    },
+    {
+      name: "mobile-se",
+      use: { ...devices["iPhone SE"], browserName: "webkit" },
+    },
+    {
+      name: "android-chrome",
+      use: { ...devices["Pixel 7"], browserName: "chromium" },
     },
   ],
   webServer: {
@@ -38,6 +57,7 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       NEXT_PUBLIC_CONVEX_URL: convexUrl,
+      UI_REVIEW: "1",
     },
   },
 })

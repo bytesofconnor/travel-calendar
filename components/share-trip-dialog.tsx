@@ -11,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { TripMember } from "@/lib/kanban-store"
 
@@ -44,7 +43,7 @@ export function ShareTripDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden border-border bg-card p-0 text-foreground sm:max-w-md">
+      <DialogContent className="flex max-h-[calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-1rem)] w-[min(28rem,calc(100vw-1rem))] min-w-0 flex-col gap-0 overflow-hidden border-border bg-card p-0 text-foreground">
         <DialogHeader className="space-y-2 border-b border-border px-6 py-5 text-left">
           <DialogTitle className="trip-title text-2xl font-normal tracking-tight text-foreground">
             This trip needs a second heartbeat.
@@ -54,19 +53,19 @@ export function ShareTripDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5 px-6 py-5">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
           <div className="space-y-2">
             <Label htmlFor="invite-link">Invite link</Label>
-            <div className="flex gap-2">
-              <Input
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <p
                 id="invite-link"
-                readOnly
-                value={inviteUrl}
-                className="h-11 min-w-0 flex-1 truncate rounded-xl bg-secondary"
-              />
+                className="min-w-0 flex-1 break-all rounded-xl bg-secondary px-3 py-3 text-sm leading-5 text-foreground"
+              >
+                {inviteUrl}
+              </p>
               <Button
                 type="button"
-                size="pill"
+                size="lg"
                 className="btn-together h-11 shrink-0 rounded-xl px-3.5 shadow-none"
                 onClick={() => void copy(inviteUrl, "link")}
                 aria-label={copied === "link" ? "Invite link copied" : "Copy invite link"}
@@ -79,15 +78,15 @@ export function ShareTripDialog({
 
           <div className="space-y-2">
             <Label htmlFor="invite-code">Invite code</Label>
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-secondary px-4 py-2">
-              <code id="invite-code" className="font-mono text-lg tracking-[0.18em] text-foreground uppercase">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-secondary px-4 py-2">
+              <code id="invite-code" className="min-w-0 break-all font-mono text-lg tracking-[0.12em] text-foreground uppercase">
                 {inviteCode}
               </code>
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
-                className="h-9 rounded-lg px-3"
+                size="lg"
+                className="h-11 rounded-lg px-3"
                 onClick={() => void copy(inviteCode, "code")}
                 aria-label={copied === "code" ? "Invite code copied" : "Copy invite code"}
               >

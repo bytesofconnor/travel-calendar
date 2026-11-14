@@ -53,11 +53,11 @@ export function ConfirmQueue({ rows, highlightedId, onConfirm, onReject }: Confi
                   {row.glanceUrl}
                 </a>
               </div>
-              <div className="flex shrink-0 gap-2">
-                <Button type="button" size="sm" onClick={() => onConfirm(row.proposalId)}>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <Button type="button" size="lg" onClick={() => onConfirm(row.proposalId)}>
                   Confirm
                 </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => onReject(row.proposalId)}>
+                <Button type="button" size="lg" variant="outline" onClick={() => onReject(row.proposalId)}>
                   Reject
                 </Button>
               </div>

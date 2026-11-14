@@ -120,7 +120,7 @@ export function ItemDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-lg flex-col gap-0 overflow-hidden rounded-xl border-border bg-card p-0 sm:my-4">
+      <DialogContent className="flex max-h-[calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-1rem)] w-[calc(100vw-1rem)] max-w-lg flex-col gap-0 overflow-hidden rounded-xl border-border bg-card p-0 sm:my-4">
         <DialogHeader className="border-b border-border px-5 py-3.5 text-left">
           <DialogTitle className="text-base font-semibold tracking-tight">
             {editItem ? "Edit plan" : "Add for both of you"}
@@ -255,7 +255,7 @@ export function ItemDialog({
               <button
                 type="button"
                 onClick={() => setShowLink(true)}
-                className="inline-flex min-h-10 items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <LinkIcon className="h-4 w-4" aria-hidden="true" />
                 Add a booking or map link
@@ -264,10 +264,11 @@ export function ItemDialog({
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4">
           {editItem ? (
             <Button
               type="button"
+              size="lg"
               variant="ghost"
               className="text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={() => void handleDelete()}
@@ -279,12 +280,13 @@ export function ItemDialog({
           ) : (
             <span />
           )}
-          <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="lg" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button
               type="button"
+              size="lg"
               className="rounded-full px-5"
               onClick={() => void handleSave()}
               disabled={!canSave || isSaving}

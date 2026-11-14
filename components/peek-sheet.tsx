@@ -24,7 +24,7 @@ export function PeekSheet({ open, onOpenChange, title, meta, children }: PeekShe
         side="bottom"
         className="flex h-[min(86svh,40rem)] flex-col gap-0 rounded-t-2xl border-border p-0"
       >
-        <SheetHeader className="shrink-0 space-y-1 border-b border-border px-5 py-4 text-left">
+        <SheetHeader className="shrink-0 space-y-1 border-b border-border py-4 pl-5 pr-14 text-left">
           <SheetTitle className="text-base font-semibold tracking-tight">{title}</SheetTitle>
           {meta ? <p className="text-xs text-muted-foreground">{meta}</p> : null}
         </SheetHeader>

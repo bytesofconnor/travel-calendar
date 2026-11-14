@@ -118,6 +118,12 @@ export function LoginScreen({
           )}
         </button>
 
+        {joinInput && !emailAuthEnabled ? (
+          <p className="mt-4 text-sm font-medium text-foreground" role="status">
+            Invite {joinInput} is ready. You join that trip after you sign in.
+          </p>
+        ) : null}
+
         {emailAuthEnabled && !showEmailAuth ? (
           <button
             type="button"

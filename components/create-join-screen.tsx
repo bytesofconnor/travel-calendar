@@ -136,7 +136,7 @@ export function CreateJoinScreen({
               onChange={(event) => onDisplayNameChange(event.target.value)}
               autoComplete="name"
               placeholder="What your partner sees"
-              className="create-join__field"
+              className="create-join__field h-12"
             />
           </label>
 
@@ -148,7 +148,7 @@ export function CreateJoinScreen({
                   value={tripName}
                   onChange={(event) => onTripNameChange(event.target.value)}
                   placeholder="Our trip"
-                  className="create-join__field"
+                  className="create-join__field h-12"
                 />
               </label>
               <div className="grid grid-cols-2 gap-2.5">
@@ -158,7 +158,7 @@ export function CreateJoinScreen({
                     type="date"
                     value={tripStart}
                     onChange={(event) => onTripStartChange(event.target.value)}
-                    className="create-join__field"
+                    className="create-join__field h-12"
                   />
                 </label>
                 <label className="block space-y-1.5">
@@ -168,7 +168,7 @@ export function CreateJoinScreen({
                     value={tripEnd}
                     min={tripStart}
                     onChange={(event) => onTripEndChange(event.target.value)}
-                    className="create-join__field"
+                    className="create-join__field h-12"
                   />
                 </label>
               </div>
@@ -183,7 +183,7 @@ export function CreateJoinScreen({
                 autoCapitalize="characters"
                 autoCorrect="off"
                 spellCheck={false}
-                className="create-join__field create-join__field--code"
+                className="create-join__field create-join__field--code h-12"
                 aria-describedby="join-code-hint"
               />
               <span id="join-code-hint" className="block text-[0.75rem] leading-5 text-muted-foreground">
