@@ -4,7 +4,6 @@ import { useAuthActions } from "@convex-dev/auth/react"
 import { useConvexAuth, useMutation, useQuery } from "convex/react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
-  ChevronDown,
   Ellipsis,
   Heart,
   Image as ImageIcon,
@@ -27,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { EditTripDialog } from "./edit-trip-dialog"
+import { StoryChrome } from "./story-chrome"
 import {
   DEFAULT_TRIP_END,
   DEFAULT_TRIP_NAME,
@@ -50,7 +50,7 @@ import {
 import { formatTripDateRange } from "@/lib/format-dates"
 import { oauthRedirectTo } from "@/lib/oauth-redirect"
 import { parseThemePack } from "@/lib/theme-packs"
-import { SegmentedControl, StatusBanner } from "@/components/ds"
+import { StatusBanner } from "@/components/ds"
 import { ThemePackPickerMenuItems } from "@/components/theme-pack-menu"
 import { useTripThemePack } from "@/components/use-trip-theme-pack"
 import { CaptureDock, type CaptureKind } from "./capture-dock"
@@ -1151,52 +1151,15 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
                 <SpectrumHairline />
                 <header className="border-b border-border/80 bg-background">
                   <div className="story-shell">
-                    <div className="story-chrome">
-                    <SegmentedControl
-                      label="Trip view"
-                      value={storyMode}
-                      onChange={setStoryMode}
-                      className="story-segment"
-                      options={[
-                        { value: "trip", label: "Trip" },
-                        { value: "today", label: "Today" },
-                      ]}
-                    />
-
-                    <button
-                      type="button"
-                      className="story-chrome__hit rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      aria-label="All trips"
-                      onClick={() => setTripsOpen(true)}
-                    >
-                      <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    </button>
-
-                    <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                      <div className="flex items-center pl-1" role="group" aria-label="Travelers">
-                        <span
-                          className="avatar-you flex h-9 w-9 items-center justify-center rounded-full text-[12px] font-bold"
-                          aria-label="You"
-                        >
-                          {youInitial}
-                        </span>
-                        {partnerInitial ? (
-                          <span
-                            className="avatar-partner -ml-2.5 flex h-9 w-9 items-center justify-center rounded-full border-2 border-background text-[12px] font-bold"
-                            aria-label={partner?.displayName ?? "Partner"}
-                          >
-                            {partnerInitial}
-                          </span>
-                        ) : null}
-                      </div>
-                      <button
-                        type="button"
-                        className="btn-together inline-flex h-11 min-w-[4.75rem] items-center justify-center rounded-full px-4 text-[13px] font-bold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--together)]"
-                        onClick={() => setShareOpen(true)}
-                        aria-label="Invite your partner"
-                      >
-                        Invite
-                      </button>
+                    <StoryChrome
+                      mode={storyMode}
+                      onModeChange={setStoryMode}
+                      onOpenTrips={() => setTripsOpen(true)}
+                      onInvite={() => setShareOpen(true)}
+                      youInitial={youInitial}
+                      partnerInitial={partnerInitial}
+                      partnerName={partner?.displayName}
+                      menu={
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
@@ -1247,8 +1210,8 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </div>
-                    </div>
+                      }
+                    />
                   </div>
                 </header>
                 {shareMessage ? <StatusBanner tone="success">{shareMessage}</StatusBanner> : null}

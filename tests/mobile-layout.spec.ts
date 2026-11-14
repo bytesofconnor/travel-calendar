@@ -110,6 +110,61 @@ test("primary controls are at least 44px and stay on screen", async ({ page }) =
   }
 })
 
+test("trip header stays on one row from 320 to 430", async ({ page }, testInfo) => {
+  const phoneProjects = new Set(["chromium", "mobile-webkit", "mobile-se", "android-chrome"])
+  test.skip(!phoneProjects.has(testInfo.project.name))
+  const widths =
+    testInfo.project.name === "chromium" ? [320, 375, 390, 412, 430] : [page.viewportSize()?.width ?? 390]
+
+  for (const width of widths) {
+    if (testInfo.project.name === "chromium") {
+      await page.setViewportSize({ width, height: 800 })
+    }
+    for (const path of ["/review?screen=trip", "/review?screen=today"]) {
+      await page.goto(path, { waitUntil: "domcontentloaded" })
+      await expect(page.locator(".story-chrome")).toBeVisible()
+      const controls = [
+        page.getByRole("button", { name: "Trip", exact: true }),
+        page.getByRole("button", { name: "Today", exact: true }),
+        page.getByRole("button", { name: "All trips" }),
+        page.getByRole("button", { name: "Invite your partner" }),
+        page.getByRole("button", { name: "More actions" }),
+      ]
+      const boxes = []
+      for (const control of controls) {
+        const box = await control.boundingBox()
+        expect(box, path).toBeTruthy()
+        expect(box!.height, path).toBeGreaterThanOrEqual(44)
+        expect(box!.width, path).toBeGreaterThanOrEqual(44)
+        expect(box!.x, path).toBeGreaterThanOrEqual(-1)
+        expect(box!.x + box!.width, path).toBeLessThanOrEqual(width + 1)
+        boxes.push(box!)
+      }
+      const tops = boxes.map((box) => box.y)
+      expect(Math.max(...tops) - Math.min(...tops), `${path} @ ${width}`).toBeLessThan(2)
+      const extra = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      )
+      expect(extra, path).toBeLessThanOrEqual(1)
+      const travelers = page.getByRole("group", { name: "Travelers" })
+      if (width < 375) await expect(travelers).toBeHidden()
+      else await expect(travelers).toBeVisible()
+    }
+  }
+})
+
+test("desktop trip header keeps the text invite and the avatars", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium")
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto("/review?screen=trip")
+  const invite = page.getByRole("button", { name: "Invite your partner" })
+  await expect(invite).toContainText("Invite")
+  await expect(invite.locator("svg")).toBeHidden()
+  await expect(page.getByRole("group", { name: "Travelers" })).toBeVisible()
+  const box = await invite.boundingBox()
+  expect(box?.width).toBeGreaterThanOrEqual(76)
+})
+
 test("the plan form keeps a focused field inside a short window", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 520 })
   await page.goto("/review?screen=add")
