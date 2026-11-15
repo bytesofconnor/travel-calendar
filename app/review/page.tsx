@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 
+import { PairTripScreen } from "@/components/pair-trip-screen"
 import { ReviewGallery } from "@/components/review-gallery"
 
 export const dynamic = "force-dynamic"
@@ -13,7 +14,12 @@ export const metadata: Metadata = {
 export default async function ReviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ screen?: string | string[]; theme?: string | string[] }>
+  searchParams: Promise<{
+    screen?: string | string[]
+    theme?: string | string[]
+    room?: string | string[]
+    member?: string | string[]
+  }>
 }) {
   if (process.env.UI_REVIEW !== "1") {
     notFound()
@@ -22,6 +28,12 @@ export default async function ReviewPage({
   const params = await searchParams
   const screen = typeof params.screen === "string" ? params.screen : "trip"
   const theme = typeof params.theme === "string" ? params.theme : null
+  if (screen === "pair") {
+    const room = typeof params.room === "string" ? params.room : ""
+    const member = params.member === "partner" ? "partner" : params.member === "owner" ? "owner" : ""
+    if (!room || !member) notFound()
+    return <PairTripScreen roomId={room} member={member} />
+  }
 
   return <ReviewGallery screen={screen} theme={theme} />
 }
