@@ -26,6 +26,9 @@ test("screens stay inside the window without console or hydration errors", async
     const url = message.location().url ?? ""
     if (url.includes("/_vercel/") || text.includes("/_vercel/")) return
     if (text.startsWith("Failed to load resource")) return
+    // Playwright's WebKit build logs this for interactive-widget. iOS Safari
+    // honors the key, and it is what keeps the in-flow add bar above the keyboard.
+    if (text.includes("Viewport argument key \"interactive-widget\" not recognized")) return
     if (message.type() === "error" || /hydration/i.test(text)) problems.push(text)
   })
   page.on("response", (response) => {
@@ -163,6 +166,58 @@ test("desktop trip header keeps the text invite and the avatars", async ({ page 
   await expect(page.getByRole("group", { name: "Travelers" })).toBeVisible()
   const box = await invite.boundingBox()
   expect(box?.width).toBeGreaterThanOrEqual(76)
+})
+
+test("the add bar stays within a fifth of a small phone", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium" && testInfo.project.name !== "webkit")
+  await page.setViewportSize({ width: 375, height: 667 })
+  await page.goto("/review?screen=today", { waitUntil: "domcontentloaded" })
+  const dock = page.getByRole("region", { name: "Add to trip" })
+  await expect(dock).toBeVisible()
+  const dockBox = await dock.boundingBox()
+  expect(dockBox!.height).toBeLessThanOrEqual(667 * 0.2)
+
+  const chips = [
+    page.getByRole("button", { name: "Add Stay" }),
+    page.getByRole("button", { name: "Add Flight" }),
+    page.getByRole("button", { name: "Add Place" }),
+    page.getByRole("button", { name: "Add Note" }),
+  ]
+  const field = page.getByRole("button", { name: "What’s happening today?" })
+  const boxes = []
+  for (const control of [field, ...chips]) {
+    const box = await control.boundingBox()
+    expect(box).toBeTruthy()
+    expect(box!.height).toBeGreaterThanOrEqual(44)
+    expect(box!.width).toBeGreaterThanOrEqual(44)
+    expect(box!.x).toBeGreaterThanOrEqual(-1)
+    expect(box!.x + box!.width).toBeLessThanOrEqual(375 + 1)
+    boxes.push(box!)
+  }
+  const chipTops = boxes.slice(1).map((box) => box.y)
+  expect(Math.max(...chipTops) - Math.min(...chipTops)).toBeLessThan(2)
+
+  await page.setViewportSize({ width: 320, height: 568 })
+  const narrow = await dock.boundingBox()
+  expect(narrow!.height).toBeLessThanOrEqual(568 * 0.25)
+  const narrowChips = []
+  for (const chip of chips) {
+    const box = await chip.boundingBox()
+    expect(box!.height).toBeGreaterThanOrEqual(44)
+    expect(box!.x + box!.width).toBeLessThanOrEqual(320 + 1)
+    narrowChips.push(box!.y)
+  }
+  expect(Math.max(...narrowChips) - Math.min(...narrowChips)).toBeLessThan(2)
+
+  await page.setViewportSize({ width: 375, height: 340 })
+  await expect(dock).toBeInViewport()
+  const withKeyboard = await dock.boundingBox()
+  expect(withKeyboard!.y + withKeyboard!.height).toBeLessThanOrEqual(341)
+
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto("/review?screen=trip")
+  const wideField = page.getByRole("button", { name: "Add to the trip…" })
+  expect((await wideField.boundingBox())!.height).toBeGreaterThanOrEqual(56)
 })
 
 test("the plan form keeps a focused field inside a short window", async ({ page }) => {
