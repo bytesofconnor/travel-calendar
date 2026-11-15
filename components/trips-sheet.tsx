@@ -72,7 +72,7 @@ export function TripsSheet({
           })}
         </ul>
 
-        <div className="shrink-0 space-y-2 border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="shrink-0 space-y-2 border-t border-border px-4 pt-4 pb-[max(1rem,var(--safe-bottom))]">
           <Button
             type="button"
             className="h-12 w-full rounded-full text-[0.9375rem] font-bold"

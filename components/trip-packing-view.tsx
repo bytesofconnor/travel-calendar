@@ -298,7 +298,7 @@ export function TripPackingView({
             <DrawerTitle>Add packing item</DrawerTitle>
             <DrawerDescription>Drop in a quick essential and keep moving.</DrawerDescription>
           </DrawerHeader>
-          <div className="space-y-3 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+          <div className="space-y-3 px-4 pb-[calc(var(--safe-bottom)+1rem)]">
             <Input
               value={newItemLabel}
               onChange={(event) => setNewItemLabel(event.target.value)}

@@ -43,7 +43,7 @@ export function ShareTripDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-1rem)] w-[min(28rem,calc(100vw-1rem))] min-w-0 flex-col gap-0 overflow-hidden border-border bg-card p-0 text-foreground">
+      <DialogContent className="flex max-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom)-1.5rem)] w-[min(28rem,calc(100vw-1rem))] min-w-0 flex-col gap-0 overflow-hidden border-border bg-card p-0 text-foreground">
         <DialogHeader className="space-y-2 border-b border-border px-6 py-5 text-left">
           <DialogTitle className="trip-title text-2xl font-normal tracking-tight text-foreground">
             This trip needs a second heartbeat.
