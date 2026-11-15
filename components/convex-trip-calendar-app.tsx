@@ -4,6 +4,7 @@ import { useAuthActions } from "@convex-dev/auth/react"
 import { useConvexAuth, useMutation, useQuery } from "convex/react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
+  Calendar,
   Ellipsis,
   Heart,
   Image as ImageIcon,
@@ -53,6 +54,7 @@ import { parseThemePack } from "@/lib/theme-packs"
 import { StatusBanner } from "@/components/ds"
 import { ThemePackPickerMenuItems } from "@/components/theme-pack-menu"
 import { useTripThemePack } from "@/components/use-trip-theme-pack"
+import { AddToCalendarSheet } from "./add-to-calendar-sheet"
 import { CaptureDock, type CaptureKind } from "./capture-dock"
 import { ConfirmQueue } from "./confirm-queue"
 import { CreateJoinScreen } from "./create-join-screen"
@@ -73,6 +75,8 @@ const LAST_TRIP_KEY = "travel-calendar:last-trip-id"
 interface ConvexTripCalendarAppProps {
   joinCode?: string
   confirmId?: string
+  tripId?: string
+  planId?: string
 }
 
 type ConvexTripDoc = {
@@ -148,7 +152,7 @@ function LoadingJourney({ label = "Loading your trip", detail = "Pulling plans, 
   )
 }
 
-export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalendarAppProps) {
+export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: ConvexTripCalendarAppProps) {
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth()
   const { signIn, signOut } = useAuthActions()
   // Calendar store no longer drives primary workspace chrome (Together Story).
@@ -181,6 +185,8 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
   const confirmProposal = useMutation(api.proposals.confirm)
   const rejectProposal = useMutation(api.proposals.reject)
   const saveNote = useMutation(api.notes.save)
+  const ensureCalendar = useMutation(api.calendarFeeds.ensure)
+  const resetCalendar = useMutation(api.calendarFeeds.reset)
   const addPacking = useMutation(api.packing.add)
   const addManyPacking = useMutation(api.packing.addMany)
   const togglePacking = useMutation(api.packing.toggle)
@@ -212,6 +218,9 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
   const [desktopAiOpen, setDesktopAiOpen] = useState(false)
   const [isEditingTripDetails, setIsEditingTripDetails] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [calendarToken, setCalendarToken] = useState<string | null>(null)
+  const [calendarError, setCalendarError] = useState("")
   const [isRefreshingCover, setIsRefreshingCover] = useState(false)
   const [storyMode, setStoryMode] = useState<"trip" | "today">("trip")
   const [storyModeReady, setStoryModeReady] = useState(false)
@@ -271,6 +280,10 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
           endDate: item.endDate,
           location: item.location,
           locationTo: item.locationTo,
+          startTime: item.startTime,
+          endTime: item.endTime,
+          startTimeZone: item.startTimeZone,
+          endTimeZone: item.endTimeZone,
           createdBy: item.createdBy,
           createdAt: toIso(item._creationTime),
           updatedAt: toIso(item._creationTime),
@@ -319,11 +332,14 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
 
   useEffect(() => {
     if (!trip || storyModeReady) return
-    if (isDateInTrip(today, trip.startDate, trip.endDate)) {
+    if (planId) {
+      setStoryMode("trip")
+      setEmphasizeItemId(planId)
+    } else if (isDateInTrip(today, trip.startDate, trip.endDate)) {
       setStoryMode("today")
     }
     setStoryModeReady(true)
-  }, [storyModeReady, today, trip])
+  }, [planId, storyModeReady, today, trip])
 
   useEffect(() => {
     noteDirtyRef.current = noteDirty
@@ -365,6 +381,9 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
         const byInvite = tripsQuery.find((candidate) => candidate.inviteCode === preferredJoin)
         if (byInvite) return byInvite._id
       }
+      if (tripId && tripsQuery.some((candidate) => candidate._id === tripId)) {
+        return tripId as Id<"trips">
+      }
       if (current && tripsQuery.some((candidate) => candidate._id === current)) {
         return current
       }
@@ -374,7 +393,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
       }
       return tripsQuery[0]._id
     })
-  }, [tripsQuery, joinCode])
+  }, [tripsQuery, joinCode, tripId])
 
   // Auto-join when authenticated with zero trips and a join code
   useEffect(() => {
@@ -623,6 +642,10 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
         endDate: input.endDate,
         location: input.location,
         locationTo: input.locationTo,
+        startTime: input.startTime,
+        endTime: input.endTime,
+        startTimeZone: input.startTimeZone,
+        endTimeZone: input.endTimeZone,
       }
       if (existingItem) {
         await updateItem({ itemId: existingItem.id as Id<"tripItems">, ...payload })
@@ -1181,6 +1204,21 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
                             New or join
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              setCalendarError("")
+                              setCalendarOpen(true)
+                              if (!trip) return
+                              void ensureCalendar({ tripId: trip.id as Id<"trips"> })
+                                .then((result) => setCalendarToken(result.token))
+                                .catch((error: unknown) => {
+                                  setCalendarError(error instanceof Error ? error.message : "Couldn't make a calendar link.")
+                                })
+                            }}
+                          >
+                            <Calendar className="h-4 w-4" />
+                            Add to calendar
+                          </DropdownMenuItem>
                           <ThemePackPickerMenuItems
                             tripId={trip.id as Id<"trips">}
                             themePack={trip.themePack}
@@ -1391,6 +1429,18 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
         onDelete={async (itemId) => {
           await handleDeleteItem(itemId)
           setItemDialogOpen(false)
+        }}
+      />
+
+      <AddToCalendarSheet
+        open={calendarOpen}
+        onOpenChange={setCalendarOpen}
+        tripName={trip.name}
+        token={calendarToken}
+        error={calendarError}
+        onReset={async () => {
+          const result = await resetCalendar({ tripId: trip.id as Id<"trips"> })
+          setCalendarToken(result.token)
         }}
       />
 

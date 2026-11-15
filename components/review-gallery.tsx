@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, type ReactNode } from "react"
-import { Ellipsis } from "lucide-react"
+import { Calendar, Ellipsis } from "lucide-react"
 
 import type { Id } from "@/convex/_generated/dataModel"
 import { CaptureDock } from "@/components/capture-dock"
@@ -16,6 +16,7 @@ import { TripCover, SpectrumHairline } from "@/components/trip-cover"
 import { TripStoryView } from "@/components/trip-story-view"
 import { TripsSheet } from "@/components/trips-sheet"
 import { useTripThemePack } from "@/components/use-trip-theme-pack"
+import { AddToCalendarSheet } from "@/components/add-to-calendar-sheet"
 import { Button } from "@/components/ui/button"
 import { StoryChrome } from "@/components/story-chrome"
 import {
@@ -31,6 +32,8 @@ import { parseThemePack, type ThemePackId } from "@/lib/theme-packs"
 const TRIP_ID = "trip_lisbon"
 const USER_ID = "user_connor"
 const REVIEW_TRIP_ID = "trips_review" as Id<"trips">
+const REVIEW_CALENDAR_TOKEN = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+const REVIEW_CALENDAR_TOKEN_RESET = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 const members: TripMember[] = [
   { tripId: TRIP_ID, userId: USER_ID, role: "owner", displayName: "Connor" },
@@ -119,6 +122,8 @@ function TripFrame({
   children: ReactNode
 }) {
   const [menuOpen, setMenuOpen] = useState(screen === "theme")
+  const [calendarOpen, setCalendarOpen] = useState(screen === "calendar")
+  const [calendarToken, setCalendarToken] = useState(REVIEW_CALENDAR_TOKEN)
 
   return (
     <main
@@ -172,6 +177,10 @@ function TripFrame({
                             onError={() => {}}
                           />
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem onSelect={() => setCalendarOpen(true)}>
+                            <Calendar className="h-4 w-4" />
+                            Add to calendar
+                          </DropdownMenuItem>
                           <DropdownMenuItem>Edit trip</DropdownMenuItem>
                           <DropdownMenuItem>Sign out</DropdownMenuItem>
                         </DropdownMenuContent>
@@ -205,6 +214,18 @@ function TripFrame({
           <CaptureDock hint={mode === "today" ? "What’s happening today?" : "Add to the trip…"} onCapture={() => {}} />
         </div>
       </div>
+      <AddToCalendarSheet
+        open={calendarOpen}
+        onOpenChange={setCalendarOpen}
+        tripName="Lisbon with you"
+        token={calendarToken}
+        origin="https://www.travelcalendar.space"
+        onReset={() => {
+          setCalendarToken((current) =>
+            current === REVIEW_CALENDAR_TOKEN ? REVIEW_CALENDAR_TOKEN_RESET : REVIEW_CALENDAR_TOKEN,
+          )
+        }}
+      />
     </main>
   )
 }

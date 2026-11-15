@@ -4,6 +4,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import { ConvexAuthNextjsServerProvider } from '@convex-dev/auth/nextjs/server'
 import { DM_Sans, Instrument_Serif } from 'next/font/google'
 import { ConvexClientProvider } from '@/components/convex-client-provider'
+import { Toaster } from '@/components/ui/sonner'
 import { SkipLink } from '@/components/ds'
 import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
@@ -177,6 +178,7 @@ export default function RootLayout({
             <ConvexClientProvider>
               {children}
             </ConvexClientProvider>
+            <Toaster position="top-center" />
           </ThemeProvider>
           {process.env.NODE_ENV === 'production' && <Analytics />}
           {process.env.NODE_ENV === 'production' && <SpeedInsights />}

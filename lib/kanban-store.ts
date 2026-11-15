@@ -40,6 +40,10 @@ export interface TripItem {
   endDate: string
   location: Location
   locationTo?: Location
+  startTime?: string
+  endTime?: string
+  startTimeZone?: string
+  endTimeZone?: string
   createdBy: string
   createdAt: string
   updatedAt: string
@@ -77,6 +81,10 @@ export interface TripItemInput {
   endDate: string
   location: Location
   locationTo?: Location
+  startTime?: string
+  endTime?: string
+  startTimeZone?: string
+  endTimeZone?: string
 }
 
 export interface LocationDef {

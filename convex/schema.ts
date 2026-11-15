@@ -21,6 +21,7 @@ export default defineSchema({
     coverImageSourceUrl: v.optional(v.string()),
     coverImageQuery: v.optional(v.string()),
     themePack: v.optional(themePackValidator),
+    updatedAt: v.optional(v.number()),
   })
     .index("by_invite_code", ["inviteCode"])
     .index("by_created_by", ["createdBy"]),
@@ -45,6 +46,12 @@ export default defineSchema({
     endDate: v.string(),
     location: v.string(),
     locationTo: v.optional(v.string()),
+    startTime: v.optional(v.string()),
+    endTime: v.optional(v.string()),
+    startTimeZone: v.optional(v.string()),
+    endTimeZone: v.optional(v.string()),
+    updatedAt: v.optional(v.number()),
+    revision: v.optional(v.number()),
     createdBy: v.id("users"),
     proposedBy: v.optional(v.id("users")),
     confirmedBy: v.optional(v.id("users")),
@@ -56,7 +63,20 @@ export default defineSchema({
     tripId: v.id("trips"),
     content: v.string(),
     updatedBy: v.optional(v.id("users")),
+    updatedAt: v.optional(v.number()),
   }).index("by_trip", ["tripId"]),
+
+  calendarFeeds: defineTable({
+    tripId: v.id("trips"),
+    userId: v.id("users"),
+    token: v.string(),
+    tokenHash: v.string(),
+    createdAt: v.number(),
+    rotatedAt: v.number(),
+    revokedAt: v.optional(v.number()),
+  })
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_trip_and_user", ["tripId", "userId"]),
 
   tripPackingItems: defineTable({
     tripId: v.id("trips"),

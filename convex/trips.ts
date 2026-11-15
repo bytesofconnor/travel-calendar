@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel"
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server"
 import type { MutationCtx } from "./_generated/server"
 import { requireAccess, userHasAccess } from "./access"
+import { revokeCalendarFeed } from "./calendarFeeds"
 import { checkOwner, getCurrentUserId, getMembership, requireOwner } from "./lib/auth"
 import { parseThemePack, type ThemePackId } from "../lib/theme-packs"
 import { bundleItemValidator, getTripBundleForUser, listTripsForUser, serializeTrip, tripValidator } from "./lib/tripData"
@@ -215,6 +216,7 @@ export async function patchTrip(
     name,
     startDate: input.startDate,
     endDate: input.endDate,
+    updatedAt: Date.now(),
     ...(attribution ?? {}),
   })
   return { ok: true }
@@ -588,5 +590,27 @@ export const setThemePackForAgent = internalMutation({
       return { ok: false as const, error: "not_found" as const }
     }
     return await applyThemePack(ctx, args.userId, tripId, args.themePack)
+  },
+})
+
+export const leave = mutation({
+  args: { tripId: v.id("trips") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const userId = await getCurrentUserId(ctx)
+    const membership = await getMembership(ctx, args.tripId, userId)
+    if (!membership) {
+      throw new ConvexError("Not a member of this trip")
+    }
+    const members = await ctx.db
+      .query("tripMembers")
+      .withIndex("by_trip", (q) => q.eq("tripId", args.tripId))
+      .collect()
+    if (members.length < 2) {
+      throw new ConvexError("You're the only person on this trip.")
+    }
+    await ctx.db.delete(membership._id)
+    await revokeCalendarFeed(ctx, args.tripId, userId)
+    return null
   },
 })
