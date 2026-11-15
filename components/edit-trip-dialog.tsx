@@ -33,7 +33,7 @@ export function EditTripDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-1rem)] max-w-md overflow-hidden rounded-3xl p-0">
+      <DialogContent className="flex max-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom)-1.5rem)] w-[calc(100vw-1rem)] max-w-md flex-col overflow-hidden rounded-3xl p-0">
         <DialogHeader className="border-b border-border px-5 py-4">
           <DialogTitle className="text-base font-medium">Edit trip details</DialogTitle>
         </DialogHeader>
@@ -47,8 +47,8 @@ export function EditTripDialog({
               className="h-11 border-0 bg-secondary/50 text-base"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
+          <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2">
+            <div className="min-w-0 space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Start date</label>
               <Input
                 type="date"
@@ -57,7 +57,7 @@ export function EditTripDialog({
                 className="h-11 border-0 bg-secondary/50 text-base"
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="min-w-0 space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">End date</label>
               <Input
                 type="date"

@@ -120,7 +120,7 @@ export function ItemDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-1rem)] w-[calc(100vw-1rem)] max-w-lg flex-col gap-0 overflow-hidden rounded-xl border-border bg-card p-0 sm:my-4">
+      <DialogContent className="flex max-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom)-1.5rem)] w-[calc(100vw-1rem)] max-w-lg flex-col gap-0 overflow-hidden rounded-xl border-border bg-card p-0 sm:my-4">
         <DialogHeader className="border-b border-border px-5 py-3.5 text-left">
           <DialogTitle className="text-base font-semibold tracking-tight">
             {editItem ? "Edit plan" : "Add for both of you"}
@@ -159,8 +159,8 @@ export function ItemDialog({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
+            <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2">
+              <div className="min-w-0 space-y-1.5">
                 <Label htmlFor="plan-start">Start</Label>
                 <Input
                   id="plan-start"
@@ -175,7 +175,7 @@ export function ItemDialog({
                   className="h-11 border-border bg-background"
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="min-w-0 space-y-1.5">
                 <Label htmlFor="plan-end">End</Label>
                 <Input
                   id="plan-end"

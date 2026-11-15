@@ -151,8 +151,8 @@ export function CreateJoinScreen({
                   className="create-join__field h-12"
                 />
               </label>
-              <div className="grid grid-cols-2 gap-2.5">
-                <label className="block space-y-1.5">
+              <div className="grid grid-cols-1 gap-2.5 min-[480px]:grid-cols-2">
+                <label className="block min-w-0 space-y-1.5">
                   <span className="create-join__label">Start</span>
                   <Input
                     type="date"
@@ -161,7 +161,7 @@ export function CreateJoinScreen({
                     className="create-join__field h-12"
                   />
                 </label>
-                <label className="block space-y-1.5">
+                <label className="block min-w-0 space-y-1.5">
                   <span className="create-join__label">End</span>
                   <Input
                     type="date"

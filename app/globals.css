@@ -37,6 +37,10 @@
   --font-serif: var(--font-instrument-serif, "Libre Baskerville", Georgia, serif);
   --font-landing-ui: var(--font-dm-sans, "DM Sans", "Segoe UI", sans-serif);
   color-scheme: light dark;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
 }
 
 /* System / next-themes dark — portals (dialogs, menus) inherit these on <html> */
@@ -240,8 +244,8 @@
     width: 100%;
     max-width: 48rem;
     margin-inline: auto;
-    padding-inline: max(1rem, env(safe-area-inset-left, 0px))
-      max(1rem, env(safe-area-inset-right, 0px));
+    padding-inline: max(1rem, var(--safe-left))
+      max(1rem, var(--safe-right));
   }
 
   .create-join__mast {
@@ -253,7 +257,7 @@
     flex-direction: column;
     background: var(--cover-chrome);
     color: oklch(0.96 0.005 240);
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: var(--safe-top);
   }
 
   .create-join__media {
@@ -389,7 +393,7 @@
     margin-inline: auto;
     flex: 1;
     flex-direction: column;
-    padding: 1.35rem 1.25rem max(1.25rem, env(safe-area-inset-bottom, 0px));
+    padding: 1.35rem 1.25rem max(1.25rem, var(--safe-bottom));
   }
 
   .create-join__tabs {
@@ -535,10 +539,10 @@
 
     .trip-cover__content {
       min-height: 10.75rem;
-      padding-top: max(1.75rem, env(safe-area-inset-top, 0px));
+      padding-top: max(1.75rem, var(--safe-top));
       padding-bottom: 1.65rem;
-      padding-inline: max(2rem, env(safe-area-inset-left, 0px))
-        max(2rem, env(safe-area-inset-right, 0px));
+      padding-inline: max(2rem, var(--safe-left))
+        max(2rem, var(--safe-right));
     }
 
     .trip-cover__title {
@@ -547,8 +551,8 @@
 
     .create-join__mast-copy {
       padding: 1.5rem 2rem 1.75rem;
-      padding-inline: max(2rem, env(safe-area-inset-left, 0px))
-        max(2rem, env(safe-area-inset-right, 0px));
+      padding-inline: max(2rem, var(--safe-left))
+        max(2rem, var(--safe-right));
     }
   }
 
@@ -603,13 +607,13 @@
 
     .trip-cover__content {
       min-height: 12.5rem;
-      padding-top: max(2.25rem, env(safe-area-inset-top, 0px));
+      padding-top: max(2.25rem, var(--safe-top));
       padding-bottom: 2rem;
     }
   }
 
   .story-chrome-sticky {
-    top: env(safe-area-inset-top, 0px);
+    top: var(--safe-top);
     background: var(--background);
   }
 
@@ -646,9 +650,9 @@
     max-width: 52rem;
     margin-inline: auto;
     padding: 1rem 1.25rem 1.2rem;
-    padding-inline: max(1.25rem, env(safe-area-inset-left, 0px))
-      max(1.25rem, env(safe-area-inset-right, 0px));
-    padding-top: max(1rem, env(safe-area-inset-top, 0px));
+    padding-inline: max(1.25rem, var(--safe-left))
+      max(1.25rem, var(--safe-right));
+    padding-top: max(1rem, var(--safe-top));
   }
 
   .trip-cover__brand {
@@ -1035,7 +1039,7 @@
     background: color-mix(in oklab, var(--background) 88%, transparent);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    padding: 0.75rem 0 calc(0.9rem + env(safe-area-inset-bottom, 0px));
+    padding: 0.75rem 0 calc(0.9rem + var(--safe-bottom));
   }
 
   .capture-dock__field {
@@ -1099,12 +1103,12 @@
 
   @media (max-width: 375px) {
     .capture-dock {
-      padding: 0.4rem 0 calc(0.45rem + env(safe-area-inset-bottom, 0px));
+      padding: 0.4rem 0 calc(0.45rem + var(--safe-bottom));
     }
 
     .capture-dock .story-shell {
-      padding-inline: max(0.75rem, env(safe-area-inset-left, 0px))
-        max(0.75rem, env(safe-area-inset-right, 0px));
+      padding-inline: max(0.75rem, var(--safe-left))
+        max(0.75rem, var(--safe-right));
     }
 
     .capture-dock__field {
@@ -1558,8 +1562,8 @@
     width: min(100%, 72rem);
     margin-inline: auto;
     padding: var(--landing-gap);
-    padding-top: max(var(--landing-gap), env(safe-area-inset-top));
-    padding-bottom: max(calc(var(--landing-gap) * 2), env(safe-area-inset-bottom));
+    padding-top: max(var(--landing-gap), var(--safe-top));
+    padding-bottom: max(calc(var(--landing-gap) * 2), var(--safe-bottom));
     min-height: 100svh;
   }
 
@@ -2053,4 +2057,14 @@
     transform: scale(1.08);
     opacity: 1;
   }
+}
+
+[data-slot="dialog-content"] [data-slot="dialog-header"] {
+  padding-right: 3.75rem;
+}
+
+input[type="date"] {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 2.75rem;
 }
