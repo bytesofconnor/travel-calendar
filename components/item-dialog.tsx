@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { airportTimeZone, TIME_ZONE_CHOICES, timeZoneLabel } from "@/lib/calendar/airports"
 import type { TripItem, TripItemInput } from "@/lib/kanban-store"
 
 interface ItemDialogProps {
@@ -52,6 +53,10 @@ export function ItemDialog({
   const [linkLabel, setLinkLabel] = useState("")
   const [linkUrl, setLinkUrl] = useState("")
   const [showLink, setShowLink] = useState(false)
+  const [startTime, setStartTime] = useState("")
+  const [endTime, setEndTime] = useState("")
+  const [startZone, setStartZone] = useState("")
+  const [endZone, setEndZone] = useState("")
 
   useEffect(() => {
     if (!open) return
@@ -73,6 +78,10 @@ export function ItemDialog({
         setLinkUrl("")
         setShowLink(false)
       }
+      setStartTime(editItem.startTime ?? "")
+      setEndTime(editItem.endTime ?? "")
+      setStartZone(editItem.startTimeZone ?? "")
+      setEndZone(editItem.endTimeZone ?? "")
       return
     }
 
@@ -86,6 +95,10 @@ export function ItemDialog({
     setLinkLabel(initialInput?.link?.label ?? "")
     setLinkUrl(initialInput?.link?.url ?? "")
     setShowLink(Boolean(initialInput?.link?.url))
+    setStartTime(initialInput?.startTime ?? "")
+    setEndTime(initialInput?.endTime ?? "")
+    setStartZone(initialInput?.startTimeZone ?? "")
+    setEndZone(initialInput?.endTimeZone ?? "")
   }, [defaultDate, editItem, initialInput, initialTravel, open])
 
   async function handleSave() {
@@ -99,6 +112,10 @@ export function ItemDialog({
         endDate,
         location: location.trim(),
         locationTo: isTravel && locationTo.trim() ? locationTo.trim() : undefined,
+        startTime: isTravel ? startTime : "",
+        endTime: isTravel ? endTime : "",
+        startTimeZone: isTravel ? airportTimeZone(location) ?? startZone : "",
+        endTimeZone: isTravel ? airportTimeZone(locationTo) ?? endZone : "",
         link:
           showLink && linkUrl.trim()
             ? { label: linkLabel.trim() || "Link", url: linkUrl.trim() }
@@ -222,11 +239,49 @@ export function ItemDialog({
                     placeholder="Lima"
                     value={locationTo}
                     onChange={(event) => setLocationTo(event.target.value)}
-                    className="h-11 border-border bg-background"
+                    className="h-11 min-w-0 border-border bg-background"
                   />
                 </div>
               ) : null}
             </div>
+
+            {isTravel ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="plan-depart">Departs</Label>
+                  <Input
+                    id="plan-depart"
+                    type="time"
+                    value={startTime}
+                    onChange={(event) => setStartTime(event.target.value)}
+                    className="h-11 min-w-0 border-border bg-background"
+                  />
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="plan-arrive">Arrives</Label>
+                  <Input
+                    id="plan-arrive"
+                    type="time"
+                    value={endTime}
+                    onChange={(event) => setEndTime(event.target.value)}
+                    className="h-11 min-w-0 border-border bg-background"
+                  />
+                </div>
+                <p className="col-span-2 text-sm leading-5 text-muted-foreground">
+                  {flightClockHint(location, locationTo, startTime, endTime, startZone, endZone)}
+                </p>
+                {startTime && !airportTimeZone(location) ? (
+                  <div className="col-span-2">
+                    <TimeZoneField id="plan-depart-zone" label="Departing time zone" value={startZone} onChange={setStartZone} />
+                  </div>
+                ) : null}
+                {endTime && !airportTimeZone(locationTo) ? (
+                  <div className="col-span-2">
+                    <TimeZoneField id="plan-arrive-zone" label="Arriving time zone" value={endZone} onChange={setEndZone} />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             {showLink ? (
               <div className="grid gap-3 sm:grid-cols-2">
@@ -297,5 +352,52 @@ export function ItemDialog({
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function flightClockHint(
+  from: string,
+  to: string,
+  depart: string,
+  arrive: string,
+  departChoice: string,
+  arriveChoice: string,
+): string {
+  if (!depart && !arrive) return "Optional. For an overnight flight, set the end date to the day you land."
+  const departZone = airportTimeZone(from) ?? departChoice
+  const arriveZone = airportTimeZone(to) ?? arriveChoice
+  const departLabel = departZone ? timeZoneLabel(departZone) : "the departure time zone"
+  const arriveLabel = arriveZone ? timeZoneLabel(arriveZone) : "the arrival time zone"
+  return `Departs in ${departLabel}. Arrives in ${arriveLabel}.`
+}
+
+function TimeZoneField({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-11 w-full min-w-0 rounded-md border border-border bg-background px-3 text-base text-foreground"
+      >
+        <option value="">Choose a time zone</option>
+        {TIME_ZONE_CHOICES.map(([zone, name]) => (
+          <option key={zone} value={zone}>
+            {name}
+          </option>
+        ))}
+      </select>
+    </div>
   )
 }

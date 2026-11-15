@@ -22,12 +22,14 @@ export const save = mutation({
       await ctx.db.patch(existing._id, {
         content: args.content,
         updatedBy: userId,
+        updatedAt: Date.now(),
       })
     } else {
       await ctx.db.insert("tripNotes", {
         tripId: args.tripId,
         content: args.content,
         updatedBy: userId,
+        updatedAt: Date.now(),
       })
     }
 

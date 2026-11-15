@@ -1,5 +1,7 @@
 import { v } from "convex/values"
 
+import { isIanaTimeZone } from "../lib/calendar/airports"
+
 import type { Id } from "./_generated/dataModel"
 import { internalQuery, mutation } from "./_generated/server"
 import type { MutationCtx } from "./_generated/server"
@@ -15,6 +17,10 @@ type ItemWrite = {
   endDate: string
   location: string
   locationTo?: string
+  startTime?: string
+  endTime?: string
+  startTimeZone?: string
+  endTimeZone?: string
 }
 
 type Attribution = {
@@ -44,6 +50,18 @@ function actorWrite(userId: Id<"users">, displayName: string, itemId: Id<"tripIt
   }
 }
 
+const CLOCK = /^([01]\d|2[0-3]):[0-5]\d$/
+
+function clock(value: string | undefined): string {
+  const time = value?.trim() ?? ""
+  return CLOCK.test(time) ? time : ""
+}
+
+function zone(value: string | undefined): string {
+  const name = value?.trim() ?? ""
+  return name && isIanaTimeZone(name) ? name : ""
+}
+
 function trimmedItem(input: ItemWrite) {
   return {
     title: input.title.trim(),
@@ -57,6 +75,20 @@ function trimmedItem(input: ItemWrite) {
   }
 }
 
+function scheduleFields(input: ItemWrite) {
+  const fields: {
+    startTime?: string
+    endTime?: string
+    startTimeZone?: string
+    endTimeZone?: string
+  } = {}
+  if (input.startTime !== undefined) fields.startTime = clock(input.startTime)
+  if (input.endTime !== undefined) fields.endTime = clock(input.endTime)
+  if (input.startTimeZone !== undefined) fields.startTimeZone = zone(input.startTimeZone)
+  if (input.endTimeZone !== undefined) fields.endTimeZone = zone(input.endTimeZone)
+  return fields
+}
+
 export async function insertItem(
   ctx: MutationCtx,
   tripId: Id<"trips">,
@@ -68,10 +100,14 @@ export async function insertItem(
   if (!fields.title) {
     return { ok: false as const, error: "title_required" as const }
   }
+  const now = Date.now()
   const itemId = await ctx.db.insert("tripItems", {
     tripId,
     ...fields,
+    ...scheduleFields(input),
     createdBy,
+    updatedAt: now,
+    revision: 0,
     ...(attribution ?? {}),
   })
   return { ok: true as const, itemId }
@@ -93,6 +129,9 @@ export async function patchItem(
   }
   await ctx.db.patch(itemId, {
     ...fields,
+    ...scheduleFields(input),
+    updatedAt: Date.now(),
+    revision: (item.revision ?? 0) + 1,
     ...(attribution ?? {}),
   })
   return { ok: true as const, tripId: item.tripId }
@@ -118,6 +157,10 @@ export const create = mutation({
     endDate: v.string(),
     location: v.string(),
     locationTo: v.optional(v.string()),
+    startTime: v.optional(v.string()),
+    endTime: v.optional(v.string()),
+    startTimeZone: v.optional(v.string()),
+    endTimeZone: v.optional(v.string()),
   },
   returns: v.object({
     ...actorFields,
@@ -145,6 +188,10 @@ export const update = mutation({
     endDate: v.string(),
     location: v.string(),
     locationTo: v.optional(v.string()),
+    startTime: v.optional(v.string()),
+    endTime: v.optional(v.string()),
+    startTimeZone: v.optional(v.string()),
+    endTimeZone: v.optional(v.string()),
   },
   returns: v.object({
     ...actorFields,
