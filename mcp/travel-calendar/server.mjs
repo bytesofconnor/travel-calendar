@@ -366,7 +366,7 @@ const toolRegistry = [
   {
     name: "check_access",
     description:
-      "Check whether lifetime access is granted. If payment is required, returns a Stripe paymentUrl ($9.99 once). Requires host.",
+      "Check whether the server requires payment. When required is false, the user can continue. When required is true and granted is false, returns a Stripe paymentUrl ($9.99 once). Requires host.",
     inputSchema: toolSchema({}, []),
     call: (args) => agentFetch("/agent/v1/access", { method: "GET", host: requireHost(args) }),
   },

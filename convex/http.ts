@@ -257,6 +257,10 @@ http.route({
       userId: opened.principal.userId,
     })
 
+    if (!access.required) {
+      return jsonResponse(access)
+    }
+
     return jsonResponse({
       ...access,
       price: { amount: 9.99, currency: "usd", interval: "once" },

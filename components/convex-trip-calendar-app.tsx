@@ -1024,19 +1024,14 @@ export function ConvexTripCalendarApp({ joinCode, confirmId }: ConvexTripCalenda
   }
 
   if (me === undefined || access === undefined) {
-    return <LoadingJourney label="Checking access" detail="Looking up your lifetime pass…" />
+    return <LoadingJourney label="Loading your trips" detail="Opening your calendar…" />
   }
 
   if (access.required && !access.granted && me) {
     return (
       <PaywallScreen
         userId={me._id}
-        paymentLink={
-          process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK ??
-          (access.paymentUrl
-            ? access.paymentUrl.replace(/[?&]client_reference_id=[^&]+/, "").replace(/\?$/, "")
-            : null)
-        }
+        paymentLink={access.paymentUrl}
         onAccessGranted={() => window.location.reload()}
       />
     )
