@@ -6,7 +6,7 @@ Every `/agent/v1` route except `OPTIONS` requires `X-Travel-Calendar-Host`. Trim
 
 `Access-Control-Allow-Methods` is `GET, POST, PUT, OPTIONS`. `Access-Control-Allow-Headers` includes `Authorization`, `Content-Type`, and `X-Travel-Calendar-Host`.
 
-**Lifetime access ($9.99 once)** is required to propose a trip or item, to confirm or reject, to read trip data, and to join with an invite code. `PUT /agent/v1/trips/:tripId` does not check lifetime access. `POST /agent/v1/theme` does not check it either. Join checks access once, inside the writer. The HTTP handler does not check access a second time. The API key's user must own the trip when a name, date, or archive proposal is applied. Any member can set the theme pack. Reads and paywalled writes return `402` with a Stripe `paymentUrl` when the user has not paid.
+**Lifetime access ($9.99 once)** is required only when Convex env `PAYWALL_ENABLED` is exactly `true`. When that flag is unset or any other value, propose, confirm, reject, trip reads, and join treat the user as granted. `PUT /agent/v1/trips/:tripId` does not check lifetime access. `POST /agent/v1/theme` does not check it either. Join checks access once, inside the writer. The HTTP handler does not check access a second time. The API key's user must own the trip when a name, date, or archive proposal is applied. Any member can set the theme pack. Reads and paywalled writes return `402` with a Stripe `paymentUrl` when the user has not paid.
 
 A new key has `confirmEnabled: false`. Absent or false is propose-only. `POST /agent/v1/confirm` then returns `403` `{ "error": "propose_scope" }`. The website confirm buttons do not use the key.
 
@@ -305,20 +305,18 @@ Body is exactly `{ "proposalId": "<proposals._id>" }`. Requires access. A propos
 
 Success is the write response. Rejecting a confirmed row returns the confirmed row and does not undo the shared plan. A bad body is `400` `{ "error": "Invalid reject fields." }`.
 
-## Enable paywall (Convex + Next)
+## Enable paywall (Convex)
+
+The wall is off unless `PAYWALL_ENABLED` is exactly `true`. `STRIPE_PAYMENT_LINK` alone does not turn it on. The website reads `hasAccess` from Convex and does not use a public payment-link env var.
+
+`GET /agent/v1/access` omits `price` while the wall is off. When the wall is on and the user has not paid, the body includes `price`.
 
 ```bash
-# Same Payment Link base URL (no client_reference_id in the env value)
+npx convex env set PAYWALL_ENABLED "true"
 npx convex env set STRIPE_PAYMENT_LINK "https://buy.stripe.com/…"
 npx convex env set STRIPE_WEBHOOK_SECRET "whsec_…"
 # optional invite codes
 npx convex env set BYPASS_CODES "FRIENDS,BETA"
-```
-
-Next `.env.local`:
-
-```
-NEXT_PUBLIC_STRIPE_PAYMENT_LINK=https://buy.stripe.com/…
 ```
 
 Stripe Dashboard webhook endpoint:
@@ -326,7 +324,7 @@ Stripe Dashboard webhook endpoint:
 `https://<deployment>.convex.site/stripe/webhook`  
 Event: `checkout.session.completed`
 
-When `STRIPE_PAYMENT_LINK` is **unset** on Convex, access checks are off (local free mode).
+To turn the wall off again, run `npx convex env set PAYWALL_ENABLED "false"` or unset it.
 
 ## MCP
 

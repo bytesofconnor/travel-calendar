@@ -147,12 +147,6 @@ export default function RootLayout({
     operatingSystem: 'Web, iOS, Android',
     browserRequirements: 'Requires JavaScript',
     inLanguage: 'en',
-    offers: {
-      '@type': 'Offer',
-      price: '9.99',
-      priceCurrency: 'USD',
-      description: 'Lifetime access — one payment, every trip forever',
-    },
     featureList: [
       'Shared trip calendar',
       'Real-time collaboration',

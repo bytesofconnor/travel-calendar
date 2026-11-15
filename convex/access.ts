@@ -7,9 +7,8 @@ import { getCurrentUserId } from "./lib/auth"
 
 type Ctx = QueryCtx | MutationCtx
 
-/** Paywall is on when Stripe Payment Link is configured on the Convex deployment. */
 export function isAccessRequired() {
-  return Boolean(process.env.STRIPE_PAYMENT_LINK?.trim())
+  return process.env.PAYWALL_ENABLED === "true"
 }
 
 export function paymentUrlForUser(userId: Id<"users">) {

@@ -15,6 +15,13 @@ interface PaywallScreenProps {
   onAccessGranted: () => void
 }
 
+function checkoutUrl(paymentLink: string | null, userId: string) {
+  if (!paymentLink) return null
+  if (/[?&]client_reference_id=/.test(paymentLink)) return paymentLink
+  const joiner = paymentLink.includes("?") ? "&" : "?"
+  return `${paymentLink}${joiner}client_reference_id=${userId}`
+}
+
 export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallScreenProps) {
   const grantByCode = useMutation(api.access.grantByCode)
   const [showCodeInput, setShowCodeInput] = useState(false)
@@ -22,9 +29,7 @@ export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallS
   const [isRedeeming, setIsRedeeming] = useState(false)
   const [codeError, setCodeError] = useState("")
 
-  const stripeUrl = paymentLink
-    ? `${paymentLink.includes("?") ? `${paymentLink}&` : `${paymentLink}?`}client_reference_id=${userId}`
-    : null
+  const stripeUrl = checkoutUrl(paymentLink, userId)
 
   async function handleRedeem() {
     if (!code.trim()) return

@@ -169,7 +169,7 @@ export async function insertTrip(
   return { ok: true, tripId }
 }
 
-async function createTripForUser(
+export async function createTripForUser(
   ctx: MutationCtx,
   userId: Id<"users">,
   input: CreateTripInput,

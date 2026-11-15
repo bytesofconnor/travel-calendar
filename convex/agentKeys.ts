@@ -44,7 +44,6 @@ export const create = mutation({
     keyPrefix: v.string(),
   }),
   handler: async (ctx, args) => {
-    // Keys may be created before payment; trip reads return 402 until access is granted.
     const userId = await getCurrentUserId(ctx)
     return await createKeyForUser(ctx, userId, args.name)
   },

@@ -26,7 +26,7 @@ MCP server for the Travel Calendar agent HTTP API. One tool list drives list and
 
 `trips_join` joins a trip with an invite code and writes the membership immediately. A second call keeps the stored role and display name. `trips_set_theme_pack` sets the trip theme pack, or clears it when `themePack` is null. Any member can set it. Zod in `toolInputs.mjs` checks `host`, a non-empty invite code, and the pack id before fetch. An unknown pack throws `Invalid theme pack.` The HTTP route still checks the pack with `parseThemePack`.
 
-`create_trip`, `update_trip`, `trips_archive`, and `trips_propose` propose a trip change. They do not insert the trip. A second call inserts a second pending row. The trip changes after a different person confirms. `items_add`, `items_update`, `items_remove`, and `items_propose` do the same for items. `confirm_pending` returns each pending row with `row_text` and `glance_url`. `trips_search` filters by date, place, or status (`active` or `archived`). A key with `confirmEnabled` false cannot confirm. `update_trip` and `trips_set_theme_pack` do not check lifetime access. `trips_join` does. The other tools that read or write do.
+`create_trip`, `update_trip`, `trips_archive`, and `trips_propose` propose a trip change. They do not insert the trip. A second call inserts a second pending row. The trip changes after a different person confirms. `items_add`, `items_update`, `items_remove`, and `items_propose` do the same for items. `confirm_pending` returns each pending row with `row_text` and `glance_url`. `trips_search` filters by date, place, or status (`active` or `archived`). A key with `confirmEnabled` false cannot confirm. `update_trip` and `trips_set_theme_pack` do not check lifetime access. `trips_join` checks it only when the paywall is on. The other tools that read or write do the same.
 
 ## 1. Create an API key
 
@@ -40,7 +40,7 @@ Save the returned `key` (`tc_…`). It is shown only once.
 
 ## Access
 
-Lifetime access ($9.99 once) is required for reads, for proposes other than `update_trip`, for confirm, for reject, and for `trips_join`. `update_trip` and `trips_set_theme_pack` do not check it. Use `check_access` first. If the user has not paid, complete the returned Stripe `paymentUrl`, then retry. A new key is propose-only.
+The paywall is off unless Convex `PAYWALL_ENABLED` is exactly `true`. While it is off, reads, proposes, confirm, reject, and `trips_join` do not require a payment. When the flag is on, lifetime access ($9.99 once) is required for those calls except `update_trip` and `trips_set_theme_pack`. Use `check_access` first. If `required` is true and `granted` is false, complete the returned Stripe `paymentUrl`, then retry. A new key is propose-only.
 
 ```bash
 cd mcp/travel-calendar
