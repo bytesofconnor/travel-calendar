@@ -28,6 +28,7 @@ export interface TripMember {
   role: "owner" | "editor"
   displayName: string
   email?: string | null
+  image?: string | null
 }
 
 export interface TripItem {

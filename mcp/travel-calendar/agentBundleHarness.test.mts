@@ -17,6 +17,9 @@ const { getTripBundleForUser } = await import("../../convex/lib/tripData.ts")
 const { parseHost } = await import("../../convex/lib/proposalTransition.ts")
 const { confirmAgent, propose, rejectAgent } = await import("../../convex/proposals.ts")
 const { applyThemePack, joinByInvite } = await import("../../convex/trips.ts")
+const { setGapClaim } = await import("../../convex/gapClaims.ts")
+const { buildTripHome } = await import("../../lib/trip-home/detect.ts")
+const { parseGapClaimBody } = await import("../../convex/lib/gapClaimBody.ts")
 
 process.env.TRAVEL_CALENDAR_SITE_URL = "https://example.convex.site"
 process.env.TRAVEL_CALENDAR_API_KEY = "tc_test"
@@ -26,6 +29,8 @@ const {
   confirmItem,
   confirmTrip,
   createTrip,
+  gapsClaim,
+  gapsList,
   getTripBundle,
   rejectTrip,
   removeItem,
@@ -88,6 +93,10 @@ const indexFields: Record<string, Record<string, readonly string[]>> = {
   tripPackingItems: {
     by_trip: ["tripId"],
     by_trip_checked_sort: ["tripId", "isChecked", "sortOrder"],
+  },
+  tripGapClaims: {
+    by_trip: ["tripId"],
+    by_trip_and_gap: ["tripId", "gapId"],
   },
   access: {
     by_user: ["userId"],
@@ -412,6 +421,47 @@ export function createAgentBundleHarness(options: { keys: Key[]; trips?: TripSee
         return jsonResponse({ error: "Invalid theme fields." }, 400)
       }
       return jsonResponse({ tripId: result.tripId, themePack: result.themePack })
+    }
+
+    if (method === "GET" && path === "/agent/v1/gaps") {
+      const tripId = url.searchParams.get("tripId")
+      if (!tripId) return jsonResponse({ error: "tripId required" }, 400)
+      const bundle = await getTripBundleForUser(ctx, tripId as never, userId as never)
+      if (!bundle) return jsonResponse({ error: "Trip not found" }, 404)
+      const home = buildTripHome({
+        trip: { startDate: bundle.trip.startDate, endDate: bundle.trip.endDate },
+        plans: bundle.items.map((item) => ({
+          id: item._id,
+          title: item.title,
+          notes: item.notes,
+          startDate: item.startDate,
+          endDate: item.endDate,
+          location: item.location,
+          locationTo: item.locationTo,
+          startTime: item.startTime,
+          endTime: item.endTime,
+          startTimeZone: item.startTimeZone,
+          endTimeZone: item.endTimeZone,
+        })),
+        now: {
+          instant: url.searchParams.get("now") ?? "2026-11-19T12:00:00.000Z",
+          timeZone: url.searchParams.get("timeZone") ?? "UTC",
+        },
+      })
+      return jsonResponse({ ...home, gapClaims: bundle.gapClaims })
+    }
+
+    if (method === "POST" && path === "/agent/v1/gaps/claim") {
+      const body = await readJson(init)
+      if (!body.ok) return body.response
+      const parsed = parseGapClaimBody(body.body)
+      if (!parsed.ok) return jsonResponse({ error: parsed.error }, 400)
+      const result = await setGapClaim(ctx, userId as never, parsed.value)
+      if (!result.ok) {
+        if (result.error === "invalid_gap") return jsonResponse({ error: "Invalid gap fields." }, 400)
+        return jsonResponse({ error: "Trip not found" }, 404)
+      }
+      return jsonResponse(result.response)
     }
 
     if (method === "GET" && path.startsWith("/agent/v1/trips/")) {
@@ -913,5 +963,59 @@ test("a non-member trips_set_theme_pack leaves the pack and surfaces Trip not fo
     const bundle = (await getTripBundle({ host: "grok", tripId })) as Bundle
     assert.equal(bundle.trip.themePack, "golden-hour")
     assert.equal(bundle.trip.name, "Lisbon")
+  })
+})
+
+test("gaps_claim is member-only and the bundle shows who has the hole", async () => {
+  await withFetch("tc_ada", async (tripId) => {
+    const home = (await gapsList({
+      host: "grok",
+      tripId,
+      now: "2026-04-01T12:00:00.000Z",
+      timeZone: "UTC",
+    })) as { gaps: unknown[]; gapClaims: unknown[] }
+    assert.ok(Array.isArray(home.gaps))
+    assert.deepEqual(home.gapClaims, [])
+    const claimed = (await gapsClaim({
+      host: "grok",
+      tripId,
+      gapId: "night:2026-05-01",
+      claimed: true,
+    })) as { claimed: boolean; displayName: string; gapId: string }
+    assert.equal(claimed.claimed, true)
+    assert.equal(claimed.displayName, "Ada")
+    assert.equal(claimed.gapId, "night:2026-05-01")
+    const again = (await gapsClaim({
+      host: "grok",
+      tripId,
+      gapId: "night:2026-05-01",
+      claimed: true,
+    })) as { claimed: boolean }
+    assert.equal(again.claimed, true)
+    const bundle = (await getTripBundle({ host: "grok", tripId })) as {
+      gapClaims: Array<{ gapId: string; displayName: string; userId: string }>
+    }
+    assert.equal(bundle.gapClaims.length, 1)
+    assert.equal(bundle.gapClaims[0]?.gapId, "night:2026-05-01")
+    assert.equal(bundle.gapClaims[0]?.displayName, "Ada")
+    assert.equal(bundle.gapClaims[0]?.userId, "users_ada")
+    const released = (await gapsClaim({
+      host: "grok",
+      tripId,
+      gapId: "night:2026-05-01",
+      claimed: false,
+    })) as { claimed: boolean }
+    assert.equal(released.claimed, false)
+    const after = (await getTripBundle({ host: "grok", tripId })) as { gapClaims: unknown[] }
+    assert.deepEqual(after.gapClaims, [])
+  })
+})
+
+test("a non-member cannot claim a hole", async () => {
+  await withFetch("tc_bea", async (tripId) => {
+    await assert.rejects(
+      () => gapsClaim({ host: "grok", tripId, gapId: "night:2026-05-01", claimed: true }),
+      { message: "Trip not found" },
+    )
   })
 })

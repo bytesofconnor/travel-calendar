@@ -22,7 +22,11 @@ MCP server for the Travel Calendar agent HTTP API. One tool list drives list and
 - `items_propose`
 - `items_confirm`
 - `confirm_pending`
+- `gaps_list`
+- `gaps_claim`
 - `get_trip_bundle`
+
+`gaps_list` reads the trip home: what's next, and the holes (uncovered nights, airport rides, conflicts, empty days, stays that miss the flights). `gaps_claim` writes immediately. A member claims a hole or releases one they hold. One member holds each hole. `get_trip_bundle` includes `gapClaims`.
 
 `trips_join` joins a trip with an invite code and writes the membership immediately. A second call keeps the stored role and display name. `trips_set_theme_pack` sets the trip theme pack, or clears it when `themePack` is null. Any member can set it. Zod in `toolInputs.mjs` checks `host`, a non-empty invite code, and the pack id before fetch. An unknown pack throws `Invalid theme pack.` The HTTP route still checks the pack with `parseThemePack`.
 

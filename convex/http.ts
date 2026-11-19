@@ -13,6 +13,8 @@ import {
   parseRejectBody,
 } from "./lib/agentProposalBody"
 import { parseCreateBody, parseJoinBody, parseThemeBody, parseUpdateBody } from "./lib/agentTripBody"
+import { parseGapClaimBody } from "./lib/gapClaimBody"
+import { buildTripHome } from "../lib/trip-home/detect.ts"
 import { parseHost } from "./lib/proposalTransition"
 import { parseSearchQuery } from "./lib/tripSearch"
 import { verifyStripeSignature } from "./lib/stripeWebhook"
@@ -239,6 +241,8 @@ options("/agent/v1/confirm")
 options("/agent/v1/confirm/pending")
 options("/agent/v1/reject")
 options("/agent/v1/items")
+options("/agent/v1/gaps")
+options("/agent/v1/gaps/claim")
 options("/agent/v1/search/trips")
 optionsPrefix("/agent/v1/trips/")
 optionsPrefix("/agent/v1/trip/")
@@ -679,6 +683,68 @@ http.route({
       return jsonResponse({ error: "Item not found" }, 404)
     }
     return jsonResponse(item)
+  }),
+})
+
+http.route({
+  path: "/agent/v1/gaps",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const opened = await openPaidAgent(ctx, request)
+    if (!opened.ok) return opened.response
+    const url = new URL(request.url)
+    const tripId = url.searchParams.get("tripId")
+    if (!tripId) return jsonResponse({ error: "tripId required" }, 400)
+    const bundle = await ctx.runQuery(internal.agentReads.getBundle, {
+      userId: opened.principal.userId,
+      tripId: tripId as Id<"trips">,
+    })
+    if (!bundle) return jsonResponse({ error: "Trip not found" }, 404)
+    const home = buildTripHome({
+      trip: { startDate: bundle.trip.startDate, endDate: bundle.trip.endDate },
+      plans: bundle.items.map((item) => ({
+        id: item._id,
+        title: item.title,
+        notes: item.notes,
+        startDate: item.startDate,
+        endDate: item.endDate,
+        location: item.location,
+        locationTo: item.locationTo,
+        startTime: item.startTime,
+        endTime: item.endTime,
+        startTimeZone: item.startTimeZone,
+        endTimeZone: item.endTimeZone,
+      })),
+      now: {
+        instant: url.searchParams.get("now") ?? new Date().toISOString(),
+        timeZone: url.searchParams.get("timeZone") ?? "UTC",
+      },
+    })
+    return jsonResponse({ ...home, gapClaims: bundle.gapClaims })
+  }),
+})
+
+http.route({
+  path: "/agent/v1/gaps/claim",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const opened = await openPaidAgent(ctx, request)
+    if (!opened.ok) return opened.response
+    const body = await readJson(request)
+    if (!body.ok) return body.response
+    const parsed = parseGapClaimBody(body.body)
+    if (!parsed.ok) return jsonResponse({ error: parsed.error }, 400)
+    const result = await ctx.runMutation(internal.gapClaims.setForAgent, {
+      userId: opened.principal.userId,
+      tripId: parsed.value.tripId,
+      gapId: parsed.value.gapId,
+      claimed: parsed.value.claimed,
+    })
+    if (!result.ok) {
+      if (result.error === "invalid_gap") return jsonResponse({ error: "Invalid gap fields." }, 400)
+      return jsonResponse({ error: "Trip not found" }, 404)
+    }
+    return jsonResponse(result.response)
   }),
 })
 

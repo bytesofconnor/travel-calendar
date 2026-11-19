@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test"
 
-const baseURL = "http://127.0.0.1:59316"
+const baseURL = "http://localhost:59316"
 const convexUrl =
   process.env.NEXT_PUBLIC_CONVEX_URL ?? "https://bright-mouse-917.convex.cloud"
 

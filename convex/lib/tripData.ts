@@ -148,15 +148,28 @@ export async function getTripBundleForUser(
     .withIndex("by_trip", (q) => q.eq("tripId", tripId))
     .collect()
 
-  return {
-    trip: serializeTrip(trip),
-    members: members.map((member) => ({
+  const claims = await ctx.db
+    .query("tripGapClaims")
+    .withIndex("by_trip", (q) => q.eq("tripId", tripId))
+    .collect()
+
+  const membersOut = []
+  for (const member of members) {
+    const user = await ctx.db.get(member.userId)
+    const image = user && typeof user.image === "string" && user.image ? user.image : undefined
+    membersOut.push({
       _id: member._id,
       tripId: member.tripId,
       userId: member.userId,
       role: member.role,
       displayName: member.displayName,
-    })),
+      ...(image ? { image } : {}),
+    })
+  }
+
+  return {
+    trip: serializeTrip(trip),
+    members: membersOut,
     items: items.map((item) => serializeItem(item)),
     note: note
       ? {
@@ -177,5 +190,19 @@ export async function getTripBundleForUser(
       updatedBy: item.updatedBy,
       _creationTime: item._creationTime,
     })),
+    gapClaims: claims
+      .flatMap((claim) => {
+        const member = members.find((entry) => entry.userId === claim.userId)
+        if (!member) return []
+        return [
+          {
+            gapId: claim.gapId,
+            userId: claim.userId,
+            displayName: member.displayName,
+            claimedAt: claim.claimedAt,
+          },
+        ]
+      })
+      .sort((a, b) => a.gapId.localeCompare(b.gapId)),
   }
 }

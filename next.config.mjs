@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Playwright's base URL is localhost. 127.0.0.1 is the same dev server,
+  // and Next blocks its assets unless the host is allowed.
+  allowedDevOrigins: ["127.0.0.1"],
   images: {
     unoptimized: true,
   },
