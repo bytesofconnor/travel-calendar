@@ -72,6 +72,14 @@ const memberValidator = v.object({
   userId: v.id("users"),
   role: v.union(v.literal("owner"), v.literal("editor")),
   displayName: v.string(),
+  image: v.optional(v.string()),
+})
+
+const gapClaimValidator = v.object({
+  gapId: v.string(),
+  userId: v.id("users"),
+  displayName: v.string(),
+  claimedAt: v.number(),
 })
 
 export const listMine = query({
@@ -112,6 +120,7 @@ export const getBundle = query({
           _creationTime: v.number(),
         }),
       ),
+      gapClaims: v.array(gapClaimValidator),
     }),
     v.null(),
   ),
@@ -611,6 +620,13 @@ export const leave = mutation({
     }
     await ctx.db.delete(membership._id)
     await revokeCalendarFeed(ctx, args.tripId, userId)
+    const claims = await ctx.db
+      .query("tripGapClaims")
+      .withIndex("by_trip", (q) => q.eq("tripId", args.tripId))
+      .collect()
+    for (const claim of claims) {
+      if (claim.userId === userId) await ctx.db.delete(claim._id)
+    }
     return null
   },
 })

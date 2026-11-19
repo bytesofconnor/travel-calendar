@@ -26,6 +26,7 @@ export const getBundle = internalQuery({
           userId: v.id("users"),
           role: v.union(v.literal("owner"), v.literal("editor")),
           displayName: v.string(),
+          image: v.optional(v.string()),
         }),
       ),
       items: v.array(bundleItemValidator),
@@ -49,6 +50,14 @@ export const getBundle = internalQuery({
           createdBy: v.optional(v.id("users")),
           updatedBy: v.optional(v.id("users")),
           _creationTime: v.number(),
+        }),
+      ),
+      gapClaims: v.array(
+        v.object({
+          gapId: v.string(),
+          userId: v.id("users"),
+          displayName: v.string(),
+          claimedAt: v.number(),
         }),
       ),
     }),

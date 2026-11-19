@@ -6,7 +6,7 @@ import test from "node:test"
 process.env.TRAVEL_CALENDAR_SITE_URL = "https://example.convex.site"
 process.env.TRAVEL_CALENDAR_API_KEY = "tc_test"
 
-const { confirmPending, createTrip, tripsJoin, tripsSetThemePack, updateTrip } = await import("./server.mjs")
+const { confirmPending, createTrip, gapsClaim, gapsList, tripsJoin, tripsSetThemePack, updateTrip } = await import("./server.mjs")
 
 const directory = fileURLToPath(new URL(".", import.meta.url))
 const originalFetch = globalThis.fetch
@@ -368,6 +368,57 @@ test("confirm_pending GETs /agent/v1/confirm/pending with the host header", asyn
     assert.equal(init.headers.Authorization, "Bearer tc_test")
     assert.equal(init.headers["X-Travel-Calendar-Host"], "grok")
     assert.equal(init.headers["Content-Type"], undefined)
+  } finally {
+    restoreFetch()
+  }
+})
+
+test("gaps_list GETs /agent/v1/gaps with the trip, clock, and host header", async () => {
+  const calls: Array<{ url: string; init: RequestInit | undefined }> = []
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init })
+    return new Response(JSON.stringify({ gaps: [], covered: false }), { status: 200 })
+  }
+  try {
+    const result = await gapsList({
+      host: "grok",
+      tripId: "trips_lisbon",
+      now: "2026-11-19T12:00:00.000Z",
+      timeZone: "Europe/Lisbon",
+    })
+    assert.deepEqual(result, { gaps: [], covered: false })
+    const call = calls[0]
+    assert.ok(call)
+    assert.equal(
+      call.url,
+      "https://example.convex.site/agent/v1/gaps?tripId=trips_lisbon&now=2026-11-19T12%3A00%3A00.000Z&timeZone=Europe%2FLisbon",
+    )
+    assert.equal(call.init?.method, "GET")
+    assert.ok(isHeaderRecord(call.init?.headers))
+    assert.equal(call.init?.headers.Authorization, "Bearer tc_test")
+    assert.equal(call.init?.headers["X-Travel-Calendar-Host"], "grok")
+  } finally {
+    restoreFetch()
+  }
+})
+
+test("gaps_claim POSTs the trip, gap, and claimed flag", async () => {
+  const calls: Array<{ url: string; init: RequestInit | undefined }> = []
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init })
+    return new Response(JSON.stringify({ claimed: true }), { status: 200 })
+  }
+  try {
+    await gapsClaim({ host: "grok", tripId: "trips_lisbon", gapId: "night:2027-04-03", claimed: true })
+    const call = calls[0]
+    assert.ok(call)
+    assert.equal(call.url, "https://example.convex.site/agent/v1/gaps/claim")
+    assert.equal(call.init?.method, "POST")
+    assert.deepEqual(jsonBody(call.init?.body), {
+      tripId: "trips_lisbon",
+      gapId: "night:2027-04-03",
+      claimed: true,
+    })
   } finally {
     restoreFetch()
   }

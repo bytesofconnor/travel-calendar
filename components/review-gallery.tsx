@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import { Calendar, Ellipsis } from "lucide-react"
 
 import type { Id } from "@/convex/_generated/dataModel"
@@ -13,6 +13,7 @@ import { PaywallScreen } from "@/components/paywall-screen"
 import { ShareTripDialog } from "@/components/share-trip-dialog"
 import { ThemePackPickerMenuItems } from "@/components/theme-pack-menu"
 import { TripCover, SpectrumHairline } from "@/components/trip-cover"
+import { TripHome } from "@/components/trip-home"
 import { TripStoryView } from "@/components/trip-story-view"
 import { TripsSheet } from "@/components/trips-sheet"
 import { useTripThemePack } from "@/components/use-trip-theme-pack"
@@ -26,7 +27,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import type { Trip, TripItem, TripMember } from "@/lib/kanban-store"
+import type { Trip, TripItem, TripItemInput, TripMember } from "@/lib/kanban-store"
+import { buildTripHome, type GapAction } from "@/lib/trip-home/detect"
 import { parseThemePack, type ThemePackId } from "@/lib/theme-packs"
 
 const TRIP_ID = "trip_lisbon"
@@ -110,6 +112,23 @@ const items: TripItem[] = [
 
 const editItem = items[2]
 
+const coveredItems: TripItem[] = [
+  {
+    id: "item_place_only",
+    tripId: TRIP_ID,
+    title: "Time Out Market",
+    startDate: "2026-11-18",
+    endDate: "2026-11-18",
+    location: "Cais do Sodré",
+    createdBy: "user_alex",
+    createdAt: "2026-11-03T12:00:00.000Z",
+    updatedAt: "2026-11-03T12:00:00.000Z",
+    authorName: "Alex",
+  },
+]
+
+const REVIEW_NOW = { instant: "2026-11-17T18:00:00.000Z", timeZone: "America/Los_Angeles" }
+
 function TripFrame({
   screen,
   mode,
@@ -137,6 +156,7 @@ function TripFrame({
           <div className="story-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {mode === "trip" ? (
               <TripCover
+                className="trip-cover--compact"
                 tripName="Lisbon with you"
                 meta="Nov 18 – 24 · 7 days · you & Alex · Connor proposed · Alex confirmed"
                 showHairline={false}
@@ -239,6 +259,23 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
   const [displayName, setDisplayName] = useState("Alex")
   const [joinInput, setJoinInput] = useState("ab12cd34ef56")
   const [createName, setCreateName] = useState("")
+  const showHome = screen === "trip" || screen === "covered"
+  const homeItems = screen === "covered" ? coveredItems : items
+  const tripStartDate = "2026-11-18"
+  const tripEndDate = screen === "covered" ? "2026-11-18" : "2026-11-24"
+  const home = useMemo(
+    () =>
+      buildTripHome({
+        trip: { startDate: tripStartDate, endDate: tripEndDate },
+        plans: homeItems,
+        now: REVIEW_NOW,
+      }),
+    [homeItems, tripEndDate],
+  )
+  const [claims, setClaims] = useState<Array<{ gapId: string; userId: string; displayName: string }>>([])
+  const [planOpen, setPlanOpen] = useState(screen === "add" || screen === "edit")
+  const [planSeed, setPlanSeed] = useState<Partial<TripItemInput> | null>(null)
+  const [planEdit, setPlanEdit] = useState<TripItem | null>(screen === "edit" ? editItem : null)
 
   if (screen === "join" || screen === "create") {
     const mode = screen === "join" ? "join" : "create"
@@ -279,16 +316,61 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
 
   const mode = screen === "today" ? "today" : "trip"
 
+  function openAction(action: GapAction) {
+    if (action.itemId) {
+      const item = homeItems.find((entry) => entry.id === action.itemId)
+      if (item) {
+        setPlanEdit(item)
+        setPlanSeed(null)
+        setPlanOpen(true)
+        return
+      }
+    }
+    setPlanEdit(null)
+    setPlanSeed({
+      title: action.title,
+      startDate: action.startDate,
+      endDate: action.endDate,
+      location: action.location,
+      locationTo: action.locationTo,
+    })
+    setPlanOpen(true)
+  }
+
   return (
     <>
       <TripFrame screen={screen} mode={mode} themePack={themePack}>
+        {showHome ? (
+          <TripHome
+            className="story-shell"
+            model={home}
+            members={members}
+            claims={claims}
+            currentUserId={USER_ID}
+            onClaim={(gapId, claimed) => {
+              setClaims((current) => {
+                const rest = current.filter((claim) => claim.gapId !== gapId)
+                if (!claimed) return rest
+                return [...rest, { gapId, userId: USER_ID, displayName: "Connor" }]
+              })
+            }}
+            onAction={openAction}
+            onOpenItem={(id) => {
+              const item = homeItems.find((entry) => entry.id === id)
+              if (!item) return
+              setPlanSeed(null)
+              setPlanEdit(item)
+              setPlanOpen(true)
+            }}
+          />
+        ) : null}
         <TripStoryView
           className="story-shell"
           mode={mode}
-          items={items}
+          items={homeItems}
           today="2026-11-18"
-          tripStart="2026-11-18"
-          tripEnd="2026-11-24"
+          tripStart={tripStartDate}
+          tripEnd={tripEndDate}
           dayNumber={1}
           currentUserId={USER_ID}
           packingChecked={2}
@@ -314,10 +396,12 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
         onJoinTrip={() => {}}
       />
       <ItemDialog
-        open={screen === "add" || screen === "edit"}
-        onOpenChange={() => {}}
-        defaultDate="2026-11-19"
-        editItem={screen === "edit" ? editItem : null}
+        open={planOpen}
+        onOpenChange={setPlanOpen}
+        defaultDate={planSeed?.startDate ?? "2026-11-19"}
+        editItem={planEdit}
+        initialInput={planSeed}
+        initialTravel={Boolean(planSeed?.locationTo)}
         currentUserName="Connor"
         onSave={() => {}}
         onDelete={() => {}}

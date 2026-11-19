@@ -78,6 +78,15 @@ export default defineSchema({
     .index("by_token_hash", ["tokenHash"])
     .index("by_trip_and_user", ["tripId", "userId"]),
 
+  tripGapClaims: defineTable({
+    tripId: v.id("trips"),
+    gapId: v.string(),
+    userId: v.id("users"),
+    claimedAt: v.number(),
+  })
+    .index("by_trip", ["tripId"])
+    .index("by_trip_and_gap", ["tripId", "gapId"]),
+
   tripPackingItems: defineTable({
     tripId: v.id("trips"),
     label: v.string(),

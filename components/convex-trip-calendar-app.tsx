@@ -42,10 +42,10 @@ import {
   type TripNote,
   type TripPackingItem,
 } from "@/lib/kanban-store"
+import { buildTripHome, type GapAction } from "@/lib/trip-home/detect"
 import {
   dayIndexInTrip,
   initial,
-  isDateInTrip,
   tripDayCount,
 } from "@/lib/trip-kind"
 import { formatTripDateRange } from "@/lib/format-dates"
@@ -67,6 +67,7 @@ import { TripCopilot } from "./trip-copilot"
 import { TripCover, SpectrumHairline } from "./trip-cover"
 import { TripNotesView } from "./trip-notes-view"
 import { TripPackingView } from "./trip-packing-view"
+import { TripHome } from "./trip-home"
 import { TripStoryView } from "./trip-story-view"
 import { TripsSheet } from "./trips-sheet"
 
@@ -192,6 +193,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
   const togglePacking = useMutation(api.packing.toggle)
   const renamePacking = useMutation(api.packing.rename)
   const removePacking = useMutation(api.packing.remove)
+  const setGapClaim = useMutation(api.gapClaims.set)
 
   const [tripName, setTripName] = useState(DEFAULT_TRIP_NAME)
   const [tripStart, setTripStart] = useState(DEFAULT_TRIP_START)
@@ -233,6 +235,11 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
   const [initialTravel, setInitialTravel] = useState(false)
   const [emphasizeItemId, setEmphasizeItemId] = useState<string | null>(null)
   const [today] = useState(() => new Date().toISOString().slice(0, 10))
+  const [homeNow] = useState(() => ({
+    instant: new Date().toISOString(),
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+  }))
+  const [claimDraft, setClaimDraft] = useState<Record<string, string | null>>({})
 
   const noteDirtyRef = useRef(noteDirty)
   const noteDraftRef = useRef(noteDraft)
@@ -257,6 +264,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
       role: member.role,
       displayName: member.displayName,
       email: me && member.userId === me._id ? me.email : null,
+      image: member.image ?? null,
     }))
   }, [bundle, me])
 
@@ -335,11 +343,53 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
     if (planId) {
       setStoryMode("trip")
       setEmphasizeItemId(planId)
-    } else if (isDateInTrip(today, trip.startDate, trip.endDate)) {
-      setStoryMode("today")
     }
     setStoryModeReady(true)
-  }, [planId, storyModeReady, today, trip])
+  }, [planId, storyModeReady, trip])
+
+  const homeModel = useMemo(() => {
+    if (!trip) return null
+    return buildTripHome({
+      trip: { startDate: trip.startDate, endDate: trip.endDate },
+      plans: items.map((item) => ({
+        id: item.id,
+        title: item.title,
+        startDate: item.startDate,
+        endDate: item.endDate,
+        location: item.location ?? "",
+        locationTo: item.locationTo,
+        startTime: item.startTime,
+        endTime: item.endTime,
+        startTimeZone: item.startTimeZone,
+        endTimeZone: item.endTimeZone,
+        notes: item.notes,
+      })),
+      now: homeNow,
+    })
+  }, [homeNow, items, trip])
+  const homeClaims = useMemo(() => {
+    const byGap = new Map<string, { gapId: string; userId: string; displayName: string }>()
+    for (const claim of bundle?.gapClaims ?? []) {
+      byGap.set(claim.gapId, {
+        gapId: claim.gapId,
+        userId: claim.userId,
+        displayName: claim.displayName,
+      })
+    }
+    for (const [gapId, holderId] of Object.entries(claimDraft)) {
+      if (!holderId) {
+        byGap.delete(gapId)
+        continue
+      }
+      const member = members.find((entry) => entry.userId === holderId)
+      byGap.set(gapId, {
+        gapId,
+        userId: holderId,
+        displayName: member?.displayName ?? "You",
+      })
+    }
+    return [...byGap.values()]
+  }, [bundle?.gapClaims, claimDraft, members])
 
   useEffect(() => {
     noteDirtyRef.current = noteDirty
@@ -662,6 +712,48 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
       setErrorMessage(error instanceof Error ? error.message : "Unable to save plan.")
     } finally {
       setIsMutating(false)
+    }
+  }
+
+  function openGap(action: GapAction) {
+    if (action.itemId) {
+      const item = items.find((entry) => entry.id === action.itemId)
+      if (item) {
+        openEditItem(item)
+        return
+      }
+    }
+    setEditItem(null)
+    setDefaultItemDate(action.startDate)
+    setInitialTravel(action.flow === "flight" || action.flow === "transport")
+    setInitialItemInput({
+      title: action.title,
+      startDate: action.startDate,
+      endDate: action.endDate,
+      location: action.location,
+      locationTo: action.locationTo,
+    })
+    setItemDialogOpen(true)
+  }
+
+  async function handleClaim(gapId: string, claimed: boolean) {
+    if (!trip || !userId) return
+    setClaimDraft((current) => ({ ...current, [gapId]: claimed ? userId : null }))
+    try {
+      await setGapClaim({ tripId: trip.id as Id<"trips">, gapId, claimed })
+      setClaimDraft((current) => {
+        if (!(gapId in current)) return current
+        const next = { ...current }
+        delete next[gapId]
+        return next
+      })
+    } catch (error) {
+      setClaimDraft((current) => {
+        const next = { ...current }
+        delete next[gapId]
+        return next
+      })
+      setErrorMessage(error instanceof Error ? error.message : "Couldn't update who has this.")
     }
   }
 
@@ -1157,6 +1249,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
             <div className="story-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {storyMode === "trip" ? (
                 <TripCover
+                  className="trip-cover--compact"
                   tripName={trip.name}
                   meta={coverMeta}
                   coverImageUrl={trip.coverImageUrl}
@@ -1252,6 +1345,23 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
               </div>
 
               {confirmQueue}
+              {storyMode === "trip" && homeModel ? (
+                <TripHome
+                  className="story-shell"
+                  model={homeModel}
+                  members={members}
+                  claims={homeClaims}
+                  currentUserId={userId}
+                  onClaim={(gapId, claimed) => {
+                    void handleClaim(gapId, claimed)
+                  }}
+                  onAction={openGap}
+                  onOpenItem={(id) => {
+                    const item = items.find((entry) => entry.id === id)
+                    if (item) openEditItem(item)
+                  }}
+                />
+              ) : null}
               <TripStoryView
                 className="story-shell"
                 mode={storyMode}

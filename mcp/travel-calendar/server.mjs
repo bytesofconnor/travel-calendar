@@ -297,6 +297,34 @@ export async function getTripBundle(input) {
   })
 }
 
+export async function gapsList(input) {
+  const host = requireHost(input)
+  const params = new URLSearchParams({ tripId: requireId(input, "tripId") })
+  if (input?.now !== undefined) {
+    if (typeof input.now !== "string") throw new Error("Invalid gap fields.")
+    params.set("now", input.now)
+  }
+  if (input?.timeZone !== undefined) {
+    if (typeof input.timeZone !== "string") throw new Error("Invalid gap fields.")
+    params.set("timeZone", input.timeZone)
+  }
+  return await agentFetch(`/agent/v1/gaps?${params}`, { method: "GET", host })
+}
+
+export async function gapsClaim(input) {
+  const host = requireHost(input)
+  if (typeof input?.claimed !== "boolean") throw new Error("Invalid gap fields.")
+  return await agentFetch("/agent/v1/gaps/claim", {
+    method: "POST",
+    host,
+    body: {
+      tripId: requireId(input, "tripId"),
+      gapId: requireId(input, "gapId"),
+      claimed: input.claimed,
+    },
+  })
+}
+
 export async function addItem(input) {
   return await proposeItem(input, "add")
 }
@@ -568,6 +596,34 @@ const toolRegistry = [
       "List pending proposals this user can see. Each row has row_text, glance_url, proposed_by, confirmed_by, and pending_for. Requires lifetime access and host.",
     inputSchema: toolSchema({}, []),
     call: (args) => confirmPending(args),
+  },
+  {
+    name: "gaps_list",
+    description:
+      "List what's next and the holes on a trip: uncovered nights, missing airport rides, conflicts, empty days, and stays that miss the flights. Includes who claimed each hole. Requires lifetime access and host.",
+    inputSchema: toolSchema(
+      {
+        tripId: tripIdField,
+        now: { type: "string", description: "ISO instant used for the countdown. Defaults to the server clock." },
+        timeZone: { type: "string", description: "IANA zone for the countdown. Defaults to UTC." },
+      },
+      ["tripId"],
+    ),
+    call: (args) => gapsList(args),
+  },
+  {
+    name: "gaps_claim",
+    description:
+      "Claim or release a trip hole. claimed true means this member has it. One member holds each hole. Members only. Requires lifetime access and host.",
+    inputSchema: toolSchema(
+      {
+        tripId: tripIdField,
+        gapId: { type: "string", description: "Stable hole id from gaps_list" },
+        claimed: { type: "boolean" },
+      },
+      ["tripId", "gapId", "claimed"],
+    ),
+    call: (args) => gapsClaim(args),
   },
   {
     name: "get_trip_bundle",
