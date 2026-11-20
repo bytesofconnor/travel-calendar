@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 
+import { PageInset, PageShell } from "@/components/page-shell"
+
 export const metadata: Metadata = {
   title: "Terms of Service",
   description: "Terms of service for Travel Calendar.",
@@ -8,10 +10,9 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <main id="main-content" className="relative min-h-dvh overflow-hidden px-6 py-16">
-      <div className="pointer-events-none absolute inset-0 mara-atmosphere opacity-80" />
-      <div className="relative mx-auto max-w-3xl">
-        <div className="mara-surface rounded-[2rem] border border-border/70 bg-card/85 p-8 shadow-2xl backdrop-blur md:p-10">
+    <PageShell className="legal-page">
+      <PageInset width="read">
+        <div className="legal-card">
           <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
             Travel Calendar
           </p>
@@ -89,7 +90,7 @@ export default function TermsPage() {
             </Link>
           </div>
         </div>
-      </div>
-    </main>
+      </PageInset>
+    </PageShell>
   )
 }

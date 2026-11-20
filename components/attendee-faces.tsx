@@ -34,6 +34,26 @@ function Face({ member }: { member: AttendeeMember }) {
   )
 }
 
+export function visibleFaceLabel(
+  attendeeIds: readonly string[] | undefined,
+  members: readonly AttendeeMember[],
+): string {
+  if (!whoLine(attendeeIds, members)) return ""
+  const attendance = resolveAttendance(
+    attendeeIds,
+    members.map((member) => member.userId),
+  )
+  const people = attendance.includedIds.flatMap((id) => {
+    const member = members.find((entry) => entry.userId === id)
+    return member ? [member] : []
+  })
+  const shown = people.slice(0, 5)
+  const extra = people.length - shown.length
+  const parts = shown.map((member) => faceInitials(member.displayName))
+  if (extra > 0) parts.push(`+${extra}`)
+  return parts.join(" ")
+}
+
 export function whoLine(attendeeIds: readonly string[] | undefined, members: readonly AttendeeMember[]): string {
   if (members.length === 0) return ""
   const attendance = resolveAttendance(
@@ -77,9 +97,15 @@ export function AttendeeStack({
           style={{ marginLeft: index === 0 ? 0 : "-0.4rem" }}
         >
           <Face member={member} />
+          {"\u200B"}
         </span>
       ))}
-      {extra > 0 ? <span className="ml-1.5 text-xs font-semibold text-foreground">+{extra}</span> : null}
+      {extra > 0 ? (
+        <span className="ml-1.5 text-xs font-semibold text-foreground">
+          +{extra}
+          {"\u200B"}
+        </span>
+      ) : null}
     </span>
   )
 }

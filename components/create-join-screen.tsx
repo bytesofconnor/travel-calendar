@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import { ArrowLeft, Loader2, LogOut } from "lucide-react"
 
 import { LandingMastMedia } from "@/components/landing-mast-media"
+import { PageShell } from "@/components/page-shell"
 import { SpectrumHairline } from "@/components/trip-cover"
 import { Input } from "@/components/ui/input"
 
@@ -58,7 +59,7 @@ export function CreateJoinScreen({
   const canJoin = Boolean(displayName.trim() && joinInput.trim())
 
   return (
-    <main id="main-content" className="together-story create-join">
+    <PageShell className="together-story create-join">
       {notice}
       <div className="create-join__mast">
         <LandingMastMedia />
@@ -221,6 +222,6 @@ export function CreateJoinScreen({
           </div>
         </form>
       </div>
-    </main>
+    </PageShell>
   )
 }

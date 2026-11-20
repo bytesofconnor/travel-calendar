@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react"
 import { Cloud, CloudFog, CloudLightning, CloudRain, CloudSnow, Sun } from "lucide-react"
 
+import {
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu"
 import type { GeoPlace } from "@/lib/plan-types"
 import { convertReading, preferredUnits, weatherName, weatherText, type WeatherReading, type WeatherUnits } from "@/lib/weather"
 
@@ -28,17 +33,27 @@ export function WeatherChip({ reading }: { reading: WeatherReading }) {
   )
 }
 
-export function WeatherScale({ units, onChange }: { units: WeatherUnits; onChange: (units: WeatherUnits) => void }) {
-  const next = units === "f" ? "c" : "f"
+export function TemperatureMenuItems({
+  units,
+  onChange,
+}: {
+  units: WeatherUnits
+  onChange: (units: WeatherUnits) => void
+}) {
   return (
-    <button
-      type="button"
-      className="weather-scale"
-      aria-label={units === "f" ? "°F. Switch to Celsius." : "°C. Switch to Fahrenheit."}
-      onClick={() => onChange(next)}
-    >
-      {units === "f" ? "°F" : "°C"}
-    </button>
+    <>
+      <DropdownMenuLabel>Temperature: °F / °C</DropdownMenuLabel>
+      <DropdownMenuRadioGroup
+        aria-label="Temperature: °F / °C"
+        value={units}
+        onValueChange={(value) => {
+          if (value === "f" || value === "c") onChange(value)
+        }}
+      >
+        <DropdownMenuRadioItem value="f">°F</DropdownMenuRadioItem>
+        <DropdownMenuRadioItem value="c">°C</DropdownMenuRadioItem>
+      </DropdownMenuRadioGroup>
+    </>
   )
 }
 
@@ -52,21 +67,16 @@ export function DayWeather({
   date,
   readings,
   units,
-  showScale = false,
-  choose,
 }: {
   date: string
   readings: Record<string, WeatherReading>
   units: WeatherUnits
-  showScale?: boolean
-  choose?: (units: WeatherUnits) => void
 }) {
   const reading = readings[date] ? convertReading(readings[date], units) : null
-  if (!reading && !showScale) return null
+  if (!reading) return null
   return (
     <div className="weather-row">
-      {reading ? <WeatherChip reading={reading} /> : null}
-      {showScale && choose ? <WeatherScale units={units} onChange={choose} /> : null}
+      <WeatherChip reading={reading} />
     </div>
   )
 }
