@@ -80,7 +80,7 @@ export function TripHome({
               <span className="trip-home__countdown">{next.countdown}</span>
             </button>
             {weather ? (
-              <DayWeather date={next.startDate} readings={weather.readings} units={weather.units} showScale choose={weather.choose} />
+              <DayWeather date={next.startDate} readings={weather.readings} units={weather.units} />
             ) : null}
             {rest.length > 0 ? (
               <ol className="trip-home__list">

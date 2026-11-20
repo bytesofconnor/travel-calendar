@@ -59,6 +59,9 @@ import { useTripThemePack } from "@/components/use-trip-theme-pack"
 import { AddToCalendarSheet } from "./add-to-calendar-sheet"
 import { CaptureDock, type CaptureKind } from "./capture-dock"
 import { useDayWeather } from "./day-weather"
+import { PageShell } from "./page-shell"
+import { TemperatureMenuItems } from "./weather-chip"
+import { TripWorkspace } from "./trip-workspace"
 import { ConfirmQueue } from "./confirm-queue"
 import { CreateJoinScreen } from "./create-join-screen"
 import { ItemDialog } from "./item-dialog"
@@ -67,7 +70,6 @@ import { PaywallScreen } from "./paywall-screen"
 import { PeekSheet } from "./peek-sheet"
 import { ShareTripDialog } from "./share-trip-dialog"
 import { TripCopilot } from "./trip-copilot"
-import { TripCover, SpectrumHairline } from "./trip-cover"
 import { TripNotesView } from "./trip-notes-view"
 import { TripPackingView } from "./trip-packing-view"
 import { TripHome } from "./trip-home"
@@ -152,9 +154,9 @@ function authErrorMessage(error: unknown, fallback: string) {
 
 function LoadingJourney({ label = "Loading your trip", detail = "Pulling plans, notes, and packing lists together." }: { label?: string; detail?: string }) {
   return (
-    <main id="main-content" className="relative flex h-dvh items-center justify-center overflow-hidden px-6">
+    <PageShell className="relative flex h-dvh items-center justify-center overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.05),_transparent_38%),radial-gradient(circle_at_bottom,_rgba(96,165,250,0.08),_transparent_30%)]" />
-      <div className="relative flex max-w-sm flex-col items-center text-center">
+      <div className="page-inset page-inset--read relative flex flex-col items-center text-center">
         <div className="loading-journey" aria-hidden="true">
           <div className="loading-journey__trail" />
           <div className="loading-journey__trail loading-journey__trail--glow" />
@@ -166,9 +168,9 @@ function LoadingJourney({ label = "Loading your trip", detail = "Pulling plans, 
           </div>
         </div>
         <div className="mt-6 text-base font-medium tracking-tight text-foreground">{label}</div>
-        <p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">{detail}</p>
+        <p className="measure mt-2 text-sm leading-6 text-muted-foreground">{detail}</p>
       </div>
-    </main>
+    </PageShell>
   )
 }
 
@@ -1244,7 +1246,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
 
   if (bundle === null) {
     return (
-      <main id="main-content" className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6">
+      <PageShell className="flex min-h-dvh flex-col items-center justify-center gap-4">
         <p className="text-sm text-muted-foreground">You don’t have access to this trip.</p>
         <Button
           onClick={() => {
@@ -1254,7 +1256,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         >
           Choose another trip
         </Button>
-      </main>
+      </PageShell>
     )
   }
 
@@ -1281,25 +1283,13 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
 
   return (
     <>
-      <main id="main-content" className="together-story relative z-10 flex h-dvh flex-col overflow-hidden">
-        <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
-          <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
-            <div className="story-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
-              {storyMode === "list" ? (
-                <TripCover
-                  className="trip-cover--compact"
-                  tripName={trip.name}
-                  meta={coverMeta}
-                  coverImageUrl={trip.coverImageUrl}
-                  showHairline={false}
-                  onBrandClick={() => setTripsOpen(true)}
-                />
-              ) : null}
-
-              <div className="story-chrome-sticky z-20">
-                <SpectrumHairline />
-                <header className="border-b border-border/80 bg-background">
-                  <div className="story-shell">
+      <TripWorkspace
+        mode={storyMode}
+        tripName={trip.name}
+        meta={coverMeta}
+        coverImageUrl={trip.coverImageUrl}
+        onBrandClick={() => setTripsOpen(true)}
+        toolbar={
                     <StoryChrome
                       mode={storyMode}
                       onModeChange={setStoryMode}
@@ -1368,6 +1358,9 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
                             </DropdownMenuItem>
                           ) : null}
                           {(currentMember?.role === "owner") ? <DropdownMenuSeparator /> : null}
+                          <DropdownMenuSeparator />
+                          <TemperatureMenuItems units={weather.units} onChange={weather.choose} />
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem onSelect={() => void handleSignOut()}>
                             <LogOut className="h-4 w-4" />
                             Sign out
@@ -1376,75 +1369,20 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
                       </DropdownMenu>
                       }
                     />
-                  </div>
-                </header>
-                {shareMessage ? <StatusBanner tone="success">{shareMessage}</StatusBanner> : null}
-                {errorMessage ? <StatusBanner tone="error">{errorMessage}</StatusBanner> : null}
-              </div>
-
-              {confirmQueue}
-              {storyMode === "list" && homeModel ? (
-                <TripHome
-                  className="story-shell"
-                  model={homeModel}
-                  members={members}
-                  claims={homeClaims}
-                  currentUserId={userId}
-                  onClaim={(gapId, claimed) => {
-                    void handleClaim(gapId, claimed)
-                  }}
-                  onAction={openGap}
-                  onOpenItem={(id) => {
-                    const item = items.find((entry) => entry.id === id)
-                    if (item) openEditItem(item)
-                  }}
-                  weather={weather}
-                />
-              ) : null}
-              {storyMode === "month" ? (
-                <TripMonthView
-                  className="story-shell"
-                  items={items}
-                  tripStart={trip.startDate}
-                  tripEnd={trip.endDate}
-                  today={today}
-                  onEditItem={openEditItem}
-                  onAddItem={(date) => openCapture(undefined, date)}
-                  weather={weather}
-                />
-              ) : (
-                <TripStoryView
-                  className="story-shell"
-                  mode="trip"
-                  items={items}
-                  today={today}
-                  tripStart={trip.startDate}
-                  tripEnd={trip.endDate}
-                  dayNumber={dayIndexInTrip(today, trip.startDate)}
-                  currentUserId={userId}
-                  members={members}
-                  emphasizeItemId={emphasizeItemId}
-                  packingChecked={packingChecked}
-                  packingTotal={packingItems.length}
-                  notesCount={notesCount}
-                  onEditItem={openEditItem}
-                  onStartFlight={() => openCapture("flight")}
-                  onStartStay={() => openCapture("stay")}
-                  onStartPlace={() => openCapture("place")}
-                  onInvite={() => setShareOpen(true)}
-                  onOpenPacking={() => setPeek("packing")}
-                  onOpenNotes={() => setPeek("notes")}
-                  onOpenAsk={() => setDesktopAiOpen(true)}
-                  weather={weather}
-                />
-              )}
-            </div>
-            <CaptureDock
-              hint={captureHint}
-              onCapture={(kind, text) => openCapture(kind, undefined, text)}
-            />
-          </div>
-
+        }
+        banners={
+          <>
+            {shareMessage ? <StatusBanner tone="success">{shareMessage}</StatusBanner> : null}
+            {errorMessage ? <StatusBanner tone="error">{errorMessage}</StatusBanner> : null}
+          </>
+        }
+        composer={
+          <CaptureDock
+            hint={captureHint}
+            onCapture={(kind, text) => openCapture(kind, undefined, text)}
+          />
+        }
+        aside={
           <aside
             className={`hidden min-h-0 shrink-0 overflow-hidden border-l border-border bg-card transition-[width,opacity] duration-300 ease-out xl:flex ${
               desktopAiOpen ? "w-[31rem] opacity-100" : "w-0 opacity-0"
@@ -1491,8 +1429,8 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
               </div>
             </div>
           </aside>
-        </div>
-
+        }
+        extra={
         <div className="xl:hidden">
           <TripCopilot
             mode="drawer-trigger"
@@ -1519,7 +1457,66 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
             onOpenChange={setDesktopAiOpen}
           />
         </div>
-      </main>
+        }
+      >
+        {confirmQueue}
+        {storyMode === "month" ? (
+          <TripMonthView
+            items={items}
+            tripStart={trip.startDate}
+            tripEnd={trip.endDate}
+            today={today}
+            onEditItem={openEditItem}
+            onAddItem={(date) => openCapture(undefined, date)}
+            weather={weather}
+          />
+        ) : (
+          <div className="trip-list">
+            {homeModel ? (
+              <TripHome
+                className="trip-list__rail"
+                model={homeModel}
+                members={members}
+                claims={homeClaims}
+                currentUserId={userId}
+                onClaim={(gapId, claimed) => {
+                  void handleClaim(gapId, claimed)
+                }}
+                onAction={openGap}
+                onOpenItem={(id) => {
+                  const item = items.find((entry) => entry.id === id)
+                  if (item) openEditItem(item)
+                }}
+                weather={weather}
+              />
+            ) : null}
+            <TripStoryView
+              className="trip-list__story"
+              mode="trip"
+              items={items}
+              today={today}
+              tripStart={trip.startDate}
+              tripEnd={trip.endDate}
+              dayNumber={dayIndexInTrip(today, trip.startDate)}
+              currentUserId={userId}
+              members={members}
+              emphasizeItemId={emphasizeItemId}
+              packingChecked={packingChecked}
+              packingTotal={packingItems.length}
+              notesCount={notesCount}
+              onEditItem={openEditItem}
+              onStartFlight={() => openCapture("flight")}
+              onStartStay={() => openCapture("stay")}
+              onStartPlace={() => openCapture("place")}
+              onInvite={() => setShareOpen(true)}
+              onOpenPacking={() => setPeek("packing")}
+              onOpenNotes={() => setPeek("notes")}
+              onOpenAsk={() => setDesktopAiOpen(true)}
+              weather={weather}
+            />
+          </div>
+        )}
+      </TripWorkspace>
 
       <PeekSheet
         open={peek === "packing"}

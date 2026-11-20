@@ -230,15 +230,22 @@ test("weather sits in the day list and the month panel, not the phone day cell",
   })
 
   await page.getByRole("button", { name: "Month", exact: true }).click()
-  const cell = page.getByRole("gridcell", { name: /November 18/ }).first()
-  await expect(cell.locator(".weather-chip")).toHaveCount(0)
-  await cell.evaluate((el) => {
-    el.scrollIntoView({ block: "nearest" })
-    if (el instanceof HTMLButtonElement) el.click()
-  })
-  const detail = page.locator(".month-detail")
-  await expect(detail.locator(".weather-chip")).toBeVisible()
-  await scrollBelowSticky(detail.locator(".weather-chip"))
+  const agenda = page.locator(".month-agenda")
+  if (await agenda.isVisible()) {
+    const day = agenda.locator(".month-agenda__day", { hasText: "Wednesday November 18" })
+    await expect(day.locator(".weather-chip")).toBeVisible()
+    await scrollBelowSticky(day.locator(".weather-chip"))
+  } else {
+    const cell = page.getByRole("gridcell", { name: /November 18/ }).first()
+    await expect(cell.locator(".weather-chip")).toHaveCount(0)
+    await cell.evaluate((el) => {
+      el.scrollIntoView({ block: "nearest" })
+      if (el instanceof HTMLButtonElement) el.click()
+    })
+    const detail = page.locator(".month-detail")
+    await expect(detail.locator(".weather-chip")).toBeVisible()
+    await scrollBelowSticky(detail.locator(".weather-chip"))
+  }
   await page.screenshot({
     path: `/opt/cursor/artifacts/weather-month-${testInfo.project.name}.png`,
     fullPage: true,

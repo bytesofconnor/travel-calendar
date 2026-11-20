@@ -6,6 +6,8 @@ import { Calendar, Ellipsis } from "lucide-react"
 import type { Id } from "@/convex/_generated/dataModel"
 import { CaptureDock, type CaptureKind } from "@/components/capture-dock"
 import { useDayWeather } from "@/components/day-weather"
+import { TripWorkspace } from "@/components/trip-workspace"
+import { TemperatureMenuItems } from "@/components/weather-chip"
 import { ConfirmQueue } from "@/components/confirm-queue"
 import { CreateJoinScreen } from "@/components/create-join-screen"
 import { EditTripDialog } from "@/components/edit-trip-dialog"
@@ -13,7 +15,6 @@ import { ItemDialog } from "@/components/item-dialog"
 import { PaywallScreen } from "@/components/paywall-screen"
 import { ShareTripDialog } from "@/components/share-trip-dialog"
 import { ThemePackPickerMenuItems } from "@/components/theme-pack-menu"
-import { TripCover, SpectrumHairline } from "@/components/trip-cover"
 import { TripHome } from "@/components/trip-home"
 import { TripMonthView } from "@/components/trip-month-view"
 import { TripStoryView } from "@/components/trip-story-view"
@@ -34,7 +35,7 @@ import type { Trip, TripItem, TripItemInput, TripMember } from "@/lib/kanban-sto
 import { defaultPlanDate, guessPlanType } from "@/lib/plan-form"
 import type { PlanType } from "@/lib/plan-types"
 import { buildTripHome, type GapAction } from "@/lib/trip-home/detect"
-import type { WeatherReading } from "@/lib/weather"
+import type { WeatherReading, WeatherUnits } from "@/lib/weather"
 import { parseThemePack, type ThemePackId } from "@/lib/theme-packs"
 
 const TRIP_ID = "trip_lisbon"
@@ -144,6 +145,123 @@ const coveredItems: TripItem[] = [
   },
 ]
 
+const vietnamItems: TripItem[] = [
+  {
+    id: "vn-flight-in",
+    tripId: TRIP_ID,
+    title: "SFO to HAN",
+    startDate: "2027-06-11",
+    endDate: "2027-06-11",
+    location: "SFO",
+    locationTo: "HAN",
+    createdBy: USER_ID,
+    createdAt: "2027-01-02T12:00:00.000Z",
+    updatedAt: "2027-01-02T12:00:00.000Z",
+  },
+  {
+    id: "vn-hanoi",
+    tripId: TRIP_ID,
+    title: "Old Quarter apartment",
+    startDate: "2027-06-11",
+    endDate: "2027-06-16",
+    location: "Hanoi",
+    createdBy: USER_ID,
+    createdAt: "2027-01-02T13:00:00.000Z",
+    updatedAt: "2027-01-02T13:00:00.000Z",
+  },
+  {
+    id: "vn-train",
+    tripId: TRIP_ID,
+    title: "Train Street",
+    startDate: "2027-06-12",
+    endDate: "2027-06-12",
+    location: "Hanoi",
+    createdBy: "user_alex",
+    createdAt: "2027-01-03T12:00:00.000Z",
+    updatedAt: "2027-01-03T12:00:00.000Z",
+  },
+  {
+    id: "vn-flight-danang",
+    tripId: TRIP_ID,
+    title: "HAN to DAD",
+    startDate: "2027-06-16",
+    endDate: "2027-06-16",
+    location: "HAN",
+    locationTo: "DAD",
+    createdBy: USER_ID,
+    createdAt: "2027-01-04T12:00:00.000Z",
+    updatedAt: "2027-01-04T12:00:00.000Z",
+  },
+  {
+    id: "vn-hoian",
+    tripId: TRIP_ID,
+    title: "Hội An house",
+    startDate: "2027-06-16",
+    endDate: "2027-06-24",
+    location: "Hội An",
+    createdBy: "user_mom",
+    createdAt: "2027-01-04T13:00:00.000Z",
+    updatedAt: "2027-01-04T13:00:00.000Z",
+  },
+  {
+    id: "vn-lanterns",
+    tripId: TRIP_ID,
+    title: "Lantern walk",
+    startDate: "2027-06-20",
+    endDate: "2027-06-20",
+    location: "Hội An",
+    createdBy: "user_dad",
+    createdAt: "2027-01-05T12:00:00.000Z",
+    updatedAt: "2027-01-05T12:00:00.000Z",
+  },
+  {
+    id: "vn-flight-sgn",
+    tripId: TRIP_ID,
+    title: "DAD to SGN",
+    startDate: "2027-06-24",
+    endDate: "2027-06-24",
+    location: "DAD",
+    locationTo: "SGN",
+    createdBy: USER_ID,
+    createdAt: "2027-01-06T12:00:00.000Z",
+    updatedAt: "2027-01-06T12:00:00.000Z",
+  },
+  {
+    id: "vn-saigon",
+    tripId: TRIP_ID,
+    title: "District 1 loft",
+    startDate: "2027-06-24",
+    endDate: "2027-07-02",
+    location: "Ho Chi Minh City",
+    createdBy: USER_ID,
+    createdAt: "2027-01-06T13:00:00.000Z",
+    updatedAt: "2027-01-06T13:00:00.000Z",
+  },
+  {
+    id: "vn-benthanh",
+    tripId: TRIP_ID,
+    title: "Ben Thanh Market",
+    startDate: "2027-06-26",
+    endDate: "2027-06-26",
+    location: "Ho Chi Minh City",
+    createdBy: "user_alex",
+    createdAt: "2027-01-07T12:00:00.000Z",
+    updatedAt: "2027-01-07T12:00:00.000Z",
+  },
+  {
+    id: "vn-flight-home",
+    tripId: TRIP_ID,
+    title: "SGN to SFO",
+    startDate: "2027-07-02",
+    endDate: "2027-07-02",
+    location: "SGN",
+    locationTo: "SFO",
+    createdBy: USER_ID,
+    createdAt: "2027-01-08T12:00:00.000Z",
+    updatedAt: "2027-01-08T12:00:00.000Z",
+  },
+]
+
 const monthItems: TripItem[] = [
   ...items,
   {
@@ -192,12 +310,13 @@ function TripFrame({
   screen,
   view,
   onViewChange,
-  showCover,
   captureHint,
   themePack,
   travelers,
   meta,
   tripName,
+  units,
+  onUnits,
   onOpenMembers,
   onCapture,
   children,
@@ -205,12 +324,13 @@ function TripFrame({
   screen: string
   view: "list" | "month"
   onViewChange: (view: "list" | "month") => void
-  showCover: boolean
   captureHint: string
   themePack: ThemePackId | null
   travelers: TripMember[]
   meta: string
   tripName: string
+  units: WeatherUnits
+  onUnits: (units: WeatherUnits) => void
   onOpenMembers: () => void
   onCapture?: (kind?: CaptureKind, text?: string) => void
   children: ReactNode
@@ -220,27 +340,12 @@ function TripFrame({
   const [calendarToken, setCalendarToken] = useState(REVIEW_CALENDAR_TOKEN)
 
   return (
-    <main
-      id="main-content"
-      data-review-ready="true"
-      data-screen={screen}
-      className="together-story relative z-10 flex h-dvh flex-col overflow-hidden"
-    >
-      <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
-        <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
-          <div className="story-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            {showCover ? (
-              <TripCover
-                className="trip-cover--compact"
-                tripName={tripName}
-                meta={meta}
-                showHairline={false}
-              />
-            ) : null}
-            <div className="story-chrome-sticky z-20">
-              <SpectrumHairline />
-              <header className="border-b border-border/80 bg-background">
-                <div className="story-shell">
+    <div data-review-ready="true" data-screen={screen} className="contents">
+    <TripWorkspace
+      mode={view}
+      tripName={tripName}
+      meta={meta}
+      toolbar={
                   <StoryChrome
                     mode={view}
                     onModeChange={onViewChange}
@@ -276,15 +381,18 @@ function TripFrame({
                             <Calendar className="h-4 w-4" />
                             Add to calendar
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <TemperatureMenuItems units={units} onChange={onUnits} />
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem>Edit trip</DropdownMenuItem>
                           <DropdownMenuItem>Sign out</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     }
                   />
-                </div>
-              </header>
-            </div>
+      }
+      composer={<CaptureDock hint={captureHint} onCapture={onCapture ?? (() => {})} />}
+    >
             {screen === "confirm" ? (
               <ConfirmQueue
                 rows={[
@@ -305,10 +413,7 @@ function TripFrame({
               />
             ) : null}
             {children}
-          </div>
-          <CaptureDock hint={captureHint} onCapture={onCapture ?? (() => {})} />
-        </div>
-      </div>
+    </TripWorkspace>
       <AddToCalendarSheet
         open={calendarOpen}
         onOpenChange={setCalendarOpen}
@@ -321,7 +426,7 @@ function TripFrame({
           )
         }}
       />
-    </main>
+    </div>
   )
 }
 
@@ -375,11 +480,14 @@ export function ReviewGallery({
   const [planEdit, setPlanEdit] = useState<TripItem | null>(screen === "edit" ? editItem : null)
   const [initialType, setInitialType] = useState<PlanType | null>(screen === "add" ? "place" : null)
   const weather = useDayWeather(homeItems, { start: tripStartDate, end: tripEndDate }, REVIEW_WEATHER)
-  const [view, setView] = useState<"list" | "month">(screen === "month" ? "month" : "list")
+  const vietnam = screen === "vietnam"
+  const [view, setView] = useState<"list" | "month">(screen === "month" || vietnam ? "month" : "list")
   const [shareOpen, setShareOpen] = useState(screen === "invite")
-  const roster = partyMembers(party)
-  const tripTitle = party === 5 ? "Vietnam '27" : "Lisbon with you"
-  const coverMeta = `Nov 18 – 24 · 7 days · ${travelerLabel(roster, USER_ID)} · Connor proposed · Alex confirmed`
+  const roster = partyMembers(vietnam ? 5 : party)
+  const tripTitle = vietnam || party === 5 ? "Vietnam '27" : "Lisbon with you"
+  const coverMeta = vietnam
+    ? `Jun 11 – Jul 2 · 22 days · ${travelerLabel(roster, USER_ID)}`
+    : `Nov 18 – 24 · 7 days · ${travelerLabel(roster, USER_ID)} · Connor proposed · Alex confirmed`
 
   if (screen === "join" || screen === "create") {
     const mode = screen === "join" ? "join" : "create"
@@ -419,7 +527,6 @@ export function ReviewGallery({
   }
 
   const story = screen === "today" ? "today" : "trip"
-  const showCover = view === "list" && story === "trip"
   const captureHint = story === "today" && view === "list" ? "What’s happening today?" : "Add to the trip…"
 
   function openPlan(item: TripItem | null, date?: string) {
@@ -465,12 +572,13 @@ export function ReviewGallery({
         screen={screen}
         view={view}
         onViewChange={setView}
-        showCover={showCover}
         captureHint={captureHint}
         themePack={themePack}
         travelers={roster}
         meta={coverMeta}
         tripName={tripTitle}
+        units={weather.units}
+        onUnits={weather.choose}
         onOpenMembers={() => setShareOpen(true)}
         onCapture={(kind, text) => {
           setPlanEdit(null)
@@ -485,20 +593,19 @@ export function ReviewGallery({
       >
         {view === "month" ? (
           <TripMonthView
-            className="story-shell"
-            items={screen === "month" ? monthItems : homeItems}
-            tripStart={tripStartDate}
-            tripEnd={tripEndDate}
-            today="2026-11-18"
+            items={vietnam ? vietnamItems : screen === "month" ? monthItems : homeItems}
+            tripStart={vietnam ? "2027-06-11" : tripStartDate}
+            tripEnd={vietnam ? "2027-07-02" : tripEndDate}
+            today={vietnam ? "2027-06-18" : "2026-11-18"}
             onEditItem={(item) => openPlan(item)}
             onAddItem={(date) => openPlan(null, date)}
             weather={weather}
           />
         ) : (
-          <>
+          <div className="trip-list">
             {showHome ? (
               <TripHome
-                className="story-shell"
+                className="trip-list__rail"
                 model={home}
                 members={roster}
                 claims={claims}
@@ -519,7 +626,7 @@ export function ReviewGallery({
               />
             ) : null}
             <TripStoryView
-              className="story-shell"
+              className="trip-list__story"
               mode={story}
               items={homeItems}
               today="2026-11-18"
@@ -541,7 +648,7 @@ export function ReviewGallery({
               onOpenAsk={() => {}}
               weather={weather}
             />
-          </>
+          </div>
         )}
       </TripFrame>
       <TripsSheet
