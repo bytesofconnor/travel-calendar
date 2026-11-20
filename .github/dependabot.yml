@@ -19,6 +19,11 @@ updates:
     # recharts 3.x changes Tooltip payload types.
     # react-resizable-panels 4.x removes PanelGroup and PanelResizeHandle.
     # https://github.com/bytesofconnor/travel-calendar/pull/28
+    # @convex-dev/auth 2.x replaces convexAuth and authTables, drops the
+    # Next.js and Email provider entry points, and deletes dist/server/cookies.js.
+    # The grouped bump in pull request 47 fails the invite-join test on that
+    # missing file. Moving the app over is a schema, session, and sign-in change.
+    # https://github.com/bytesofconnor/travel-calendar/pull/47
     ignore:
       - dependency-name: "typescript"
         versions: ["7.x"]
@@ -30,6 +35,8 @@ updates:
         versions: ["3.x"]
       - dependency-name: "react-resizable-panels"
         versions: ["4.x"]
+      - dependency-name: "@convex-dev/auth"
+        versions: ["2.x"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
