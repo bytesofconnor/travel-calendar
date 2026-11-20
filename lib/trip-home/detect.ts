@@ -1,4 +1,6 @@
 import { airportTimeZone, isIanaTimeZone } from "../calendar/airports.ts"
+import { homeRole } from "../plan-form.ts"
+import type { PlanType } from "../plan-types.ts"
 
 export type HomePlan = {
   id: string
@@ -12,6 +14,7 @@ export type HomePlan = {
   startTimeZone?: string
   endTimeZone?: string
   notes?: string
+  planType?: PlanType
 }
 
 export type HomeNow = {
@@ -74,8 +77,6 @@ const GAP_OK = /^[a-z0-9][a-z0-9:_-]{0,159}$/i
 export function isGapId(value: string): boolean {
   return GAP_OK.test(value)
 }
-const TRANSPORT_WORD =
-  /\b(taxi|uber|lyft|cab|shuttle|transfer|train|metro|subway|rental|pickup|pick-up|drop-off|dropoff|car service|bus)\b/i
 const HOUR = 3_600_000
 const CONNECTION = 8 * HOUR
 const RIDE_WINDOW = 6 * HOUR
@@ -225,10 +226,6 @@ function iataOf(place: string): string | undefined {
   return undefined
 }
 
-function isAirportPlace(place: string): boolean {
-  return Boolean(iataOf(place)) || /\bairport\b/i.test(place)
-}
-
 function cityOf(place: string): { code?: string; label: string } | null {
   const code = iataOf(place)
   if (code && CITIES[code]) return { code, label: CITIES[code].label }
@@ -332,20 +329,7 @@ function cleanTime(value: string | undefined): string | undefined {
 }
 
 function classify(plan: HomePlan): Role {
-  const destination = plan.locationTo?.trim() ?? ""
-  if (destination) {
-    const originAirport = isAirportPlace(plan.location)
-    const destinationAirport = isAirportPlace(destination)
-    if (originAirport && destinationAirport) return "flight"
-    if (originAirport || destinationAirport) return "transport"
-    if (TRANSPORT_WORD.test(`${plan.title} ${plan.notes ?? ""}`)) return "transport"
-    return "place"
-  }
-  if (plan.startDate !== plan.endDate) return "stay"
-  if (TRANSPORT_WORD.test(`${plan.title} ${plan.notes ?? ""}`) && (isAirportPlace(plan.location) || /\bairport\b/i.test(plan.notes ?? ""))) {
-    return "transport"
-  }
-  return "place"
+  return homeRole(plan)
 }
 
 function toSpan(plan: HomePlan, fallbackZone: string): Span | null {

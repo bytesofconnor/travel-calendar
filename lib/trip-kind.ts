@@ -1,11 +1,10 @@
 import type { TripItem } from "@/lib/kanban-store"
+import { resolvePlanType } from "@/lib/plan-form"
 
 export type PlanKind = "flight" | "stay" | "place" | "note" | "ask" | "now"
 
 export function inferPlanKind(item: TripItem): PlanKind {
-  if (item.locationTo?.trim()) return "flight"
-  if (item.startDate !== item.endDate) return "stay"
-  return "place"
+  return resolvePlanType(item)
 }
 
 export function kindLabel(kind: PlanKind): string {
@@ -65,7 +64,7 @@ export function itemMetaLine(item: TripItem, kind: PlanKind): string {
   if (kind === "flight") {
     const from = item.location.trim()
     const to = item.locationTo?.trim()
-    return [from && to ? `${from} → ${to}` : from || to, item.notes].filter(Boolean).join(" · ")
+    return [from && to ? `${from} → ${to}` : from || to, item.flightCode, item.notes].filter(Boolean).join(" · ")
   }
   if (kind === "stay") {
     const nights = stayNights(item.startDate, item.endDate)

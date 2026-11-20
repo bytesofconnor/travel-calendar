@@ -5,18 +5,21 @@ async function openEdit(page: Page) {
   await page.goto("/review?screen=edit", { waitUntil: "domcontentloaded" })
   const dialog = page.getByRole("dialog")
   await expect(dialog).toBeVisible()
-  await expect(dialog.getByRole("heading", { name: "Edit plan" })).toBeVisible()
+  await expect(dialog.getByRole("heading", { name: "Edit place" })).toBeVisible()
   return dialog
 }
 
 test("a member can include or exclude faces on a plan", async ({ page }) => {
   const dialog = await openEdit(page)
-  await expect(dialog.getByText("Connor and Alex", { exact: true })).toBeVisible()
+  await expect(dialog.getByText("2 of 4, Mom and Dad out", { exact: true })).toBeVisible()
 
   const mom = dialog.getByRole("button", { name: "Mom, not included" })
   const connor = dialog.getByRole("button", { name: "Connor, included" })
-  await dialog.locator("#plan-title").focus()
-  await page.keyboard.press("Tab")
+  await dialog.locator("#plan-time").focus()
+  for (let step = 0; step < 4; step += 1) {
+    if (await connor.evaluate((element) => element === document.activeElement)) break
+    await page.keyboard.press("Tab")
+  }
   await expect(connor).toBeFocused()
   const focus = await connor.evaluate((element) => getComputedStyle(element).boxShadow)
   expect(focus).not.toBe("none")
@@ -25,11 +28,11 @@ test("a member can include or exclude faces on a plan", async ({ page }) => {
 
   await mom.press("Space")
   await expect(dialog.getByRole("button", { name: "Mom, included" })).toHaveAttribute("aria-pressed", "true")
-  await expect(dialog.getByText("Connor, Alex, and Mom", { exact: true })).toBeVisible()
+  await expect(dialog.getByText("3 of 4, Dad out", { exact: true })).toBeVisible()
 
   await connor.click()
   await expect(dialog.getByRole("button", { name: "Connor, not included" })).toHaveAttribute("aria-pressed", "false")
-  await dialog.getByRole("button", { name: "Save changes" }).click()
+  await dialog.getByRole("button", { name: "Save", exact: true }).click()
   await expect(dialog).toBeHidden()
 
   const card = page.getByRole("button", { name: /Place: Time Out Market/ })
@@ -115,7 +118,7 @@ test("who's in stays on screen at large text and 200% zoom", async ({ page }, te
     document.documentElement.style.fontSize = "16px"
     document.documentElement.style.zoom = "2"
   })
-  await expect(dialog.getByText("Connor and Alex", { exact: true })).toBeVisible()
+  await expect(dialog.getByText("2 of 4, Mom and Dad out", { exact: true })).toBeVisible()
   const zoomed = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(zoomed).toBeLessThanOrEqual(1)
 })

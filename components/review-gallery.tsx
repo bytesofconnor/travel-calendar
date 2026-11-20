@@ -4,7 +4,8 @@ import { useMemo, useState, type ReactNode } from "react"
 import { Calendar, Ellipsis } from "lucide-react"
 
 import type { Id } from "@/convex/_generated/dataModel"
-import { CaptureDock } from "@/components/capture-dock"
+import { CaptureDock, type CaptureKind } from "@/components/capture-dock"
+import { useDayWeather } from "@/components/day-weather"
 import { ConfirmQueue } from "@/components/confirm-queue"
 import { CreateJoinScreen } from "@/components/create-join-screen"
 import { EditTripDialog } from "@/components/edit-trip-dialog"
@@ -30,7 +31,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { Trip, TripItem, TripItemInput, TripMember } from "@/lib/kanban-store"
+import { guessPlanType } from "@/lib/plan-form"
+import type { PlanType } from "@/lib/plan-types"
 import { buildTripHome, type GapAction } from "@/lib/trip-home/detect"
+import type { WeatherReading } from "@/lib/weather"
 import { parseThemePack, type ThemePackId } from "@/lib/theme-packs"
 
 const TRIP_ID = "trip_lisbon"
@@ -93,6 +97,14 @@ const items: TripItem[] = [
     startDate: "2026-11-18",
     endDate: "2026-11-24",
     location: "Alfama, Lisbon",
+    planType: "stay",
+    place: {
+      name: "Alfama, Lisbon",
+      lat: 38.712,
+      lng: -9.13,
+      country: "PT",
+      timeZone: "Europe/Lisbon",
+    },
     createdBy: "user_alex",
     createdAt: "2026-11-02T13:00:00.000Z",
     updatedAt: "2026-11-02T13:00:00.000Z",
@@ -160,6 +172,22 @@ const monthItems: TripItem[] = [
 
 const REVIEW_NOW = { instant: "2026-11-17T18:00:00.000Z", timeZone: "America/Los_Angeles" }
 
+const REVIEW_WEATHER: Record<string, WeatherReading> = Object.fromEntries(
+  ["2026-11-18", "2026-11-19", "2026-11-20", "2026-11-21", "2026-11-22", "2026-11-23"].map((date) => [
+    date,
+    {
+      date,
+      name: "Alfama, Lisbon",
+      high: 64,
+      low: 54,
+      precip: 40,
+      condition: "Rain",
+      typical: true,
+      units: "f" as const,
+    },
+  ]),
+)
+
 function TripFrame({
   screen,
   view,
@@ -171,6 +199,7 @@ function TripFrame({
   meta,
   tripName,
   onOpenMembers,
+  onCapture,
   children,
 }: {
   screen: string
@@ -183,6 +212,7 @@ function TripFrame({
   meta: string
   tripName: string
   onOpenMembers: () => void
+  onCapture?: (kind?: CaptureKind, text?: string) => void
   children: ReactNode
 }) {
   const [menuOpen, setMenuOpen] = useState(screen === "theme")
@@ -207,7 +237,7 @@ function TripFrame({
                 showHairline={false}
               />
             ) : null}
-            <div className="story-chrome-sticky sticky z-20">
+            <div className="story-chrome-sticky z-20">
               <SpectrumHairline />
               <header className="border-b border-border/80 bg-background">
                 <div className="story-shell">
@@ -276,7 +306,7 @@ function TripFrame({
             ) : null}
             {children}
           </div>
-          <CaptureDock hint={captureHint} onCapture={() => {}} />
+          <CaptureDock hint={captureHint} onCapture={onCapture ?? (() => {})} />
         </div>
       </div>
       <AddToCalendarSheet
@@ -343,6 +373,8 @@ export function ReviewGallery({
   const [planOpen, setPlanOpen] = useState(screen === "add" || screen === "edit")
   const [planSeed, setPlanSeed] = useState<Partial<TripItemInput> | null>(null)
   const [planEdit, setPlanEdit] = useState<TripItem | null>(screen === "edit" ? editItem : null)
+  const [initialType, setInitialType] = useState<PlanType | null>(screen === "add" ? "place" : null)
+  const weather = useDayWeather(homeItems, { start: tripStartDate, end: tripEndDate }, REVIEW_WEATHER)
   const [view, setView] = useState<"list" | "month">(screen === "month" ? "month" : "list")
   const [shareOpen, setShareOpen] = useState(screen === "invite")
   const roster = partyMembers(party)
@@ -394,10 +426,12 @@ export function ReviewGallery({
     if (item) {
       setPlanSeed(null)
       setPlanEdit(item)
+      setInitialType(null)
       setPlanOpen(true)
       return
     }
     setPlanEdit(null)
+    setInitialType("place")
     setPlanSeed(date ? { startDate: date, endDate: date } : null)
     setPlanOpen(true)
   }
@@ -408,11 +442,13 @@ export function ReviewGallery({
       if (item) {
         setPlanEdit(item)
         setPlanSeed(null)
+        setInitialType(null)
         setPlanOpen(true)
         return
       }
     }
     setPlanEdit(null)
+    setInitialType(action.flow === "stay" ? "stay" : action.flow === "place" ? "place" : "flight")
     setPlanSeed({
       title: action.title,
       startDate: action.startDate,
@@ -436,6 +472,16 @@ export function ReviewGallery({
         meta={coverMeta}
         tripName={tripTitle}
         onOpenMembers={() => setShareOpen(true)}
+        onCapture={(kind, text) => {
+          setPlanEdit(null)
+          setInitialType(kind ?? (text?.trim() ? guessPlanType(text) : "place"))
+          setPlanSeed({
+            title: text?.trim() ?? "",
+            startDate: tripStartDate,
+            endDate: tripStartDate,
+          })
+          setPlanOpen(true)
+        }}
       >
         {view === "month" ? (
           <TripMonthView
@@ -446,6 +492,7 @@ export function ReviewGallery({
             today="2026-11-18"
             onEditItem={(item) => openPlan(item)}
             onAddItem={(date) => openPlan(null, date)}
+            weather={weather}
           />
         ) : (
           <>
@@ -468,6 +515,7 @@ export function ReviewGallery({
                   const item = homeItems.find((entry) => entry.id === id)
                   if (item) openPlan(item)
                 }}
+                weather={weather}
               />
             ) : null}
             <TripStoryView
@@ -491,6 +539,7 @@ export function ReviewGallery({
               onOpenPacking={() => {}}
               onOpenNotes={() => {}}
               onOpenAsk={() => {}}
+              weather={weather}
             />
           </>
         )}
@@ -510,7 +559,9 @@ export function ReviewGallery({
         defaultDate={planSeed?.startDate ?? "2026-11-19"}
         editItem={planEdit}
         initialInput={planSeed}
-        initialTravel={Boolean(planSeed?.locationTo)}
+        initialType={initialType}
+        placeHint={party === 5 ? "Vietnam" : "Lisbon"}
+        units={weather.units}
         currentUserName="Connor"
         members={roster}
         onSave={(input, existing) => {

@@ -524,3 +524,29 @@ test("a trip with no plans is not covered, and a backwards range is not covered"
   assert.equal(backwards.covered, false)
   assert.deepEqual(backwards.gaps, [])
 })
+
+test("city to city flights stay flights, and a ride stays a ride", () => {
+  const home = ids([
+    {
+      id: "fly_hanoi",
+      title: "Fly DC to Hanoi",
+      startDate: "2027-04-02",
+      endDate: "2027-04-03",
+      location: "DC",
+      locationTo: "Hanoi",
+    },
+    {
+      id: "mn_dc",
+      title: "MN to DC",
+      startDate: "2027-04-04",
+      endDate: "2027-04-04",
+      location: "MSP",
+      locationTo: "DCA",
+    },
+    homeRide,
+  ])
+  const kinds = Object.fromEntries(home.upcoming.map((item) => [item.id, item.kind]))
+  assert.equal(kinds.fly_hanoi, "flight")
+  assert.equal(kinds.mn_dc, "flight")
+  assert.equal(kinds.ride_sfo, "transport")
+})

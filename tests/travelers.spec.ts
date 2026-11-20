@@ -86,10 +86,12 @@ test("invite copy is a group invite", async ({ page }) => {
 test("add says everyone, or the people who are in", async ({ page }) => {
   await page.goto("/review?screen=add", { waitUntil: "domcontentloaded" })
   const dialog = page.getByRole("dialog")
-  await expect(dialog.getByRole("heading", { name: "Add for everyone" })).toBeVisible()
+  await expect(dialog.getByRole("heading", { name: "Add a place" })).toBeVisible()
+  await expect(dialog.getByText("Everyone", { exact: true })).toBeVisible()
   await dialog.getByRole("button", { name: "Mom, included" }).click()
   await dialog.getByRole("button", { name: "Dad, included" }).click()
-  await expect(dialog.getByRole("heading", { name: "Add for Connor and Alex" })).toBeVisible()
+  await expect(dialog.getByRole("heading", { name: "Add a place" })).toBeVisible()
+  await expect(dialog.getByText("2 of 4, Mom and Dad out", { exact: true })).toBeVisible()
 })
 
 test("traveler stack and invite keep contrast across themes", async ({ page }, testInfo) => {

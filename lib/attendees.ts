@@ -55,6 +55,30 @@ export function toggleMember<T extends string>(
   return storedAttendeeIds(next, members)
 }
 
+function givenName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  return parts[0] || "Someone"
+}
+
+export function attendanceSummary(
+  members: readonly { userId: string; displayName: string }[],
+  stored: readonly string[] | undefined,
+): string {
+  const attendance = resolveAttendance(
+    stored,
+    members.map((member) => member.userId),
+  )
+  if (attendance.everyone) return "Everyone"
+  const out = members
+    .filter((member) => !attendance.includedIds.includes(member.userId))
+    .map((member) => givenName(member.displayName))
+  const count = `${attendance.includedIds.length} of ${members.length}`
+  if (out.length === 1) return `${count}, ${out[0]} out`
+  if (out.length === 2) return `${count}, ${out[0]} and ${out[1]} out`
+  if (out.length === 3) return `${count}, ${out[0]}, ${out[1]}, and ${out[2]} out`
+  return `${count} in`
+}
+
 export function attendanceLabel(names: readonly string[], everyone: boolean): string {
   if (everyone || names.length === 0) return "Everyone"
   if (names.length === 1) return names[0] ?? "Everyone"

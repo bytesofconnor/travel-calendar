@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { formatTripDateRange } from "@/lib/format-dates"
 import type { TripItem, TripItemInput } from "@/lib/kanban-store"
+import { guessPlanType } from "@/lib/plan-form"
+import type { PlanType } from "@/lib/plan-types"
 import type { MemberView, SharedItem } from "@/lib/shared-trip"
 
 function storyItem(item: SharedItem, tripId: string, createdBy: string): TripItem {
@@ -54,7 +56,7 @@ export function PairTripScreen({ roomId, member }: { roomId: string; member: "ow
   const [itemOpen, setItemOpen] = useState(false)
   const [editItem, setEditItem] = useState<TripItem | null>(null)
   const [initialInput, setInitialInput] = useState<Partial<TripItemInput> | null>(null)
-  const [initialTravel, setInitialTravel] = useState(false)
+  const [initialType, setInitialType] = useState<PlanType | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
@@ -111,14 +113,16 @@ export function PairTripScreen({ roomId, member }: { roomId: string; member: "ow
   const items = trip.items.map((item) => storyItem(item, trip.id, member))
   const noteText = savedNote.trim() ? savedNote : "No shared note yet"
 
-  function openCapture(kind?: CaptureKind) {
+  function openCapture(kind?: CaptureKind, text?: string) {
     const baseDate = trip.startDate
+    const typed = kind ?? (text?.trim() ? guessPlanType(text) : "place")
     setEditItem(null)
-    setInitialTravel(kind === "flight")
-    if (kind === "flight") setInitialInput({ title: "Flight", startDate: baseDate, endDate: baseDate })
-    else if (kind === "stay") setInitialInput({ title: "Stay", startDate: baseDate, endDate: baseDate })
-    else if (kind === "place") setInitialInput({ title: "", startDate: baseDate, endDate: baseDate })
-    else setInitialInput(null)
+    setInitialType(typed)
+    setInitialInput({
+      title: text?.trim() ?? "",
+      startDate: baseDate,
+      endDate: baseDate,
+    })
     setItemOpen(true)
   }
 
@@ -201,7 +205,7 @@ export function PairTripScreen({ roomId, member }: { roomId: string; member: "ow
             onEditItem={(item) => {
               setEditItem(item)
               setInitialInput(null)
-              setInitialTravel(Boolean(item.locationTo))
+              setInitialType(null)
               setItemOpen(true)
             }}
             onStartFlight={() => openCapture("flight")}
@@ -226,7 +230,7 @@ export function PairTripScreen({ roomId, member }: { roomId: string; member: "ow
           </div>
         </div>
       </div>
-      <CaptureDock hint="Add to the trip…" onCapture={openCapture} onOpenNotes={() => document.getElementById("shared-note-draft")?.focus()} />
+      <CaptureDock hint="Add to the trip…" onCapture={openCapture} />
       <ItemDialog
         open={itemOpen}
         onOpenChange={(open) => {
@@ -234,13 +238,14 @@ export function PairTripScreen({ roomId, member }: { roomId: string; member: "ow
           if (!open) {
             setEditItem(null)
             setInitialInput(null)
-            setInitialTravel(false)
+            setInitialType(null)
           }
         }}
         defaultDate={view.trip.startDate}
         editItem={editItem}
         initialInput={initialInput}
-        initialTravel={initialTravel}
+        initialType={initialType}
+        placeHint="Lisbon"
         currentUserName={member === "owner" ? "Avery" : "Blair"}
         isSaving={isSaving}
         onSave={saveItem}

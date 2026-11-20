@@ -710,6 +710,7 @@ http.route({
         endDate: item.endDate,
         location: item.location,
         locationTo: item.locationTo,
+        planType: item.planType,
         startTime: item.startTime,
         endTime: item.endTime,
         startTimeZone: item.startTimeZone,

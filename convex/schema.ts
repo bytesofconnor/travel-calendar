@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server"
 import { authTables } from "@convex-dev/auth/server"
 import { v } from "convex/values"
 
+import { geoPlaceValidator, planTypeValidator } from "./lib/place"
 import { themePackValidator } from "./lib/themePack"
 
 export default defineSchema({
@@ -46,6 +47,12 @@ export default defineSchema({
     endDate: v.string(),
     location: v.string(),
     locationTo: v.optional(v.string()),
+    planType: v.optional(planTypeValidator),
+    place: v.optional(geoPlaceValidator),
+    placeTo: v.optional(geoPlaceValidator),
+    confirmation: v.optional(v.string()),
+    flightCode: v.optional(v.string()),
+    address: v.optional(v.string()),
     startTime: v.optional(v.string()),
     endTime: v.optional(v.string()),
     startTimeZone: v.optional(v.string()),
@@ -143,4 +150,10 @@ export default defineSchema({
   })
     .index("by_trip_and_status", ["tripId", "status"])
     .index("by_proposer_and_status", ["proposedBy", "status"]),
+
+  geoCache: defineTable({
+    key: v.string(),
+    payload: v.string(),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
 })

@@ -3,6 +3,7 @@ import { v } from "convex/values"
 import type { Doc, Id } from "../_generated/dataModel"
 import type { QueryCtx } from "../_generated/server"
 import { parseThemePack } from "../../lib/theme-packs"
+import { geoPlaceValidator, planTypeValidator } from "./place"
 import { themePackValidator } from "./themePack"
 
 export const tripValidator = v.object({
@@ -34,6 +35,12 @@ export const bundleItemValidator = v.object({
   endDate: v.string(),
   location: v.string(),
   locationTo: v.optional(v.string()),
+  planType: v.optional(planTypeValidator),
+  place: v.optional(geoPlaceValidator),
+  placeTo: v.optional(geoPlaceValidator),
+  confirmation: v.optional(v.string()),
+  flightCode: v.optional(v.string()),
+  address: v.optional(v.string()),
   startTime: v.optional(v.string()),
   endTime: v.optional(v.string()),
   startTimeZone: v.optional(v.string()),
@@ -79,6 +86,12 @@ export function serializeItem(item: Doc<"tripItems">) {
     endDate: item.endDate,
     location: item.location,
     locationTo: item.locationTo,
+    ...(item.planType ? { planType: item.planType } : {}),
+    ...(item.place ? { place: item.place } : {}),
+    ...(item.placeTo ? { placeTo: item.placeTo } : {}),
+    ...(item.confirmation ? { confirmation: item.confirmation } : {}),
+    ...(item.flightCode ? { flightCode: item.flightCode } : {}),
+    ...(item.address ? { address: item.address } : {}),
     startTime: item.startTime,
     endTime: item.endTime,
     startTimeZone: item.startTimeZone,

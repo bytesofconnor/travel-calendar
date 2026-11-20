@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { resolveAttendance, storedAttendeeIds, toggleMember } from "./attendees.ts"
+import { attendanceSummary, resolveAttendance, storedAttendeeIds, toggleMember } from "./attendees.ts"
 
 const family = ["mom", "dad", "connor", "alex"] as const
 
@@ -41,6 +41,17 @@ test("turning one face off keeps the rest, and the last face stays on", () => {
   assert.deepEqual(toggleMember(undefined, family, "dad"), ["mom", "connor", "alex"])
   assert.deepEqual(toggleMember(["mom"], family, "mom"), ["mom"])
   assert.equal(toggleMember(["mom", "dad", "connor"], family, "alex"), undefined)
+})
+
+test("the who's in summary names who is out", () => {
+  const members = [
+    { userId: "mom", displayName: "Mom Barrett" },
+    { userId: "dad", displayName: "Dad Barrett" },
+    { userId: "connor", displayName: "Connor" },
+    { userId: "alex", displayName: "Alex" },
+  ]
+  assert.equal(attendanceSummary(members, undefined), "Everyone")
+  assert.equal(attendanceSummary(members, ["connor", "alex"]), "2 of 4, Mom and Dad out")
 })
 
 test("the same subset saves to the same ids", () => {

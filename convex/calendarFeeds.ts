@@ -1,6 +1,7 @@
 import { ConvexError, v } from "convex/values"
 
 import { calendarToken, hashCalendarToken, isCalendarToken } from "../lib/calendar/token"
+import { planTypeValidator } from "./lib/place"
 import type { Id } from "./_generated/dataModel"
 import type { MutationCtx } from "./_generated/server"
 import { mutation, query } from "./_generated/server"
@@ -16,6 +17,7 @@ const feedItem = v.object({
   endDate: v.string(),
   location: v.string(),
   locationTo: v.optional(v.string()),
+  planType: v.optional(planTypeValidator),
   startTime: v.optional(v.string()),
   endTime: v.optional(v.string()),
   startTimeZone: v.optional(v.string()),
@@ -149,6 +151,7 @@ export const readByToken = query({
           endDate: item.endDate,
           location: item.location,
           locationTo: item.locationTo,
+          planType: item.planType,
           startTime: item.startTime,
           endTime: item.endTime,
           startTimeZone: item.startTimeZone,

@@ -13,6 +13,7 @@ import {
 } from "@/lib/trip-kind"
 import { KindChip } from "@/components/capture-dock"
 import { LiveWhisper } from "@/components/live-whisper"
+import { DayWeather, type DayWeatherState } from "@/components/weather-chip"
 
 interface TripStoryViewProps {
   mode: "trip" | "today"
@@ -35,6 +36,7 @@ interface TripStoryViewProps {
   onOpenPacking: () => void
   onOpenNotes: () => void
   onOpenAsk: () => void
+  weather?: DayWeatherState
   className?: string
 }
 
@@ -140,6 +142,7 @@ export function TripStoryView({
   onOpenPacking,
   onOpenNotes,
   onOpenAsk,
+  weather,
   className,
 }: TripStoryViewProps) {
   const chapters = groupItemsByStartDate(items)
@@ -161,6 +164,7 @@ export function TripStoryView({
             {formatChapterDate(today)} · Day {dayNumber}
           </p>
           <h2 className="story-chapter__place mt-2">{place}</h2>
+          {weather ? <DayWeather date={today} readings={weather.readings} units={weather.units} showScale choose={weather.choose} /> : null}
           <p className="story-lede mt-2.5">
             {todayItems.length === 0
               ? "Nothing planned yet — add what’s happening."
@@ -274,7 +278,7 @@ export function TripStoryView({
         <LiveWhisper items={items} currentUserId={currentUserId} />
       </div>
 
-      {chapters.map((chapter) => {
+      {chapters.map((chapter, index) => {
         const stay = chapter.items.find((item) => inferPlanKind(item) === "stay")
         const place = stay?.location || chapter.items[0]?.location || "—"
         const note = stay?.notes?.trim() || undefined
@@ -285,6 +289,15 @@ export function TripStoryView({
               <h2 id={`chapter-${chapter.date}`} className="story-chapter__place mt-1.5">
                 {place}
               </h2>
+              {weather ? (
+                <DayWeather
+                  date={chapter.date}
+                  readings={weather.readings}
+                  units={weather.units}
+                  showScale={index === 0}
+                  choose={weather.choose}
+                />
+              ) : null}
               {note ? <p className="story-chapter__note">{note}</p> : null}
             </header>
             <div className="flex flex-col gap-2.5" role="list">

@@ -15,6 +15,7 @@ import type * as agentReads from "../agentReads.js";
 import type * as auth from "../auth.js";
 import type * as calendarFeeds from "../calendarFeeds.js";
 import type * as gapClaims from "../gapClaims.js";
+import type * as geoCache from "../geoCache.js";
 import type * as health from "../health.js";
 import type * as http from "../http.js";
 import type * as items from "../items.js";
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   calendarFeeds: typeof calendarFeeds;
   gapClaims: typeof gapClaims;
+  geoCache: typeof geoCache;
   health: typeof health;
   http: typeof http;
   items: typeof items;

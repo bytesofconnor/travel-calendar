@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import type { TripItem } from "@/lib/kanban-store"
 import { inferPlanKind, kindLabel, type PlanKind } from "@/lib/trip-kind"
 import { cn } from "@/lib/utils"
+import { DayWeather, type DayWeatherState } from "@/components/weather-chip"
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const
 const MONTHS = [
@@ -41,6 +42,7 @@ interface TripMonthViewProps {
   today: string
   onEditItem: (item: TripItem) => void
   onAddItem: (date: string) => void
+  weather?: DayWeatherState
   className?: string
 }
 
@@ -127,6 +129,7 @@ export function TripMonthView({
   today,
   onEditItem,
   onAddItem,
+  weather,
   className,
 }: TripMonthViewProps) {
   const initialMonth = monthKey(tripStart) || monthKey(today)
@@ -245,6 +248,9 @@ export function TripMonthView({
           <h3 className="month-detail__title">
             {selectedParts.weekday}, {selectedParts.month} {selectedParts.day}
           </h3>
+          {weather ? (
+            <DayWeather date={selected} readings={weather.readings} units={weather.units} showScale choose={weather.choose} />
+          ) : null}
           {selectedItems.length > 0 ? (
             <ul className="month-detail__list">
               {selectedItems.map((item) => {

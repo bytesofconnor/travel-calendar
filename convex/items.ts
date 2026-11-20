@@ -8,6 +8,17 @@ import { internalQuery, mutation } from "./_generated/server"
 import type { MutationCtx } from "./_generated/server"
 import { getCurrentUserId, getMembership, requireMembership } from "./lib/auth"
 import { bundleItemValidator, serializeItem } from "./lib/tripData"
+import { geoPlaceValidator, planTypeValidator } from "./lib/place"
+
+type PlanTypeName = "stay" | "flight" | "place" | "note"
+
+type StoredPlace = {
+  name: string
+  lat: number
+  lng: number
+  country?: string
+  timeZone?: string
+}
 
 type ItemWrite = {
   title: string
@@ -18,11 +29,72 @@ type ItemWrite = {
   endDate: string
   location: string
   locationTo?: string
+  planType?: PlanTypeName
+  place?: StoredPlace | null
+  placeTo?: StoredPlace | null
+  confirmation?: string
+  flightCode?: string
+  address?: string
   startTime?: string
   endTime?: string
   startTimeZone?: string
   endTimeZone?: string
   attendeeIds?: Id<"users">[] | null
+}
+
+const extraItemArgs = {
+  planType: v.optional(planTypeValidator),
+  place: v.optional(v.union(geoPlaceValidator, v.null())),
+  placeTo: v.optional(v.union(geoPlaceValidator, v.null())),
+  confirmation: v.optional(v.string()),
+  flightCode: v.optional(v.string()),
+  address: v.optional(v.string()),
+}
+
+function cleanPlace(place: StoredPlace | null | undefined): StoredPlace | undefined {
+  if (!place) return undefined
+  const name = place.name.trim()
+  if (!name || !Number.isFinite(place.lat) || !Number.isFinite(place.lng)) return undefined
+  const country = place.country?.trim()
+  const timeZone = place.timeZone?.trim()
+  return {
+    name,
+    lat: place.lat,
+    lng: place.lng,
+    ...(country ? { country } : {}),
+    ...(timeZone && isIanaTimeZone(timeZone) ? { timeZone } : {}),
+  }
+}
+
+function detailInsert(input: ItemWrite) {
+  const place = cleanPlace(input.place)
+  const placeTo = cleanPlace(input.placeTo)
+  return {
+    ...(input.planType ? { planType: input.planType } : {}),
+    ...(place ? { place } : {}),
+    ...(placeTo ? { placeTo } : {}),
+    ...(input.confirmation?.trim() ? { confirmation: input.confirmation.trim() } : {}),
+    ...(input.flightCode?.trim() ? { flightCode: input.flightCode.trim() } : {}),
+    ...(input.address?.trim() ? { address: input.address.trim() } : {}),
+  }
+}
+
+function detailPatch(input: ItemWrite) {
+  const patch: {
+    planType?: PlanTypeName
+    place?: StoredPlace
+    placeTo?: StoredPlace
+    confirmation?: string
+    flightCode?: string
+    address?: string
+  } = {}
+  if ("planType" in input) patch.planType = input.planType
+  if ("place" in input) patch.place = cleanPlace(input.place)
+  if ("placeTo" in input) patch.placeTo = cleanPlace(input.placeTo)
+  if (input.confirmation !== undefined) patch.confirmation = input.confirmation.trim() || undefined
+  if (input.flightCode !== undefined) patch.flightCode = input.flightCode.trim() || undefined
+  if (input.address !== undefined) patch.address = input.address.trim() || undefined
+  return patch
 }
 
 type Attribution = {
@@ -121,6 +193,7 @@ export async function insertItem(
   const itemId = await ctx.db.insert("tripItems", {
     tripId,
     ...fields,
+    ...detailInsert(input),
     ...scheduleFields(input),
     ...(attendees?.attendeeIds ? { attendeeIds: attendees.attendeeIds } : {}),
     createdBy,
@@ -148,6 +221,7 @@ export async function patchItem(
   const attendees = attendeeFields(input)
   await ctx.db.patch(itemId, {
     ...fields,
+    ...detailPatch(input),
     ...scheduleFields(input),
     ...(attendees ?? {}),
     updatedAt: Date.now(),
@@ -177,6 +251,7 @@ export const create = mutation({
     endDate: v.string(),
     location: v.string(),
     locationTo: v.optional(v.string()),
+    ...extraItemArgs,
     startTime: v.optional(v.string()),
     endTime: v.optional(v.string()),
     startTimeZone: v.optional(v.string()),
@@ -213,6 +288,7 @@ export const update = mutation({
     endDate: v.string(),
     location: v.string(),
     locationTo: v.optional(v.string()),
+    ...extraItemArgs,
     startTime: v.optional(v.string()),
     endTime: v.optional(v.string()),
     startTimeZone: v.optional(v.string()),
