@@ -94,15 +94,14 @@ test("arrow keys move between days", async ({ page }) => {
   await expect(page.getByRole("gridcell", { name: /Wednesday November 18/ })).toBeFocused()
 })
 
-test("narrow phones show dots and stay inside the screen", async ({ page }) => {
+test("narrow phones show count badges and stay inside the screen", async ({ page }) => {
   for (const width of [390, 320]) {
     await page.setViewportSize({ width, height: width === 320 ? 568 : 844 })
     await openMonth(page)
     const day = page.getByRole("gridcell", { name: /Wednesday November 18, today, 4 events/ })
-    await expect(day.locator(".month-chip").first()).toBeHidden()
-    await expect(day.locator(".month-dot")).toHaveCount(3)
-    await expect(day.locator(".month-dot").first()).toBeVisible()
-    await expect(day.getByText("+1 more")).toBeVisible()
+    await expect(page.locator(".month-chip").first()).toBeHidden()
+    await expect(page.locator(".month-bar").first()).toBeHidden()
+    await expect(page.locator(".month-badge", { hasText: "4" }).first()).toBeVisible()
     const box = await day.boundingBox()
     expect(box?.width ?? 0).toBeGreaterThanOrEqual(44)
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
@@ -111,28 +110,39 @@ test("narrow phones show dots and stay inside the screen", async ({ page }) => {
 
   await page.setViewportSize({ width: 1280, height: 800 })
   await openMonth(page)
-  const wide = page.getByRole("gridcell", { name: /Wednesday November 18, today, 4 events/ })
-  await expect(wide.locator(".month-chip").first()).toBeVisible()
-  await expect(wide.getByText("+2 more")).toBeVisible()
+  await expect(page.locator(".month-chip", { hasText: "TAP to Lisbon" }).first()).toBeVisible()
+  await expect(page.locator(".month-chip", { hasText: "Flight" }).first()).toBeVisible()
+  await expect(page.locator(".month-bar", { hasText: "Alfama apartment" })).toHaveCount(2)
   expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
 })
 
 test("month view stays readable at large text and 200% zoom", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "Text scaling runs once on Chromium")
   await page.setViewportSize({ width: 320, height: 568 })
-  await page.addInitScript(() => {
-    document.documentElement.style.fontSize = "32px"
-  })
-  await openMonth(page)
+  await page.goto("/review?screen=month", { waitUntil: "domcontentloaded" })
+  await waitUntilInteractive(page)
+  await page.addStyleTag({ content: "html { font-size: 32px !important; }" })
   await expect(page.getByRole("heading", { name: "November 2026" })).toBeVisible()
+  await expect(page.locator(".month-agenda")).toBeVisible()
+  const agendaTitle = page.locator(".month-agenda__title", { hasText: "Alfama apartment" }).first()
+  await expect(agendaTitle).toBeVisible()
+  const agendaText = await agendaTitle.evaluate((element) => {
+    const style = getComputedStyle(element)
+    const box = element.getBoundingClientRect()
+    return { whiteSpace: style.whiteSpace, text: element.textContent, right: box.right, width: box.width }
+  })
+  expect(agendaText.whiteSpace).not.toBe("nowrap")
+  expect(agendaText.text).toBe("Alfama apartment")
+  expect(agendaText.right).toBeLessThanOrEqual(320)
   expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
 
   await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/review?screen=month", { waitUntil: "domcontentloaded" })
+  await waitUntilInteractive(page)
   await page.evaluate(() => {
-    document.documentElement.style.fontSize = "16px"
     document.documentElement.style.zoom = "2"
   })
-  await expect(page.getByRole("grid", { name: "November 2026" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "November 2026" })).toBeVisible()
   expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
 })
 
@@ -156,6 +166,99 @@ test("month view keeps contrast in light, dark, and each theme pack", async ({ p
     const results = await new AxeBuilder({ page }).include("[data-month-view]").analyze()
     expect(results.violations).toEqual([])
   }
+})
+
+test("home, end, and page keys move through the month", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "Key map runs once on Chromium")
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await openMonth(page)
+  const start = page.getByRole("gridcell", { name: /Wednesday November 18/ })
+  await start.focus()
+  await page.keyboard.press("PageDown")
+  await expect(page.getByRole("heading", { name: "December 2026" })).toBeVisible()
+  await expect(page.getByRole("gridcell", { name: /Friday December 18/ })).toBeFocused()
+  await page.keyboard.press("PageUp")
+  await expect(page.getByRole("gridcell", { name: /Wednesday November 18/ })).toBeFocused()
+  await page.keyboard.press("Home")
+  await expect(page.getByRole("gridcell", { name: /Sunday November 15/ })).toBeFocused()
+  await page.keyboard.press("End")
+  await expect(page.getByRole("gridcell", { name: /Saturday November 21/ })).toBeFocused()
+  await page.keyboard.press("Control+Home")
+  await expect(page.getByRole("gridcell", { name: /Sunday November 1, no events/ })).toBeFocused()
+  await page.keyboard.press("Control+End")
+  await expect(page.getByRole("gridcell", { name: /Monday November 30/ })).toBeFocused()
+})
+
+test("the month grid fills the width without horizontal overflow", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "Width matrix runs once on Chromium")
+  for (const width of [320, 390, 768, 1280, 1920, 2560]) {
+    await page.setViewportSize({ width, height: 900 })
+    await openMonth(page)
+    expect(await pageOverflow(page), `overflow at ${width}`).toBeLessThanOrEqual(1)
+    const grid = page.locator(".month-grid")
+    await expect(grid).toBeVisible()
+    const gridBox = await grid.boundingBox()
+    const viewBox = await page.locator(".month-view").boundingBox()
+    expect(gridBox?.width ?? 0).toBeGreaterThan((viewBox?.width ?? 1) * 0.85)
+    if (width >= 768 && width <= 1920) {
+      expect(gridBox?.width ?? 0).toBeGreaterThan(width * 0.75)
+    }
+    if (width >= 1280) {
+      expect(gridBox?.height ?? 0).toBeGreaterThan(420)
+    }
+    if (width === 2560) {
+      expect(gridBox?.width ?? 0).toBeGreaterThan(1400)
+      expect(gridBox?.width ?? 0).toBeLessThan(2000)
+      const left = gridBox?.x ?? 0
+      const right = width - ((gridBox?.x ?? 0) + (gridBox?.width ?? 0))
+      expect(Math.abs(left - right)).toBeLessThan(48)
+    }
+  }
+})
+
+test("a multi-day stay is one bar that wraps at the week", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto("/review?screen=vietnam", { waitUntil: "domcontentloaded" })
+  await waitUntilInteractive(page)
+  await expect(page.getByRole("heading", { name: "June 2027" })).toBeVisible()
+  const bars = page.locator(".month-bar", { hasText: "Old Quarter apartment" })
+  await expect(bars).toHaveCount(2)
+  const first = await bars.nth(0).boundingBox()
+  const friday = await page.getByRole("gridcell", { name: /Friday June 11/ }).boundingBox()
+  expect(first?.width ?? 0).toBeGreaterThan((friday?.width ?? 0) * 1.5)
+  const flight = page.locator(".month-chip", { hasText: "SFO to HAN" })
+  await expect(flight).toBeVisible()
+  await expect(flight).toContainText("Flight")
+  expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
+})
+
+test("add something stays above the composer", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "Dock clearance runs once on Chromium")
+  await page.setViewportSize({ width: 390, height: 700 })
+  await openMonth(page)
+  await page.getByRole("gridcell", { name: /Wednesday November 18/ }).click()
+  const add = page.getByRole("button", { name: "Add something", exact: true })
+  await expect(add).toBeVisible()
+  const addBox = await add.boundingBox()
+  const dock = await page.getByRole("region", { name: "Add to trip" }).boundingBox()
+  expect(addBox?.y ?? 0).toBeGreaterThanOrEqual(0)
+  expect((addBox?.y ?? 0) + (addBox?.height ?? 0)).toBeLessThanOrEqual((dock?.y ?? 0) + 1)
+})
+
+test("text spacing does not overflow the month", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "Text spacing runs once on Chromium")
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    const style = document.createElement("style")
+    style.textContent = `
+      * { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; }
+      p { margin-bottom: 2em !important; }
+    `
+    document.head.appendChild(style)
+  })
+  await openMonth(page)
+  await expect(page.getByRole("heading", { name: "November 2026" })).toBeVisible()
+  expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
 })
 
 test("month view does not animate when motion is reduced", async ({ page }) => {

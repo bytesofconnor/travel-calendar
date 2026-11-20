@@ -144,6 +144,123 @@ const coveredItems: TripItem[] = [
   },
 ]
 
+const vietnamItems: TripItem[] = [
+  {
+    id: "vn-flight-in",
+    tripId: TRIP_ID,
+    title: "SFO to HAN",
+    startDate: "2027-06-11",
+    endDate: "2027-06-11",
+    location: "SFO",
+    locationTo: "HAN",
+    createdBy: USER_ID,
+    createdAt: "2027-01-02T12:00:00.000Z",
+    updatedAt: "2027-01-02T12:00:00.000Z",
+  },
+  {
+    id: "vn-hanoi",
+    tripId: TRIP_ID,
+    title: "Old Quarter apartment",
+    startDate: "2027-06-11",
+    endDate: "2027-06-16",
+    location: "Hanoi",
+    createdBy: USER_ID,
+    createdAt: "2027-01-02T13:00:00.000Z",
+    updatedAt: "2027-01-02T13:00:00.000Z",
+  },
+  {
+    id: "vn-train",
+    tripId: TRIP_ID,
+    title: "Train Street",
+    startDate: "2027-06-12",
+    endDate: "2027-06-12",
+    location: "Hanoi",
+    createdBy: "user_alex",
+    createdAt: "2027-01-03T12:00:00.000Z",
+    updatedAt: "2027-01-03T12:00:00.000Z",
+  },
+  {
+    id: "vn-flight-danang",
+    tripId: TRIP_ID,
+    title: "HAN to DAD",
+    startDate: "2027-06-16",
+    endDate: "2027-06-16",
+    location: "HAN",
+    locationTo: "DAD",
+    createdBy: USER_ID,
+    createdAt: "2027-01-04T12:00:00.000Z",
+    updatedAt: "2027-01-04T12:00:00.000Z",
+  },
+  {
+    id: "vn-hoian",
+    tripId: TRIP_ID,
+    title: "Hội An house",
+    startDate: "2027-06-16",
+    endDate: "2027-06-24",
+    location: "Hội An",
+    createdBy: "user_mom",
+    createdAt: "2027-01-04T13:00:00.000Z",
+    updatedAt: "2027-01-04T13:00:00.000Z",
+  },
+  {
+    id: "vn-lanterns",
+    tripId: TRIP_ID,
+    title: "Lantern walk",
+    startDate: "2027-06-20",
+    endDate: "2027-06-20",
+    location: "Hội An",
+    createdBy: "user_dad",
+    createdAt: "2027-01-05T12:00:00.000Z",
+    updatedAt: "2027-01-05T12:00:00.000Z",
+  },
+  {
+    id: "vn-flight-sgn",
+    tripId: TRIP_ID,
+    title: "DAD to SGN",
+    startDate: "2027-06-24",
+    endDate: "2027-06-24",
+    location: "DAD",
+    locationTo: "SGN",
+    createdBy: USER_ID,
+    createdAt: "2027-01-06T12:00:00.000Z",
+    updatedAt: "2027-01-06T12:00:00.000Z",
+  },
+  {
+    id: "vn-saigon",
+    tripId: TRIP_ID,
+    title: "District 1 loft",
+    startDate: "2027-06-24",
+    endDate: "2027-07-02",
+    location: "Ho Chi Minh City",
+    createdBy: USER_ID,
+    createdAt: "2027-01-06T13:00:00.000Z",
+    updatedAt: "2027-01-06T13:00:00.000Z",
+  },
+  {
+    id: "vn-benthanh",
+    tripId: TRIP_ID,
+    title: "Ben Thanh Market",
+    startDate: "2027-06-26",
+    endDate: "2027-06-26",
+    location: "Ho Chi Minh City",
+    createdBy: "user_alex",
+    createdAt: "2027-01-07T12:00:00.000Z",
+    updatedAt: "2027-01-07T12:00:00.000Z",
+  },
+  {
+    id: "vn-flight-home",
+    tripId: TRIP_ID,
+    title: "SGN to SFO",
+    startDate: "2027-07-02",
+    endDate: "2027-07-02",
+    location: "SGN",
+    locationTo: "SFO",
+    createdBy: USER_ID,
+    createdAt: "2027-01-08T12:00:00.000Z",
+    updatedAt: "2027-01-08T12:00:00.000Z",
+  },
+]
+
 const monthItems: TripItem[] = [
   ...items,
   {
@@ -375,11 +492,14 @@ export function ReviewGallery({
   const [planEdit, setPlanEdit] = useState<TripItem | null>(screen === "edit" ? editItem : null)
   const [initialType, setInitialType] = useState<PlanType | null>(screen === "add" ? "place" : null)
   const weather = useDayWeather(homeItems, { start: tripStartDate, end: tripEndDate }, REVIEW_WEATHER)
-  const [view, setView] = useState<"list" | "month">(screen === "month" ? "month" : "list")
+  const vietnam = screen === "vietnam"
+  const [view, setView] = useState<"list" | "month">(screen === "month" || vietnam ? "month" : "list")
   const [shareOpen, setShareOpen] = useState(screen === "invite")
-  const roster = partyMembers(party)
-  const tripTitle = party === 5 ? "Vietnam '27" : "Lisbon with you"
-  const coverMeta = `Nov 18 – 24 · 7 days · ${travelerLabel(roster, USER_ID)} · Connor proposed · Alex confirmed`
+  const roster = partyMembers(vietnam ? 5 : party)
+  const tripTitle = vietnam || party === 5 ? "Vietnam '27" : "Lisbon with you"
+  const coverMeta = vietnam
+    ? `Jun 11 – Jul 2 · 22 days · ${travelerLabel(roster, USER_ID)}`
+    : `Nov 18 – 24 · 7 days · ${travelerLabel(roster, USER_ID)} · Connor proposed · Alex confirmed`
 
   if (screen === "join" || screen === "create") {
     const mode = screen === "join" ? "join" : "create"
@@ -485,11 +605,10 @@ export function ReviewGallery({
       >
         {view === "month" ? (
           <TripMonthView
-            className="story-shell"
-            items={screen === "month" ? monthItems : homeItems}
-            tripStart={tripStartDate}
-            tripEnd={tripEndDate}
-            today="2026-11-18"
+            items={vietnam ? vietnamItems : screen === "month" ? monthItems : homeItems}
+            tripStart={vietnam ? "2027-06-11" : tripStartDate}
+            tripEnd={vietnam ? "2027-07-02" : tripEndDate}
+            today={vietnam ? "2027-06-18" : "2026-11-18"}
             onEditItem={(item) => openPlan(item)}
             onAddItem={(date) => openPlan(null, date)}
             weather={weather}
