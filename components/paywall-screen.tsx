@@ -5,6 +5,7 @@ import { useState } from "react"
 import { ArrowRight, Loader2, MapPin } from "lucide-react"
 
 import { api } from "@/convex/_generated/api"
+import { PageInset, PageShell } from "@/components/page-shell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -49,7 +50,7 @@ export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallS
   }
 
   return (
-    <main id="main-content" className="fixed inset-0 z-50 flex items-center justify-center bg-background px-4">
+    <PageShell className="fixed inset-0 z-50 flex items-center justify-center bg-background">
       <div
         className="pointer-events-none fixed inset-0 opacity-20"
         style={{
@@ -57,7 +58,8 @@ export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallS
         }}
       />
 
-      <div className="relative w-full max-w-sm space-y-8 text-center">
+      <PageInset width="read" className="relative">
+      <div className="mx-auto w-full max-w-sm space-y-8 text-center">
         <div className="flex justify-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary">
             <MapPin className="h-7 w-7 text-foreground" />
@@ -159,6 +161,7 @@ export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallS
           </p>
         )}
       </div>
-    </main>
+      </PageInset>
+    </PageShell>
   )
 }

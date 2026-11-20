@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react"
 
+import { PageInset } from "@/components/page-shell"
 import { cn } from "@/lib/utils"
 import type { PlanKind } from "@/lib/trip-kind"
 
@@ -61,7 +62,7 @@ export function CaptureDock({ hint, onCapture, className }: CaptureDockProps) {
 
   return (
     <div className={cn("capture-dock", className)} role="region" aria-label="Add to trip">
-      <div className="story-shell">
+      <PageInset className="capture-dock__inset">
       <form className="capture-dock__field" onSubmit={submit}>
         <span className="capture-dock__plus" aria-hidden="true">
           +
@@ -89,7 +90,7 @@ export function CaptureDock({ hint, onCapture, className }: CaptureDockProps) {
           />
         ))}
       </div>
-      </div>
+      </PageInset>
     </div>
   )
 }

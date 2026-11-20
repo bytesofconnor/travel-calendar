@@ -6,6 +6,8 @@ import { Calendar, Ellipsis } from "lucide-react"
 import type { Id } from "@/convex/_generated/dataModel"
 import { CaptureDock, type CaptureKind } from "@/components/capture-dock"
 import { useDayWeather } from "@/components/day-weather"
+import { TripWorkspace } from "@/components/trip-workspace"
+import { TemperatureMenuItems } from "@/components/weather-chip"
 import { ConfirmQueue } from "@/components/confirm-queue"
 import { CreateJoinScreen } from "@/components/create-join-screen"
 import { EditTripDialog } from "@/components/edit-trip-dialog"
@@ -13,7 +15,6 @@ import { ItemDialog } from "@/components/item-dialog"
 import { PaywallScreen } from "@/components/paywall-screen"
 import { ShareTripDialog } from "@/components/share-trip-dialog"
 import { ThemePackPickerMenuItems } from "@/components/theme-pack-menu"
-import { TripCover, SpectrumHairline } from "@/components/trip-cover"
 import { TripHome } from "@/components/trip-home"
 import { TripMonthView } from "@/components/trip-month-view"
 import { TripStoryView } from "@/components/trip-story-view"
@@ -34,7 +35,7 @@ import type { Trip, TripItem, TripItemInput, TripMember } from "@/lib/kanban-sto
 import { guessPlanType } from "@/lib/plan-form"
 import type { PlanType } from "@/lib/plan-types"
 import { buildTripHome, type GapAction } from "@/lib/trip-home/detect"
-import type { WeatherReading } from "@/lib/weather"
+import type { WeatherReading, WeatherUnits } from "@/lib/weather"
 import { parseThemePack, type ThemePackId } from "@/lib/theme-packs"
 
 const TRIP_ID = "trip_lisbon"
@@ -309,12 +310,13 @@ function TripFrame({
   screen,
   view,
   onViewChange,
-  showCover,
   captureHint,
   themePack,
   travelers,
   meta,
   tripName,
+  units,
+  onUnits,
   onOpenMembers,
   onCapture,
   children,
@@ -322,12 +324,13 @@ function TripFrame({
   screen: string
   view: "list" | "month"
   onViewChange: (view: "list" | "month") => void
-  showCover: boolean
   captureHint: string
   themePack: ThemePackId | null
   travelers: TripMember[]
   meta: string
   tripName: string
+  units: WeatherUnits
+  onUnits: (units: WeatherUnits) => void
   onOpenMembers: () => void
   onCapture?: (kind?: CaptureKind, text?: string) => void
   children: ReactNode
@@ -337,27 +340,12 @@ function TripFrame({
   const [calendarToken, setCalendarToken] = useState(REVIEW_CALENDAR_TOKEN)
 
   return (
-    <main
-      id="main-content"
-      data-review-ready="true"
-      data-screen={screen}
-      className="together-story relative z-10 flex h-dvh flex-col overflow-hidden"
-    >
-      <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
-        <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
-          <div className="story-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            {showCover ? (
-              <TripCover
-                className="trip-cover--compact"
-                tripName={tripName}
-                meta={meta}
-                showHairline={false}
-              />
-            ) : null}
-            <div className="story-chrome-sticky z-20">
-              <SpectrumHairline />
-              <header className="border-b border-border/80 bg-background">
-                <div className="story-shell">
+    <div data-review-ready="true" data-screen={screen} className="contents">
+    <TripWorkspace
+      mode={view}
+      tripName={tripName}
+      meta={meta}
+      toolbar={
                   <StoryChrome
                     mode={view}
                     onModeChange={onViewChange}
@@ -393,15 +381,18 @@ function TripFrame({
                             <Calendar className="h-4 w-4" />
                             Add to calendar
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <TemperatureMenuItems units={units} onChange={onUnits} />
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem>Edit trip</DropdownMenuItem>
                           <DropdownMenuItem>Sign out</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     }
                   />
-                </div>
-              </header>
-            </div>
+      }
+      composer={<CaptureDock hint={captureHint} onCapture={onCapture ?? (() => {})} />}
+    >
             {screen === "confirm" ? (
               <ConfirmQueue
                 rows={[
@@ -422,10 +413,7 @@ function TripFrame({
               />
             ) : null}
             {children}
-          </div>
-          <CaptureDock hint={captureHint} onCapture={onCapture ?? (() => {})} />
-        </div>
-      </div>
+    </TripWorkspace>
       <AddToCalendarSheet
         open={calendarOpen}
         onOpenChange={setCalendarOpen}
@@ -438,7 +426,7 @@ function TripFrame({
           )
         }}
       />
-    </main>
+    </div>
   )
 }
 
@@ -539,7 +527,6 @@ export function ReviewGallery({
   }
 
   const story = screen === "today" ? "today" : "trip"
-  const showCover = view === "list" && story === "trip"
   const captureHint = story === "today" && view === "list" ? "What’s happening today?" : "Add to the trip…"
 
   function openPlan(item: TripItem | null, date?: string) {
@@ -585,12 +572,13 @@ export function ReviewGallery({
         screen={screen}
         view={view}
         onViewChange={setView}
-        showCover={showCover}
         captureHint={captureHint}
         themePack={themePack}
         travelers={roster}
         meta={coverMeta}
         tripName={tripTitle}
+        units={weather.units}
+        onUnits={weather.choose}
         onOpenMembers={() => setShareOpen(true)}
         onCapture={(kind, text) => {
           setPlanEdit(null)
@@ -614,10 +602,10 @@ export function ReviewGallery({
             weather={weather}
           />
         ) : (
-          <>
+          <div className="trip-list">
             {showHome ? (
               <TripHome
-                className="story-shell"
+                className="trip-list__rail"
                 model={home}
                 members={roster}
                 claims={claims}
@@ -638,7 +626,7 @@ export function ReviewGallery({
               />
             ) : null}
             <TripStoryView
-              className="story-shell"
+              className="trip-list__story"
               mode={story}
               items={homeItems}
               today="2026-11-18"
@@ -660,7 +648,7 @@ export function ReviewGallery({
               onOpenAsk={() => {}}
               weather={weather}
             />
-          </>
+          </div>
         )}
       </TripFrame>
       <TripsSheet

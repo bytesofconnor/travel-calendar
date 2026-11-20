@@ -5,6 +5,7 @@ import { ChevronDown, KeyRound, Loader2, Mail, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { LandingMastMedia } from "@/components/landing-mast-media"
+import { PageShell } from "@/components/page-shell"
 import { SpectrumHairline } from "@/components/trip-cover"
 
 function GoogleIcon() {
@@ -73,7 +74,7 @@ export function LoginScreen({
   }, [hasPendingCode, emailAuthEnabled])
 
   return (
-    <main id="main-content" className="together-story create-join">
+    <PageShell className="together-story create-join">
       <div className="create-join__mast">
         <LandingMastMedia />
         <div className="create-join__mast-bar">
@@ -269,6 +270,6 @@ export function LoginScreen({
           <div className="mt-auto" aria-hidden="true" />
         )}
       </div>
-    </main>
+    </PageShell>
   )
 }

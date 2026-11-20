@@ -367,13 +367,7 @@ export function TripMonthView({
                 {selectedParts.weekday}, {selectedParts.month} {selectedParts.day}
               </h3>
               {weather ? (
-                <DayWeather
-                  date={selected}
-                  readings={weather.readings}
-                  units={weather.units}
-                  showScale
-                  choose={weather.choose}
-                />
+                <DayWeather date={selected} readings={weather.readings} units={weather.units} />
               ) : null}
               {selectedItems.length > 0 ? (
                 <ul className="month-detail__list">
@@ -436,7 +430,6 @@ function MonthAgenda({
   onEditItem: (item: TripItem) => void
   onAddItem: (date: string) => void
 }) {
-  const firstInMonth = days.find((day) => day.inMonth)?.iso
   const weeks = Array.from({ length: 6 }, (_, week) => days.slice(week * 7, week * 7 + 7))
   return (
     <div className="month-agenda">
@@ -458,13 +451,7 @@ function MonthAgenda({
                 <article key={day.iso} className="month-agenda__day" data-trip={inTrip ? "true" : "false"} data-today={day.iso === today ? "true" : "false"}>
                   <h4 className="month-agenda__date">{label}</h4>
                   {weather ? (
-                    <DayWeather
-                      date={day.iso}
-                      readings={weather.readings}
-                      units={weather.units}
-                      showScale={day.iso === firstInMonth}
-                      choose={weather.choose}
-                    />
+                    <DayWeather date={day.iso} readings={weather.readings} units={weather.units} />
                   ) : null}
                   {dayItems.length > 0 ? (
                     <ul className="month-agenda__list">

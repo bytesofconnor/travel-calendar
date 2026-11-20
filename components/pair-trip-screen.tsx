@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 
 import { CaptureDock, type CaptureKind } from "@/components/capture-dock"
+import { PageInset, PageShell } from "@/components/page-shell"
 import { EditTripDialog } from "@/components/edit-trip-dialog"
 import { ItemDialog } from "@/components/item-dialog"
 import { TripStoryView } from "@/components/trip-story-view"
@@ -103,9 +104,11 @@ export function PairTripScreen({ roomId, member }: { roomId: string; member: "ow
 
   if (!view) {
     return (
-      <main id="main-content" className="flex min-h-dvh items-center justify-center p-6">
-        <p className="text-sm text-muted-foreground">Loading trip</p>
-      </main>
+      <PageShell className="flex min-h-dvh items-center justify-center">
+        <PageInset width="read">
+          <p className="text-sm text-muted-foreground">Loading trip</p>
+        </PageInset>
+      </PageShell>
     )
   }
 
@@ -165,9 +168,9 @@ export function PairTripScreen({ roomId, member }: { roomId: string; member: "ow
   }
 
   return (
-    <main id="main-content" className="flex h-dvh flex-col overflow-hidden">
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="story-shell pb-8 pt-6">
+    <PageShell className="page-frame">
+      <div className="story-scroll">
+        <PageInset className="pb-8 pt-6">
           <header className="flex items-start justify-between gap-3">
             <div>
               <h1 className="text-3xl font-semibold tracking-tight">{view.trip.name}</h1>
@@ -228,7 +231,7 @@ export function PairTripScreen({ roomId, member }: { roomId: string; member: "ow
               {noteText}
             </p>
           </div>
-        </div>
+        </PageInset>
       </div>
       <CaptureDock hint="Add to the trip…" onCapture={openCapture} />
       <ItemDialog
@@ -292,6 +295,6 @@ export function PairTripScreen({ roomId, member }: { roomId: string; member: "ow
         }
         isSaving={isSaving}
       />
-    </main>
+    </PageShell>
   )
 }

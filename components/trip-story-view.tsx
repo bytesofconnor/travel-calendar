@@ -1,6 +1,6 @@
 "use client"
 
-import { AttendeeStack, whoLine, type AttendeeMember } from "@/components/attendee-faces"
+import { AttendeeStack, visibleFaceLabel, whoLine, type AttendeeMember } from "@/components/attendee-faces"
 import { cn } from "@/lib/utils"
 import type { TripItem } from "@/lib/kanban-store"
 import {
@@ -55,11 +55,16 @@ function PlanCard({
 }) {
   const meta = itemMetaLine(item, kind)
   const who = whoLine(item.attendeeIds, members)
+  const faces = visibleFaceLabel(item.attendeeIds, members)
+  const visible = [kindLabel(kind), item.authorName, item.confirmLine, item.title, meta, faces]
+    .filter((part) => part && part.trim())
+    .join(" ")
+  const detail = `${kindLabel(kind)}: ${item.title}${meta ? `. ${meta}` : ""}${who ? `. ${who}` : ""}${item.confirmLine ? `. ${item.confirmLine}` : ""}`
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={`${kindLabel(kind)}: ${item.title}${meta ? `. ${meta}` : ""}${who ? `. ${who}` : ""}${item.confirmLine ? `. ${item.confirmLine}` : ""}`}
+      aria-label={`${visible}. ${detail}`}
       className={cn(
         "plan-card w-full",
         `plan-card--${kind}`,
@@ -69,20 +74,21 @@ function PlanCard({
       <span className="plan-card__rail" aria-hidden="true" />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          <span className="plan-card__kind">{kindLabel(kind)}</span>
+          {/* Zero-width spaces keep adjacent text as separate words in the accessible name. */}
+          <span className="plan-card__kind">{kindLabel(kind)}{"\u200B"}</span>
           {item.authorName ? (
             <span className="ml-auto truncate text-[11px] text-muted-foreground">
-              {item.authorName}
+              {item.authorName}{"\u200B"}
             </span>
           ) : null}
         </span>
         {item.confirmLine ? (
           <span className="mt-0.5 block truncate text-right text-[11px] text-muted-foreground">
-            {item.confirmLine}
+            {item.confirmLine}{"\u200B"}
           </span>
         ) : null}
-        <span className="plan-card__title">{item.title}</span>
-        {meta ? <span className="plan-card__meta">{meta}</span> : null}
+        <span className="plan-card__title">{item.title}{"\u200B"}</span>
+        {meta ? <span className="plan-card__meta">{meta}{"\u200B"}</span> : null}
         <AttendeeStack attendeeIds={item.attendeeIds} members={members} />
       </span>
     </button>
@@ -164,7 +170,7 @@ export function TripStoryView({
             {formatChapterDate(today)} · Day {dayNumber}
           </p>
           <h2 className="story-chapter__place mt-2">{place}</h2>
-          {weather ? <DayWeather date={today} readings={weather.readings} units={weather.units} showScale choose={weather.choose} /> : null}
+          {weather ? <DayWeather date={today} readings={weather.readings} units={weather.units} /> : null}
           <p className="story-lede mt-2.5">
             {todayItems.length === 0
               ? "Nothing planned yet — add what’s happening."
@@ -278,7 +284,7 @@ export function TripStoryView({
         <LiveWhisper items={items} currentUserId={currentUserId} />
       </div>
 
-      {chapters.map((chapter, index) => {
+      {chapters.map((chapter) => {
         const stay = chapter.items.find((item) => inferPlanKind(item) === "stay")
         const place = stay?.location || chapter.items[0]?.location || "—"
         const note = stay?.notes?.trim() || undefined
@@ -290,13 +296,7 @@ export function TripStoryView({
                 {place}
               </h2>
               {weather ? (
-                <DayWeather
-                  date={chapter.date}
-                  readings={weather.readings}
-                  units={weather.units}
-                  showScale={index === 0}
-                  choose={weather.choose}
-                />
+                <DayWeather date={chapter.date} readings={weather.readings} units={weather.units} />
               ) : null}
               {note ? <p className="story-chapter__note">{note}</p> : null}
             </header>
