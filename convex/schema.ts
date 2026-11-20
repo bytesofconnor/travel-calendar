@@ -55,6 +55,7 @@ export default defineSchema({
     createdBy: v.id("users"),
     proposedBy: v.optional(v.id("users")),
     confirmedBy: v.optional(v.id("users")),
+    attendeeIds: v.optional(v.array(v.id("users"))),
   })
     .index("by_trip", ["tripId"])
     .index("by_trip_and_start", ["tripId", "startDate"]),

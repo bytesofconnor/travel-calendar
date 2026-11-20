@@ -44,6 +44,7 @@ export const bundleItemValidator = v.object({
   _creationTime: v.number(),
   proposedBy: v.optional(v.id("users")),
   confirmedBy: v.optional(v.id("users")),
+  attendeeIds: v.optional(v.array(v.id("users"))),
 })
 
 export function serializeTrip(trip: Doc<"trips">) {
@@ -88,6 +89,7 @@ export function serializeItem(item: Doc<"tripItems">) {
     _creationTime: item._creationTime,
     ...(item.proposedBy ? { proposedBy: item.proposedBy } : {}),
     ...(item.confirmedBy ? { confirmedBy: item.confirmedBy } : {}),
+    ...(item.attendeeIds && item.attendeeIds.length > 0 ? { attendeeIds: item.attendeeIds } : {}),
   }
 }
 

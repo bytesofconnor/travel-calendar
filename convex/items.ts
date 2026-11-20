@@ -1,5 +1,6 @@
 import { v } from "convex/values"
 
+import { storedAttendeeIds } from "../lib/attendees"
 import { isIanaTimeZone } from "../lib/calendar/airports"
 
 import type { Id } from "./_generated/dataModel"
@@ -21,6 +22,7 @@ type ItemWrite = {
   endTime?: string
   startTimeZone?: string
   endTimeZone?: string
+  attendeeIds?: Id<"users">[] | null
 }
 
 type Attribution = {
@@ -89,6 +91,20 @@ function scheduleFields(input: ItemWrite) {
   return fields
 }
 
+function attendeeFields(input: ItemWrite): { attendeeIds?: Id<"users">[] } | undefined {
+  if (!("attendeeIds" in input)) return undefined
+  if (!input.attendeeIds || input.attendeeIds.length === 0) return { attendeeIds: undefined }
+  return { attendeeIds: input.attendeeIds }
+}
+
+async function tripMemberIds(ctx: MutationCtx, tripId: Id<"trips">) {
+  const members = await ctx.db
+    .query("tripMembers")
+    .withIndex("by_trip", (q) => q.eq("tripId", tripId))
+    .collect()
+  return members.map((member) => member.userId).sort((a, b) => a.localeCompare(b))
+}
+
 export async function insertItem(
   ctx: MutationCtx,
   tripId: Id<"trips">,
@@ -101,10 +117,12 @@ export async function insertItem(
     return { ok: false as const, error: "title_required" as const }
   }
   const now = Date.now()
+  const attendees = attendeeFields(input)
   const itemId = await ctx.db.insert("tripItems", {
     tripId,
     ...fields,
     ...scheduleFields(input),
+    ...(attendees?.attendeeIds ? { attendeeIds: attendees.attendeeIds } : {}),
     createdBy,
     updatedAt: now,
     revision: 0,
@@ -127,9 +145,11 @@ export async function patchItem(
   if (!fields.title) {
     return { ok: false as const, error: "title_required" as const }
   }
+  const attendees = attendeeFields(input)
   await ctx.db.patch(itemId, {
     ...fields,
     ...scheduleFields(input),
+    ...(attendees ?? {}),
     updatedAt: Date.now(),
     revision: (item.revision ?? 0) + 1,
     ...(attribution ?? {}),
@@ -161,6 +181,7 @@ export const create = mutation({
     endTime: v.optional(v.string()),
     startTimeZone: v.optional(v.string()),
     endTimeZone: v.optional(v.string()),
+    attendeeIds: v.optional(v.array(v.id("users"))),
   },
   returns: v.object({
     ...actorFields,
@@ -169,7 +190,11 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const userId = await getCurrentUserId(ctx)
     const membership = await requireMembership(ctx, args.tripId, userId)
-    const result = await insertItem(ctx, args.tripId, userId, args)
+    const memberIds = await tripMemberIds(ctx, args.tripId)
+    const result = await insertItem(ctx, args.tripId, userId, {
+      ...args,
+      attendeeIds: storedAttendeeIds(args.attendeeIds ?? [], memberIds) ?? null,
+    })
     if (!result.ok) {
       throw new Error("Title is required.")
     }
@@ -192,6 +217,7 @@ export const update = mutation({
     endTime: v.optional(v.string()),
     startTimeZone: v.optional(v.string()),
     endTimeZone: v.optional(v.string()),
+    attendeeIds: v.optional(v.array(v.id("users"))),
   },
   returns: v.object({
     ...actorFields,
@@ -203,8 +229,14 @@ export const update = mutation({
       throw new Error("Item not found.")
     }
     const membership = await requireMembership(ctx, item.tripId)
-    const { itemId, ...fields } = args
-    const result = await patchItem(ctx, itemId, fields)
+    const { itemId, attendeeIds, ...fields } = args
+    const memberIds = await tripMemberIds(ctx, item.tripId)
+    const result = await patchItem(ctx, itemId, {
+      ...fields,
+      ...(attendeeIds !== undefined
+        ? { attendeeIds: storedAttendeeIds(attendeeIds, memberIds) ?? null }
+        : {}),
+    })
     if (!result.ok && result.error === "title_required") {
       throw new Error("Title is required.")
     }

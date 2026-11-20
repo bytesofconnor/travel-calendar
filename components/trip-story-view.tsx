@@ -1,5 +1,6 @@
 "use client"
 
+import { AttendeeStack, whoLine, type AttendeeMember } from "@/components/attendee-faces"
 import { cn } from "@/lib/utils"
 import type { TripItem } from "@/lib/kanban-store"
 import {
@@ -21,6 +22,7 @@ interface TripStoryViewProps {
   tripEnd: string
   dayNumber?: number
   currentUserId?: string
+  members?: readonly AttendeeMember[]
   emphasizeItemId?: string | null
   packingChecked: number
   packingTotal: number
@@ -39,20 +41,23 @@ interface TripStoryViewProps {
 function PlanCard({
   item,
   kind,
+  members,
   emphasize,
   onClick,
 }: {
   item: TripItem
   kind: PlanKind
+  members: readonly AttendeeMember[]
   emphasize?: boolean
   onClick: () => void
 }) {
   const meta = itemMetaLine(item, kind)
+  const who = whoLine(item.attendeeIds, members)
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={`${kindLabel(kind)}: ${item.title}${meta ? `. ${meta}` : ""}${item.confirmLine ? `. ${item.confirmLine}` : ""}`}
+      aria-label={`${kindLabel(kind)}: ${item.title}${meta ? `. ${meta}` : ""}${who ? `. ${who}` : ""}${item.confirmLine ? `. ${item.confirmLine}` : ""}`}
       className={cn(
         "plan-card w-full",
         `plan-card--${kind}`,
@@ -76,6 +81,7 @@ function PlanCard({
         ) : null}
         <span className="plan-card__title">{item.title}</span>
         {meta ? <span className="plan-card__meta">{meta}</span> : null}
+        <AttendeeStack attendeeIds={item.attendeeIds} members={members} />
       </span>
     </button>
   )
@@ -121,6 +127,7 @@ export function TripStoryView({
   tripEnd,
   dayNumber = 1,
   currentUserId,
+  members = [],
   emphasizeItemId,
   packingChecked,
   packingTotal,
@@ -171,6 +178,7 @@ export function TripStoryView({
                 <PlanCard
                   item={item}
                   kind={kind}
+                  members={members}
                   emphasize={index === 0 || item.id === emphasizeItemId}
                   onClick={() => onEditItem(item)}
                 />
@@ -287,6 +295,7 @@ export function TripStoryView({
                     <PlanCard
                       item={item}
                       kind={kind}
+                      members={members}
                       emphasize={item.id === emphasizeItemId}
                       onClick={() => onEditItem(item)}
                     />

@@ -50,6 +50,7 @@ export interface TripItem {
   updatedAt: string
   authorName?: string
   confirmLine?: string
+  attendeeIds?: string[]
 }
 
 export interface TripNote {
@@ -86,6 +87,7 @@ export interface TripItemInput {
   endTime?: string
   startTimeZone?: string
   endTimeZone?: string
+  attendeeIds?: string[]
 }
 
 export interface LocationDef {
