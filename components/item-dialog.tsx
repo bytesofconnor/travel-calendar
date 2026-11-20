@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { AttendeeToggles, type AttendeeMember } from "@/components/attendee-faces"
 import { resolveAttendance } from "@/lib/attendees"
+import { addPlanTitle } from "@/lib/travelers"
 import { airportTimeZone, TIME_ZONE_CHOICES, timeZoneLabel } from "@/lib/calendar/airports"
 import type { TripItem, TripItemInput } from "@/lib/kanban-store"
 
@@ -152,7 +153,7 @@ export function ItemDialog({
       <DialogContent className="flex max-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom)-1.5rem)] w-[calc(100vw-1rem)] max-w-lg flex-col gap-0 overflow-hidden rounded-xl border-border bg-card p-0">
         <DialogHeader className="border-b border-border px-5 py-3.5 text-left">
           <DialogTitle className="text-base font-semibold tracking-tight">
-            {editItem ? "Edit plan" : "Add for both of you"}
+            {editItem ? "Edit plan" : addPlanTitle(attendeeIds, members)}
           </DialogTitle>
           <p className="text-[13px] text-muted-foreground">
             {editItem?.authorName
@@ -183,7 +184,7 @@ export function ItemDialog({
               <Label htmlFor="plan-notes">Notes</Label>
               <Textarea
                 id="plan-notes"
-                placeholder="Notes for your partner (optional)"
+                placeholder="Notes for everyone (optional)"
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
                 className="min-h-[100px] resize-none border-border bg-background text-base"

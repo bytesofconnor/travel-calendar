@@ -8,7 +8,7 @@ const screens = [
   { path: "/review?screen=trips", ready: "Your trips" },
   { path: "/review?screen=trip", ready: "Lisbon with you" },
   { path: "/review?screen=today", ready: "on for today" },
-  { path: "/review?screen=add", ready: "Add for both of you" },
+  { path: "/review?screen=add", ready: "Add for everyone" },
   { path: "/review?screen=edit", ready: "Edit plan" },
   { path: "/review?screen=edit-trip", ready: "Edit trip details" },
   { path: "/review?screen=invite", ready: "https://www.travelcalendar.space/?join=ab12cd34ef56" },
@@ -130,7 +130,7 @@ test("trip header stays on one row from 320 to 430", async ({ page }, testInfo) 
         page.getByRole("button", { name: "List", exact: true }),
         page.getByRole("button", { name: "Month", exact: true }),
         page.getByRole("button", { name: "All trips" }),
-        page.getByRole("button", { name: "Invite your partner" }),
+        page.getByRole("button", { name: "Invite", exact: true }),
         page.getByRole("button", { name: "More actions" }),
       ]
       const boxes = []
@@ -149,9 +149,7 @@ test("trip header stays on one row from 320 to 430", async ({ page }, testInfo) 
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       )
       expect(extra, path).toBeLessThanOrEqual(1)
-      const travelers = page.getByRole("group", { name: "Travelers" })
-      if (width < 375) await expect(travelers).toBeHidden()
-      else await expect(travelers).toBeVisible()
+      await expect(page.getByRole("button", { name: /^\d+ travelers?:/ })).toBeVisible()
     }
   }
 })
@@ -160,10 +158,10 @@ test("desktop trip header keeps the text invite and the avatars", async ({ page 
   test.skip(testInfo.project.name !== "chromium")
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.goto("/review?screen=trip")
-  const invite = page.getByRole("button", { name: "Invite your partner" })
+  const invite = page.getByRole("button", { name: "Invite", exact: true })
   await expect(invite).toContainText("Invite")
   await expect(invite.locator("svg")).toBeHidden()
-  await expect(page.getByRole("group", { name: "Travelers" })).toBeVisible()
+  await expect(page.getByRole("button", { name: /^\d+ travelers?:/ })).toBeVisible()
   const box = await invite.boundingBox()
   expect(box?.width).toBeGreaterThanOrEqual(76)
 })

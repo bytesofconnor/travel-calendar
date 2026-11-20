@@ -135,7 +135,7 @@ export function CreateJoinScreen({
               value={displayName}
               onChange={(event) => onDisplayNameChange(event.target.value)}
               autoComplete="name"
-              placeholder="What your partner sees"
+              placeholder="What everyone on the trip sees"
               className="create-join__field h-12"
             />
           </label>

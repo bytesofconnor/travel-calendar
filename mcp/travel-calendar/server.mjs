@@ -489,7 +489,7 @@ const toolRegistry = [
   },
   {
     name: "trips_archive",
-    description: `Propose archiving a trip. The trip stays active until a different partner confirms. ${secondPropose} Requires lifetime access and host.`,
+    description: `Propose archiving a trip. The trip stays active until someone else on the trip confirms. ${secondPropose} Requires lifetime access and host.`,
     inputSchema: toolSchema({ tripId: tripIdField }, ["tripId"]),
     call: (args) => proposeTrip(args, "archive"),
   },
@@ -565,7 +565,7 @@ const toolRegistry = [
   },
   {
     name: "items_remove",
-    description: `Propose removing a calendar item. The item stays until a different partner confirms. ${secondPropose} Requires lifetime access and host.`,
+    description: `Propose removing a calendar item. The item stays until someone else on the trip confirms. ${secondPropose} Requires lifetime access and host.`,
     inputSchema: toolSchema({ tripId: tripIdField, itemId: itemIdField }, ["tripId", "itemId"]),
     call: (args) => removeItem(args),
   },

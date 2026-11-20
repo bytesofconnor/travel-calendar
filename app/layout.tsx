@@ -27,9 +27,9 @@ const dmSans = DM_Sans({
 
 const SITE_URL = 'https://www.travelcalendar.space'
 const SITE_NAME = 'Travel Calendar'
-const TITLE = 'Travel Calendar — Shared Trip Planner for Couples & Travel Partners'
+const TITLE = 'Travel Calendar — One shared calendar for the trip'
 const DESCRIPTION =
-  'The simplest shared travel calendar for couples and trip partners. Plan every flight, stay, and adventure together in real time. One calendar, two (or more) people, zero drama.'
+  'One shared calendar for the people on a trip. Plan every flight, stay, and day together, from one person to a group of ten.'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -40,17 +40,15 @@ export const metadata: Metadata = {
   description: DESCRIPTION,
   keywords: [
     'shared trip calendar',
-    'couples travel planner',
-    'travel calendar for couples',
+    'group trip planner',
+    'family trip planner',
     'collaborative trip planning',
     'shared vacation calendar',
-    'trip planning app for couples',
+    'trip planning app',
     'travel itinerary sharing',
-    'joint travel planner',
-    'couple travel app',
+    'group travel planner',
     'shared holiday planner',
-    'trip organizer for two',
-    'vacation planner for couples',
+    'vacation planner for groups',
   ],
   authors: [{ name: 'Travel Calendar', url: SITE_URL }],
   creator: 'Travel Calendar',
@@ -81,7 +79,7 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Travel Calendar — Shared Trip Planner for Couples',
+        alt: 'Travel Calendar — a shared trip calendar',
       },
     ],
   },
@@ -153,12 +151,12 @@ export default function RootLayout({
       'Real-time collaboration',
       'Week and month views',
       'Travel itinerary planning',
-      'Invite travel partners',
+      'Invite the people on the trip',
       'Export to calendar apps',
     ],
     audience: {
       '@type': 'Audience',
-      audienceType: 'Couples, travel partners, friend groups',
+      audienceType: 'Families, friend groups, and anyone sharing a trip',
     },
   }
 

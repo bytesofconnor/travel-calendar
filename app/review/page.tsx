@@ -19,6 +19,7 @@ export default async function ReviewPage({
     theme?: string | string[]
     room?: string | string[]
     member?: string | string[]
+    party?: string | string[]
   }>
 }) {
   if (process.env.UI_REVIEW !== "1") {
@@ -28,6 +29,8 @@ export default async function ReviewPage({
   const params = await searchParams
   const screen = typeof params.screen === "string" ? params.screen : "trip"
   const theme = typeof params.theme === "string" ? params.theme : null
+  const partyRaw = typeof params.party === "string" ? Number(params.party) : NaN
+  const party = Number.isInteger(partyRaw) && partyRaw >= 1 && partyRaw <= 10 ? partyRaw : null
   if (screen === "pair") {
     const room = typeof params.room === "string" ? params.room : ""
     const member = params.member === "partner" ? "partner" : params.member === "owner" ? "owner" : ""
@@ -35,5 +38,5 @@ export default async function ReviewPage({
     return <PairTripScreen roomId={room} member={member} />
   }
 
-  return <ReviewGallery screen={screen} theme={theme} />
+  return <ReviewGallery screen={screen} theme={theme} party={party} />
 }

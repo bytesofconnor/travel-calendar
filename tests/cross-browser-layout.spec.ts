@@ -6,7 +6,7 @@ const coreScreens = [
   { id: "trip-list", path: "/review?screen=trips", ready: "Your trips" },
   { id: "trip", path: "/review?screen=trip", ready: "Lisbon with you" },
   { id: "today", path: "/review?screen=today", ready: "on for today" },
-  { id: "add", path: "/review?screen=add", ready: "Add for both of you" },
+  { id: "add", path: "/review?screen=add", ready: "Add for everyone" },
   { id: "edit", path: "/review?screen=edit", ready: "Edit plan" },
   { id: "edit-trip", path: "/review?screen=edit-trip", ready: "Edit trip details" },
   { id: "invite", path: "/review?screen=invite", ready: "https://www.travelcalendar.space/?join=ab12cd34ef56" },

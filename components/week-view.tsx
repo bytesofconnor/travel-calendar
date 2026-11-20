@@ -283,7 +283,7 @@ export function WeekView({
             <div className="plans-welcome">
               <p className="plans-welcome__title">Start building the trip</p>
               <p className="mt-1.5 text-[13px] leading-5 text-muted-foreground">
-                Drop in stays, flights, and ideas day by day. Your partner sees every change live.
+                Drop in stays, flights, and ideas day by day. Everyone on the trip sees every change live.
               </p>
             </div>
           ) : null}

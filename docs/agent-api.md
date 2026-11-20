@@ -65,7 +65,7 @@ Agent flow:
 
 ## Write response
 
-Propose, confirm, and reject return this object. Join and theme do not. `glance_url` is set only while `status` is `pending`. It is `https://www.travelcalendar.space/?confirm=<proposalId>`. `pending_for` is the other member who can confirm, or `null` when no partner is named yet. `confirmed_by` is `null` until the row is confirmed. `scope_used` is `propose` on propose, `confirm` on an agent confirm, and `member` on a website confirm or reject.
+Propose, confirm, and reject return this object. Join and theme do not. `glance_url` is set only while `status` is `pending`. It is `https://www.travelcalendar.space/?confirm=<proposalId>`. `pending_for` is the other member who can confirm, or `null` when nobody else is named yet. `confirmed_by` is `null` until the row is confirmed. `scope_used` is `propose` on propose, `confirm` on an agent confirm, and `member` on a website confirm or reject.
 
 ```json
 {
@@ -271,7 +271,7 @@ Returns pending proposals this user can see: rows on trips they belong to, rows 
   "proposals": [
     {
       "proposalId": "<proposals._id>",
-      "row_text": "Ada proposed Add Lisbon · 2026-05-01 to 2026-05-08. A partner still owes confirm.",
+      "row_text": "Ada proposed Add Lisbon · 2026-05-01 to 2026-05-08. Someone else still owes confirm.",
       "glance_url": "https://www.travelcalendar.space/?confirm=<proposals._id>",
       "proposed_by": { "userId": "<users._id>", "displayName": "Ada" },
       "confirmed_by": null,
@@ -292,7 +292,7 @@ Errors:
 - Propose-only key: `403` `{ "error": "propose_scope" }`.
 - The caller proposed the row: `409` `{ "error": "self_confirm" }`. The row stays pending.
 - No other member, except trip add: `409` `{ "error": "no_partner" }`.
-- The caller is not the partner who owes confirm: `409` `{ "error": "not_pending_for" }`.
+- The caller is not the person who owes confirm: `409` `{ "error": "not_pending_for" }`.
 - `target` does not match the row: `409` `{ "error": "wrong_tool" }`.
 - The item or trip is gone: `409` `{ "error": "target_missing" }`. The row stays pending.
 - Trip add without `displayName`: `400` `{ "error": "display_name_required" }`.
@@ -301,7 +301,7 @@ Errors:
 
 ### `POST /agent/v1/reject`
 
-Body is exactly `{ "proposalId": "<proposals._id>" }`. Requires access. A propose-only key can reject. The proposer can withdraw a pending row. The named partner can reject it. Any different person can reject a pending trip add.
+Body is exactly `{ "proposalId": "<proposals._id>" }`. Requires access. A propose-only key can reject. The proposer can withdraw a pending row. The person who owes confirm can reject it. Any different person can reject a pending trip add.
 
 Success is the write response. Rejecting a confirmed row returns the confirmed row and does not undo the shared plan. A bad body is `400` `{ "error": "Invalid reject fields." }`.
 
