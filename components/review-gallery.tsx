@@ -31,7 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { Trip, TripItem, TripItemInput, TripMember } from "@/lib/kanban-store"
-import { guessPlanType } from "@/lib/plan-form"
+import { defaultPlanDate, guessPlanType } from "@/lib/plan-form"
 import type { PlanType } from "@/lib/plan-types"
 import { buildTripHome, type GapAction } from "@/lib/trip-home/detect"
 import type { WeatherReading } from "@/lib/weather"
@@ -556,7 +556,15 @@ export function ReviewGallery({
       <ItemDialog
         open={planOpen}
         onOpenChange={setPlanOpen}
-        defaultDate={planSeed?.startDate ?? "2026-11-19"}
+        defaultDate={
+          planSeed?.startDate ??
+          defaultPlanDate({
+            tripStart: tripStartDate,
+            tripEnd: tripEndDate,
+            plans: homeItems,
+            today: "2026-11-18",
+          })
+        }
         editItem={planEdit}
         initialInput={planSeed}
         initialType={initialType}

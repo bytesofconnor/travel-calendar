@@ -73,6 +73,14 @@ async function mockPlaces(page: Page) {
   })
 }
 
+test("a new flight starts on the trip's first day", async ({ page }) => {
+  await page.goto("/review?screen=add&party=5", { waitUntil: "domcontentloaded" })
+  const dialog = page.getByRole("dialog")
+  await dialog.getByRole("radio", { name: "Flight" }).click()
+  await expect(dialog.locator("#plan-start")).toHaveValue("2026-11-18")
+  await expect(dialog.locator("#plan-end")).toHaveValue("2026-11-18")
+})
+
 test("each type shows its own fields and the flight toggle is gone", async ({ page }) => {
   await page.goto("/review?screen=trip", { waitUntil: "domcontentloaded" })
   await page.getByRole("button", { name: "Add Stay" }).click()
@@ -186,7 +194,7 @@ test("a picked Hanoi stay is on screen at phone, large text, and desktop", async
   await expect(dialog.getByText("Typical 91°/79° · 60% rain")).toBeVisible()
   const chip = dialog.locator(".weather-chip")
   await expect(chip).toHaveAccessibleName(
-        "Hanoi, Nov 19: typical high 91, low 79, 60 percent chance of rain. Typical 91°/79° · 60% rain",
+        "Hanoi, Nov 18: typical high 91, low 79, 60 percent chance of rain. Typical 91°/79° · 60% rain",
       )
   await where.evaluate((el) => {
     const scroller = el.closest(".overflow-y-auto")

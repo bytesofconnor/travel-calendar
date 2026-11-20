@@ -4,6 +4,7 @@ import test from "node:test"
 import {
   autoTitle,
   buildPlan,
+  defaultPlanDate,
   draftErrors,
   draftTitle,
   flightWhen,
@@ -231,6 +232,32 @@ test("a short place label still stores the picked place", () => {
   assert.equal(saved?.placeTo?.label, "DCA · Washington National")
   assert.equal(saved?.startTimeZone, "America/Chicago")
   assert.equal(saved?.endTimeZone, "America/New_York")
+})
+
+test("a new plan uses the tapped day, or the trip, never today when the trip is ahead", () => {
+  assert.equal(
+    defaultPlanDate({ tapped: "2027-06-04", tripStart: "2027-06-01", tripEnd: "2027-06-14", today: "2026-11-20" }),
+    "2027-06-04",
+  )
+  assert.equal(defaultPlanDate({ tripStart: "2027-06-01", tripEnd: "2027-06-14", today: "2026-11-20" }), "2027-06-01")
+  assert.equal(
+    defaultPlanDate({
+      tripStart: "2026-11-18",
+      tripEnd: "2026-11-24",
+      plans: [{ startDate: "2026-11-18", endDate: "2026-11-20" }],
+      today: "2026-11-19",
+    }),
+    "2026-11-21",
+  )
+  assert.equal(
+    defaultPlanDate({
+      tripStart: "2026-11-18",
+      tripEnd: "2026-11-24",
+      plans: [{ startDate: "2026-11-18", endDate: "2026-11-24" }],
+      today: "2026-11-19",
+    }),
+    "2026-11-18",
+  )
 })
 
 test("headings and trip hints stay short", () => {

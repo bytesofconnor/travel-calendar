@@ -478,3 +478,41 @@ export function saveLabel(type: PlanType, editing: boolean): string {
   if (type === "place") return "Add place"
   return "Add note"
 }
+
+export function defaultPlanDate(input: {
+  tapped?: string | null
+  tripStart?: string | null
+  tripEnd?: string | null
+  plans?: Array<{ startDate?: string | null; endDate?: string | null }>
+  today: string
+}): string {
+  const tapped = input.tapped?.trim()
+  if (tapped) return tapped
+  const start = input.tripStart?.trim() ?? ""
+  const end = input.tripEnd?.trim() || start
+  const today = input.today.trim()
+  if (start && today && start > today) return start
+  const last = latestPlanEnd(input.plans)
+  if (last && start) {
+    const next = addIsoDays(last, 1)
+    if (!end || (next >= start && next <= end)) return next
+  }
+  return start || today
+}
+
+function latestPlanEnd(plans: Array<{ startDate?: string | null; endDate?: string | null }> | undefined): string {
+  let last = ""
+  for (const plan of plans ?? []) {
+    const end = plan.endDate?.trim() || plan.startDate?.trim() || ""
+    if (end > last) last = end
+  }
+  return last
+}
+
+function addIsoDays(iso: string, days: number): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  if (!match) return iso
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])))
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
+}
