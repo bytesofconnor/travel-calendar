@@ -1387,6 +1387,12 @@
     margin-top: 0.55rem;
   }
 
+  .place-option-active {
+    background: var(--background);
+    color: var(--foreground);
+    box-shadow: inset 0 0 0 2px var(--foreground);
+  }
+
   .weather-chip {
     display: inline-flex;
     max-width: 100%;

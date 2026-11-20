@@ -94,6 +94,27 @@ export function timeZoneLabel(timeZone: string): string {
   return ZONE_LABELS[timeZone] ?? timeZone.replaceAll("_", " ")
 }
 
+const CLOCK_NAMES: Record<string, string> = {
+  "America/Chicago": "Central",
+  "America/Denver": "Mountain",
+  "America/Los_Angeles": "Pacific",
+  "America/New_York": "Eastern",
+  "America/Phoenix": "Arizona",
+  "Asia/Bangkok": "Indochina",
+  "Asia/Ho_Chi_Minh": "Vietnam",
+  "Asia/Tokyo": "Japan",
+  "Australia/Sydney": "Sydney",
+  "Europe/Lisbon": "Portugal",
+  "Europe/London": "UK",
+  "Europe/Paris": "Central Europe",
+  "Pacific/Honolulu": "Hawaii",
+  UTC: "UTC",
+}
+
+export function zoneClockName(timeZone: string): string {
+  return CLOCK_NAMES[timeZone] ?? timeZoneLabel(timeZone).replace(/ time$/i, "")
+}
+
 export function isIanaTimeZone(value: string): boolean {
   try {
     Intl.DateTimeFormat("en-US", { timeZone: value })

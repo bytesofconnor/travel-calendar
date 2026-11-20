@@ -1,4 +1,4 @@
-import { airportTimeZone } from "./calendar/airports.ts"
+import { airportTimeZone, zoneClockName } from "./calendar/airports.ts"
 import type { TripItemInput } from "./kanban-store.ts"
 import type { GeoPlace, PlanType } from "./plan-types.ts"
 
@@ -196,21 +196,68 @@ export function draftErrors(draft: PlanDraft): Record<string, string> {
   return errors
 }
 
+function samePlaceText(text: string, place: GeoPlace): boolean {
+  const value = text.trim()
+  if (!value) return false
+  if (value === place.name.trim()) return true
+  return Boolean(place.label?.trim() && value === place.label.trim())
+}
+
 function picked(text: string, place?: GeoPlace | null): GeoPlace | undefined {
   if (!place || typeof place.lat !== "number" || typeof place.lng !== "number") return undefined
-  if (place.name.trim() !== text.trim()) return undefined
+  if (!samePlaceText(text, place)) return undefined
   return {
     name: place.name.trim(),
     lat: place.lat,
     lng: place.lng,
+    ...(place.label?.trim() ? { label: place.label.trim() } : {}),
+    ...(place.kind ? { kind: place.kind } : {}),
+    ...(place.code ? { code: place.code } : {}),
+    ...(place.city?.trim() ? { city: place.city.trim() } : {}),
     ...(place.country ? { country: place.country } : {}),
     ...(place.timeZone ? { timeZone: place.timeZone } : {}),
   }
 }
 
+export function formatClock(value: string): string {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim())
+  if (!match?.[1] || !match[2]) return value.trim()
+  const hour = Number(match[1])
+  const minute = match[2]
+  if (hour > 23) return value.trim()
+  const suffix = hour >= 12 ? "PM" : "AM"
+  const twelve = hour % 12 || 12
+  return `${twelve}:${minute} ${suffix}`
+}
+
+export function flightWhen(input: {
+  departTime: string
+  arriveTime: string
+  departDate: string
+  arriveDate: string
+  departZone: string
+  arriveZone: string
+  departCity: string
+  arriveCity: string
+}): string {
+  const nextDay = Boolean(input.departDate && input.arriveDate && input.arriveDate > input.departDate)
+  const depart = clockPart("Departs", input.departTime, input.departZone, input.departCity, false)
+  const arrive = clockPart("Arrives", input.arriveTime, input.arriveZone, input.arriveCity, nextDay)
+  return [depart, arrive].filter(Boolean).join(" · ")
+}
+
+function clockPart(verb: string, time: string, zone: string, city: string, nextDay: boolean): string {
+  if (!time.trim()) return ""
+  const where = [zone ? zoneClockName(zone) : "", city.trim() ? `(${city.trim()})` : ""].filter(Boolean).join(" ")
+  const day = nextDay ? " +1" : ""
+  return where ? `${verb} ${formatClock(time)} ${where}${day}` : `${verb} ${formatClock(time)}${day}`
+}
+
 function zoneFor(text: string, place: GeoPlace | undefined, chosen: string): string {
+  const pickedZone = chosen.trim()
+  if (pickedZone) return pickedZone
   if (place?.timeZone) return place.timeZone
-  return airportTimeZone(text) ?? chosen.trim()
+  return airportTimeZone(text) ?? ""
 }
 
 export function buildPlan(draft: PlanDraft, fallbackDate: string): TripItemInput | null {

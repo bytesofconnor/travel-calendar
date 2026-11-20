@@ -109,6 +109,10 @@ function storedPlace(place: TripItemInput["place"]) {
     name: place.name,
     lat: place.lat,
     lng: place.lng,
+    ...(place.label ? { label: place.label } : {}),
+    ...(place.kind ? { kind: place.kind } : {}),
+    ...(place.code ? { code: place.code } : {}),
+    ...(place.city ? { city: place.city } : {}),
     ...(place.country ? { country: place.country } : {}),
     ...(place.timeZone ? { timeZone: place.timeZone } : {}),
   }

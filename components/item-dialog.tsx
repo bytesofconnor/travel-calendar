@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react"
+import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react"
 import { Link as LinkIcon, Trash2 } from "lucide-react"
 
 import { AttendeeToggles, type AttendeeMember } from "@/components/attendee-faces"
-import { PlaceField } from "@/components/place-field"
+import { PlaceField, PlacePopoverProvider } from "@/components/place-field"
 import { DraftWeather, useWeatherUnits } from "@/components/weather-chip"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,13 +24,14 @@ import {
   draftTitle,
   fieldsFromItem,
   fieldsFromNew,
+  flightWhen,
   headingFor,
   seedPlanType,
   saveLabel,
   stayPlaceholder,
   type PlanDraft,
 } from "@/lib/plan-form"
-import type { PlanType } from "@/lib/plan-types"
+import type { GeoPlace, PlanType } from "@/lib/plan-types"
 import type { TripItem, TripItemInput } from "@/lib/kanban-store"
 import type { WeatherUnits } from "@/lib/weather"
 
@@ -78,6 +79,7 @@ export function ItemDialog({
   const [draft, setDraft] = useState<PlanDraft>(() => fieldsFromNew("place", null, fallbackDate))
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [showLink, setShowLink] = useState(false)
+  const [showZones, setShowZones] = useState(false)
   const [attendeeIds, setAttendeeIds] = useState<string[] | undefined>(undefined)
   const errorSummary = useId()
   const returnFocus = useRef<HTMLElement | null>(null)
@@ -100,6 +102,7 @@ export function ItemDialog({
     setDraft(next)
     setErrors({})
     setShowLink(Boolean(next.linkUrl))
+    setShowZones(false)
     setAttendeeIds(editItem?.attendeeIds ?? initialInput?.attendeeIds)
   }, [editItem, fallbackDate, initialInput, initialType, open])
 
@@ -163,6 +166,7 @@ export function ItemDialog({
           target.focus()
         }}
       >
+        <PlacePopoverProvider>
         <form onSubmit={(event) => void onSubmit(event)} className="flex min-h-0 flex-1 flex-col">
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
             <DialogHeader className="border-b border-border px-0 pb-3 pr-10 text-left">
@@ -206,6 +210,7 @@ export function ItemDialog({
               })}
             </div>
 
+            <SmoothFields watch={draft.type}>
             {draft.type === "stay" ? (
               <>
                 <PlaceField
@@ -215,8 +220,10 @@ export function ItemDialog({
                   placeholder={hint}
                   invalid={Boolean(errors.where)}
                   describedBy={described("where", "plan-location")}
-                  onText={(where) => patch({ where, wherePlace: draft.wherePlace?.name === where ? draft.wherePlace : null })}
-                  onPlace={(place) => patch({ where: place.name, wherePlace: place })}
+                  bias={placeHint}
+                  selected={draft.wherePlace}
+                  onText={(where) => patch({ where, wherePlace: placeStillMatches(where, draft.wherePlace) })}
+                  onPlace={(place) => patch({ where: place.label || place.name, wherePlace: place })}
                 />
                 <FieldError id="plan-location-error" message={errors.where} />
                 <TitleField
@@ -238,8 +245,16 @@ export function ItemDialog({
                     flight
                     invalid={Boolean(errors.from)}
                     describedBy={described("from", "plan-location")}
-                    onText={(from) => patch({ from, fromPlace: draft.fromPlace?.name === from ? draft.fromPlace : null })}
-                    onPlace={(place) => patch({ from: place.name, fromPlace: place })}
+                    bias={placeHint}
+                    selected={draft.fromPlace}
+                    onText={(from) => patch({ from, fromPlace: placeStillMatches(from, draft.fromPlace) })}
+                    onPlace={(place) =>
+                      patch({
+                        from: place.label || place.name,
+                        fromPlace: place,
+                        ...(place.timeZone ? { startZone: place.timeZone } : {}),
+                      })
+                    }
                   />
                   <PlaceField
                     id="plan-location-to"
@@ -249,8 +264,16 @@ export function ItemDialog({
                     flight
                     invalid={Boolean(errors.to)}
                     describedBy={described("to", "plan-location-to")}
-                    onText={(to) => patch({ to, toPlace: draft.toPlace?.name === to ? draft.toPlace : null })}
-                    onPlace={(place) => patch({ to: place.name, toPlace: place })}
+                    bias={placeHint}
+                    selected={draft.toPlace}
+                    onText={(to) => patch({ to, toPlace: placeStillMatches(to, draft.toPlace) })}
+                    onPlace={(place) =>
+                      patch({
+                        to: place.label || place.name,
+                        toPlace: place,
+                        ...(place.timeZone ? { endZone: place.timeZone } : {}),
+                      })
+                    }
                   />
                 </div>
                 <FieldError id="plan-location-error" message={errors.from} />
@@ -290,8 +313,10 @@ export function ItemDialog({
                   label="Where"
                   value={draft.where}
                   placeholder={placeHint || "Neighborhood or address"}
-                  onText={(where) => patch({ where, wherePlace: draft.wherePlace?.name === where ? draft.wherePlace : null })}
-                  onPlace={(place) => patch({ where: place.name, wherePlace: place })}
+                  bias={placeHint}
+                  selected={draft.wherePlace}
+                  onText={(where) => patch({ where, wherePlace: placeStillMatches(where, draft.wherePlace) })}
+                  onPlace={(place) => patch({ where: place.label || place.name, wherePlace: place })}
                 />
               </>
             ) : null}
@@ -343,15 +368,13 @@ export function ItemDialog({
                   <TextField id="plan-depart" label="Depart time" type="time" value={draft.startTime} onChange={(startTime) => patch({ startTime })} />
                   <TextField id="plan-arrive" label="Arrive time" type="time" value={draft.endTime} onChange={(endTime) => patch({ endTime })} />
                 </div>
-                <p className="text-sm text-foreground">
-                  {flightClockHint(draft.from, draft.to, draft.startTime, draft.endTime, draft.fromPlace?.timeZone || draft.startZone, draft.toPlace?.timeZone || draft.endZone)}
-                </p>
-                {draft.startTime && !draft.fromPlace?.timeZone && !airportTimeZone(draft.from) ? (
-                  <TimeZoneField id="plan-depart-zone" label="Departing time zone" value={draft.startZone} onChange={(startZone) => patch({ startZone })} />
-                ) : null}
-                {draft.endTime && !draft.toPlace?.timeZone && !airportTimeZone(draft.to) ? (
-                  <TimeZoneField id="plan-arrive-zone" label="Arriving time zone" value={draft.endZone} onChange={(endZone) => patch({ endZone })} />
-                ) : null}
+                <FlightClock
+                  draft={draft}
+                  showZones={showZones}
+                  onShowZones={() => setShowZones(true)}
+                  onDepartZone={(startZone) => patch({ startZone })}
+                  onArriveZone={(endZone) => patch({ endZone })}
+                />
               </>
             ) : null}
 
@@ -386,6 +409,7 @@ export function ItemDialog({
               date={draft.type === "flight" ? draft.endDate || draft.startDate : draft.startDate}
               units={weatherUnits}
             />
+            </SmoothFields>
 
             <AttendeeToggles members={members} attendeeIds={attendeeIds} onChange={setAttendeeIds} />
 
@@ -452,7 +476,10 @@ export function ItemDialog({
             ) : null}
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 pb-[max(1rem,var(--safe-bottom))]">
+          <div data-dialog-footer="" className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 pb-[max(1rem,var(--safe-bottom))]">
+            {draft.type !== "note" ? (
+              <p className="basis-full text-xs text-foreground">Cities by Open-Meteo. Addresses © OpenStreetMap via Photon.</p>
+            ) : null}
             {editItem ? (
               <Button
                 type="button"
@@ -480,6 +507,7 @@ export function ItemDialog({
             </div>
           </div>
         </form>
+        </PlacePopoverProvider>
       </DialogContent>
     </Dialog>
   )
@@ -633,6 +661,7 @@ function TimeZoneField({
         className="h-11 min-h-11 w-full min-w-0 rounded-md border border-foreground bg-background px-3 text-base text-foreground"
       >
         <option value="">Choose a time zone</option>
+        {value && !TIME_ZONE_CHOICES.some(([zone]) => zone === value) ? <option value={value}>{timeZoneLabel(value)}</option> : null}
         {TIME_ZONE_CHOICES.map(([zone, name]) => (
           <option key={zone} value={zone}>
             {name}
@@ -643,11 +672,105 @@ function TimeZoneField({
   )
 }
 
-function flightClockHint(from: string, to: string, depart: string, arrive: string, departZone: string, arriveZone: string): string {
-  if (!depart && !arrive) return "Times are optional. For an overnight flight, set Arrive to the day you land."
-  const fromZone = departZone || airportTimeZone(from)
-  const toZone = arriveZone || airportTimeZone(to)
-  const departLabel = fromZone ? timeZoneLabel(fromZone) : "the departure time zone"
-  const arriveLabel = toZone ? timeZoneLabel(toZone) : "the arrival time zone"
-  return `Departs in ${departLabel}. Arrives in ${arriveLabel}.`
+function FlightClock({
+  draft,
+  showZones,
+  onShowZones,
+  onDepartZone,
+  onArriveZone,
+}: {
+  draft: PlanDraft
+  showZones: boolean
+  onShowZones: () => void
+  onDepartZone: (value: string) => void
+  onArriveZone: (value: string) => void
+}) {
+  const idle = !draft.startTime && !draft.endTime
+  const summary = flightWhen({
+    departTime: draft.startTime,
+    arriveTime: draft.endTime,
+    departDate: draft.startDate,
+    arriveDate: draft.endDate,
+    departZone: draft.startZone || draft.fromPlace?.timeZone || airportTimeZone(draft.from) || "",
+    arriveZone: draft.endZone || draft.toPlace?.timeZone || airportTimeZone(draft.to) || "",
+    departCity: placeCity(draft.fromPlace, draft.from),
+    arriveCity: placeCity(draft.toPlace, draft.to),
+  })
+  return (
+    <div className="space-y-1">
+      <p className="text-sm text-foreground" data-testid="flight-when">
+        {idle ? "Times are optional. For an overnight flight, set Arrive to the day you land." : summary}
+      </p>
+      {idle || showZones ? null : (
+        <button
+          type="button"
+          onClick={onShowZones}
+          className="inline-flex min-h-11 items-center text-sm font-medium text-foreground underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Change
+        </button>
+      )}
+      {showZones ? (
+        <>
+          <TimeZoneField id="plan-depart-zone" label="Departing time zone" value={draft.startZone} onChange={onDepartZone} />
+          <TimeZoneField id="plan-arrive-zone" label="Arriving time zone" value={draft.endZone} onChange={onArriveZone} />
+        </>
+      ) : null}
+    </div>
+  )
+}
+
+function placeCity(place: GeoPlace | null | undefined, text: string): string {
+  if (place?.city?.trim()) return place.city.trim()
+  const trimmed = text.trim()
+  if (trimmed && trimmed.length <= 22 && !trimmed.includes("·")) return trimmed
+  return ""
+}
+
+function placeStillMatches(text: string, place: GeoPlace | null | undefined): GeoPlace | null {
+  if (!place) return null
+  const value = text.trim()
+  if (value === place.name.trim() || (place.label && value === place.label.trim())) return place
+  return null
+}
+
+function SmoothFields({ watch, children }: { watch: string; children: ReactNode }) {
+  const innerRef = useRef<HTMLDivElement>(null)
+  const [height, setHeight] = useState<number | null>(null)
+  const [motion, setMotion] = useState(true)
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)")
+    const apply = () => setMotion(!media.matches)
+    apply()
+    media.addEventListener("change", apply)
+    return () => media.removeEventListener("change", apply)
+  }, [])
+
+  useLayoutEffect(() => {
+    const node = innerRef.current
+    if (!node) return
+    const measure = () => {
+      const next = node.scrollHeight
+      setHeight((current) => (current === next ? current : next))
+    }
+    const frame = window.requestAnimationFrame(measure)
+    const observer = new ResizeObserver(measure)
+    observer.observe(node)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
+  }, [watch])
+
+  return (
+    <div
+      className="min-w-0"
+      style={motion && height != null ? { height, transition: "height 150ms ease-out", overflow: "hidden" } : undefined}
+    >
+      <div ref={innerRef} className="flex flex-col gap-4 py-1">
+        {children}
+      </div>
+    </div>
+  )
 }
