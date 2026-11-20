@@ -16,6 +16,10 @@ type StoredPlace = {
   name: string
   lat: number
   lng: number
+  label?: string
+  kind?: "city" | "airport" | "address" | "country" | "region"
+  code?: string
+  city?: string
   country?: string
   timeZone?: string
 }
@@ -57,10 +61,17 @@ function cleanPlace(place: StoredPlace | null | undefined): StoredPlace | undefi
   if (!name || !Number.isFinite(place.lat) || !Number.isFinite(place.lng)) return undefined
   const country = place.country?.trim()
   const timeZone = place.timeZone?.trim()
+  const label = place.label?.trim()
+  const city = place.city?.trim()
+  const code = place.code?.trim().toUpperCase()
   return {
     name,
     lat: place.lat,
     lng: place.lng,
+    ...(label && label !== name ? { label } : {}),
+    ...(place.kind ? { kind: place.kind } : {}),
+    ...(code ? { code } : {}),
+    ...(city ? { city } : {}),
     ...(country ? { country } : {}),
     ...(timeZone && isIanaTimeZone(timeZone) ? { timeZone } : {}),
   }

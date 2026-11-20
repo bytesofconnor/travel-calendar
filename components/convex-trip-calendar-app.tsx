@@ -48,7 +48,7 @@ import {
   tripDayCount,
 } from "@/lib/trip-kind"
 import { formatTripDateRange } from "@/lib/format-dates"
-import { guessPlanType, tripPlaceHint } from "@/lib/plan-form"
+import { defaultPlanDate, guessPlanType, tripPlaceHint } from "@/lib/plan-form"
 import type { PlanType } from "@/lib/plan-types"
 import { addedPlanMessage, travelerLabel } from "@/lib/travelers"
 import { oauthRedirectTo } from "@/lib/oauth-redirect"
@@ -111,6 +111,10 @@ function storedPlace(place: TripItemInput["place"]) {
     name: place.name,
     lat: place.lat,
     lng: place.lng,
+    ...(place.label ? { label: place.label } : {}),
+    ...(place.kind ? { kind: place.kind } : {}),
+    ...(place.code ? { code: place.code } : {}),
+    ...(place.city ? { city: place.city } : {}),
     ...(place.country ? { country: place.country } : {}),
     ...(place.timeZone ? { timeZone: place.timeZone } : {}),
   }
@@ -796,7 +800,13 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
   }
 
   function openCapture(kind?: CaptureKind, date?: string, text?: string) {
-    const baseDate = date ?? trip?.startDate ?? today
+    const baseDate = defaultPlanDate({
+      tapped: date,
+      tripStart: trip?.startDate,
+      tripEnd: trip?.endDate,
+      plans: items,
+      today,
+    })
     const typed = kind ?? (text?.trim() ? guessPlanType(text) : "place")
     setEditItem(null)
     setDefaultItemDate(baseDate)

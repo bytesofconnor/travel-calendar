@@ -4,8 +4,10 @@ import test from "node:test"
 import {
   autoTitle,
   buildPlan,
+  defaultPlanDate,
   draftErrors,
   draftTitle,
+  flightWhen,
   guessPlanType,
   headingFor,
   homeRole,
@@ -160,6 +162,102 @@ test("validation names the missing field and still allows a note without a date"
   assert.equal(note?.title, "Pack raincoats")
   assert.equal(note?.startDate, day)
   assert.equal(note?.location, "")
+})
+
+test("a flight clock names the zone and the next day", () => {
+  assert.equal(
+    flightWhen({
+      departTime: "10:00",
+      arriveTime: "12:00",
+      departDate: day,
+      arriveDate: day,
+      departZone: "America/Chicago",
+      arriveZone: "America/New_York",
+      departCity: "Minneapolis",
+      arriveCity: "Washington",
+    }),
+    "Departs 10:00 AM Central (Minneapolis) · Arrives 12:00 PM Eastern (Washington)",
+  )
+  assert.match(
+    flightWhen({
+      departTime: "22:00",
+      arriveTime: "12:00",
+      departDate: day,
+      arriveDate: "2027-06-15",
+      departZone: "America/Chicago",
+      arriveZone: "Asia/Ho_Chi_Minh",
+      departCity: "Minneapolis",
+      arriveCity: "Hanoi",
+    }),
+    /Arrives 12:00 PM Vietnam \(Hanoi\) \+1$/,
+  )
+})
+
+test("a short place label still stores the picked place", () => {
+  const saved = buildPlan(
+    draft({
+      type: "flight",
+      from: "MSP · Minneapolis–Saint Paul",
+      to: "DCA · Washington National",
+      fromPlace: {
+        name: "Minneapolis–Saint Paul International Airport",
+        label: "MSP · Minneapolis–Saint Paul",
+        kind: "airport",
+        code: "MSP",
+        city: "Minneapolis",
+        lat: 44.88,
+        lng: -93.22,
+        country: "US",
+        timeZone: "America/Chicago",
+      },
+      toPlace: {
+        name: "Ronald Reagan Washington National Airport",
+        label: "DCA · Washington National",
+        kind: "airport",
+        code: "DCA",
+        city: "Washington",
+        lat: 38.85,
+        lng: -77.04,
+        country: "US",
+        timeZone: "America/New_York",
+      },
+      startTime: "10:00",
+      endTime: "12:00",
+      startZone: "America/Chicago",
+      endZone: "America/New_York",
+    }),
+    day,
+  )
+  assert.equal(saved?.place?.code, "MSP")
+  assert.equal(saved?.placeTo?.label, "DCA · Washington National")
+  assert.equal(saved?.startTimeZone, "America/Chicago")
+  assert.equal(saved?.endTimeZone, "America/New_York")
+})
+
+test("a new plan uses the tapped day, or the trip, never today when the trip is ahead", () => {
+  assert.equal(
+    defaultPlanDate({ tapped: "2027-06-04", tripStart: "2027-06-01", tripEnd: "2027-06-14", today: "2026-11-20" }),
+    "2027-06-04",
+  )
+  assert.equal(defaultPlanDate({ tripStart: "2027-06-01", tripEnd: "2027-06-14", today: "2026-11-20" }), "2027-06-01")
+  assert.equal(
+    defaultPlanDate({
+      tripStart: "2026-11-18",
+      tripEnd: "2026-11-24",
+      plans: [{ startDate: "2026-11-18", endDate: "2026-11-20" }],
+      today: "2026-11-19",
+    }),
+    "2026-11-21",
+  )
+  assert.equal(
+    defaultPlanDate({
+      tripStart: "2026-11-18",
+      tripEnd: "2026-11-24",
+      plans: [{ startDate: "2026-11-18", endDate: "2026-11-24" }],
+      today: "2026-11-19",
+    }),
+    "2026-11-18",
+  )
 })
 
 test("headings and trip hints stay short", () => {
