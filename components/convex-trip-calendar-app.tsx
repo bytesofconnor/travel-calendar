@@ -297,6 +297,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
           updatedAt: toIso(item._creationTime),
           confirmLine:
             proposed && confirmed ? `${proposed} proposed · ${confirmed} confirmed` : undefined,
+          ...(item.attendeeIds && item.attendeeIds.length > 0 ? { attendeeIds: item.attendeeIds } : {}),
         }
       }),
       members,
@@ -696,6 +697,9 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         endTime: input.endTime,
         startTimeZone: input.startTimeZone,
         endTimeZone: input.endTimeZone,
+        ...(input.attendeeIds !== undefined
+          ? { attendeeIds: input.attendeeIds as Id<"users">[] }
+          : {}),
       }
       if (existingItem) {
         await updateItem({ itemId: existingItem.id as Id<"tripItems">, ...payload })
@@ -1371,6 +1375,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
                 tripEnd={trip.endDate}
                 dayNumber={dayIndexInTrip(today, trip.startDate)}
                 currentUserId={userId}
+                members={members}
                 emphasizeItemId={emphasizeItemId}
                 packingChecked={packingChecked}
                 packingTotal={packingItems.length}
@@ -1530,6 +1535,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         initialInput={initialItemInput}
         initialTravel={initialTravel}
         currentUserName={currentMember?.displayName ?? guessDisplayName(me)}
+        members={members}
         isSaving={isMutating}
         isDeleting={isMutating}
         onSave={async (input, existing) => {

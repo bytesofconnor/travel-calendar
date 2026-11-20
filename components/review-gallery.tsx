@@ -40,6 +40,8 @@ const REVIEW_CALENDAR_TOKEN_RESET = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 const members: TripMember[] = [
   { tripId: TRIP_ID, userId: USER_ID, role: "owner", displayName: "Connor" },
   { tripId: TRIP_ID, userId: "user_alex", role: "editor", displayName: "Alex" },
+  { tripId: TRIP_ID, userId: "user_mom", role: "editor", displayName: "Mom" },
+  { tripId: TRIP_ID, userId: "user_dad", role: "editor", displayName: "Dad" },
 ]
 
 const trips: Trip[] = [
@@ -107,6 +109,7 @@ const items: TripItem[] = [
     updatedAt: "2026-11-03T12:00:00.000Z",
     authorName: "Alex",
     confirmLine: "Alex proposed · waiting on Connor",
+    attendeeIds: [USER_ID, "user_alex"],
   },
 ]
 
@@ -259,8 +262,9 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
   const [displayName, setDisplayName] = useState("Alex")
   const [joinInput, setJoinInput] = useState("ab12cd34ef56")
   const [createName, setCreateName] = useState("")
+  const [plans, setPlans] = useState(items)
   const showHome = screen === "trip" || screen === "covered"
-  const homeItems = screen === "covered" ? coveredItems : items
+  const homeItems = screen === "covered" ? coveredItems : plans
   const tripStartDate = "2026-11-18"
   const tripEndDate = screen === "covered" ? "2026-11-18" : "2026-11-24"
   const home = useMemo(
@@ -373,10 +377,15 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
           tripEnd={tripEndDate}
           dayNumber={1}
           currentUserId={USER_ID}
+          members={members}
           packingChecked={2}
           packingTotal={6}
           notesCount={1}
-          onEditItem={() => {}}
+          onEditItem={(item) => {
+            setPlanSeed(null)
+            setPlanEdit(item)
+            setPlanOpen(true)
+          }}
           onStartFlight={() => {}}
           onStartStay={() => {}}
           onStartPlace={() => {}}
@@ -403,7 +412,15 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
         initialInput={planSeed}
         initialTravel={Boolean(planSeed?.locationTo)}
         currentUserName="Connor"
-        onSave={() => {}}
+        members={members}
+        onSave={(input, existing) => {
+          if (!existing) return
+          const nextIds = input.attendeeIds && input.attendeeIds.length > 0 ? input.attendeeIds : undefined
+          setPlans((current) =>
+            current.map((item) => (item.id === existing.id ? { ...item, attendeeIds: nextIds } : item)),
+          )
+          setPlanEdit((current) => (current && current.id === existing.id ? { ...current, attendeeIds: nextIds } : current))
+        }}
         onDelete={() => {}}
       />
       <ShareTripDialog

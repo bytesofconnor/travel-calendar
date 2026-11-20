@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { AttendeeToggles, type AttendeeMember } from "@/components/attendee-faces"
+import { resolveAttendance } from "@/lib/attendees"
 import { airportTimeZone, TIME_ZONE_CHOICES, timeZoneLabel } from "@/lib/calendar/airports"
 import type { TripItem, TripItemInput } from "@/lib/kanban-store"
 
@@ -24,6 +26,7 @@ interface ItemDialogProps {
   initialInput?: Partial<TripItemInput> | null
   initialTravel?: boolean
   currentUserName?: string
+  members?: AttendeeMember[]
   isSaving?: boolean
   isDeleting?: boolean
   onSave: (input: TripItemInput, existingItem?: TripItem) => Promise<void> | void
@@ -38,6 +41,7 @@ export function ItemDialog({
   initialInput,
   initialTravel = false,
   currentUserName,
+  members = [],
   isSaving = false,
   isDeleting = false,
   onSave,
@@ -57,6 +61,7 @@ export function ItemDialog({
   const [endTime, setEndTime] = useState("")
   const [startZone, setStartZone] = useState("")
   const [endZone, setEndZone] = useState("")
+  const [attendeeIds, setAttendeeIds] = useState<string[] | undefined>(undefined)
 
   useEffect(() => {
     if (!open) return
@@ -82,6 +87,7 @@ export function ItemDialog({
       setEndTime(editItem.endTime ?? "")
       setStartZone(editItem.startTimeZone ?? "")
       setEndZone(editItem.endTimeZone ?? "")
+      setAttendeeIds(editItem.attendeeIds)
       return
     }
 
@@ -99,10 +105,13 @@ export function ItemDialog({
     setEndTime(initialInput?.endTime ?? "")
     setStartZone(initialInput?.startTimeZone ?? "")
     setEndZone(initialInput?.endTimeZone ?? "")
+    setAttendeeIds(initialInput?.attendeeIds)
   }, [defaultDate, editItem, initialInput, initialTravel, open])
 
   async function handleSave() {
     if (!title.trim() || !startDate || !endDate || !location.trim()) return
+    const memberIds = members.map((member) => member.userId)
+    const attendance = resolveAttendance(attendeeIds, memberIds)
 
     await onSave(
       {
@@ -120,6 +129,9 @@ export function ItemDialog({
           showLink && linkUrl.trim()
             ? { label: linkLabel.trim() || "Link", url: linkUrl.trim() }
             : undefined,
+        ...(members.length > 0
+          ? { attendeeIds: attendance.everyone ? [] : attendance.includedIds }
+          : {}),
       },
       editItem ?? undefined,
     )
@@ -137,7 +149,7 @@ export function ItemDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom)-1.5rem)] w-[calc(100vw-1rem)] max-w-lg flex-col gap-0 overflow-hidden rounded-xl border-border bg-card p-0 sm:my-4">
+      <DialogContent className="flex max-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom)-1.5rem)] w-[calc(100vw-1rem)] max-w-lg flex-col gap-0 overflow-hidden rounded-xl border-border bg-card p-0">
         <DialogHeader className="border-b border-border px-5 py-3.5 text-left">
           <DialogTitle className="text-base font-semibold tracking-tight">
             {editItem ? "Edit plan" : "Add for both of you"}
@@ -164,6 +176,8 @@ export function ItemDialog({
                 autoFocus
               />
             </div>
+
+            <AttendeeToggles members={members} attendeeIds={attendeeIds} onChange={setAttendeeIds} />
 
             <div className="space-y-1.5">
               <Label htmlFor="plan-notes">Notes</Label>
