@@ -738,6 +738,7 @@ function SmoothFields({ watch, children }: { watch: string; children: ReactNode 
   const innerRef = useRef<HTMLDivElement>(null)
   const [height, setHeight] = useState<number | null>(null)
   const [motion, setMotion] = useState(true)
+  const [clip, setClip] = useState(false)
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -763,10 +764,21 @@ function SmoothFields({ watch, children }: { watch: string; children: ReactNode 
     }
   }, [watch])
 
+  useEffect(() => {
+    if (!motion) return
+    setClip(true)
+    const timer = window.setTimeout(() => setClip(false), 160)
+    return () => window.clearTimeout(timer)
+  }, [motion, watch])
+
   return (
     <div
       className="min-w-0"
-      style={motion && height != null ? { height, transition: "height 150ms ease-out", overflow: "hidden" } : undefined}
+      style={
+        motion && height != null
+          ? { height, transition: "height 150ms ease-out", overflow: clip ? "hidden" : "visible" }
+          : undefined
+      }
     >
       <div ref={innerRef} className="flex flex-col gap-4 py-1">
         {children}
