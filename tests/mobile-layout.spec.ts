@@ -73,7 +73,7 @@ test("primary controls are at least 44px and stay on screen", async ({ page }) =
 
   await page.goto("/review?screen=trip")
   const more = page.getByRole("button", { name: "More actions" })
-  const trip = page.getByRole("button", { name: "Trip", exact: true })
+  const trip = page.getByRole("button", { name: "List", exact: true })
   await expect(more).toBeVisible()
   const moreBox = await more.boundingBox()
   const tripBox = await trip.boundingBox()
@@ -127,8 +127,8 @@ test("trip header stays on one row from 320 to 430", async ({ page }, testInfo) 
       await page.goto(path, { waitUntil: "domcontentloaded" })
       await expect(page.locator(".story-chrome")).toBeVisible()
       const controls = [
-        page.getByRole("button", { name: "Trip", exact: true }),
-        page.getByRole("button", { name: "Today", exact: true }),
+        page.getByRole("button", { name: "List", exact: true }),
+        page.getByRole("button", { name: "Month", exact: true }),
         page.getByRole("button", { name: "All trips" }),
         page.getByRole("button", { name: "Invite your partner" }),
         page.getByRole("button", { name: "More actions" }),

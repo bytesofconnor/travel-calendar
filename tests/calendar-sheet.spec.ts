@@ -7,6 +7,7 @@ const actions = ["Apple Calendar", "Google Calendar", "Outlook", "Copy link", "R
 
 test("add to calendar sheet subscribes, copies, and resets", async ({ page }) => {
   await page.goto("/review?screen=trip", { waitUntil: "domcontentloaded" })
+  await page.waitForFunction(() => document.documentElement.dataset.uiReady === "true")
   await page.getByRole("button", { name: "More actions" }).click()
   await page.getByRole("menuitem", { name: "Add to calendar" }).click()
 

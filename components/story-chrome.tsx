@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
+import { useEffect, type ReactNode } from "react"
 import { ChevronDown, UserPlus } from "lucide-react"
 
 import { SegmentedControl } from "@/components/ds"
@@ -15,8 +15,8 @@ export function StoryChrome({
   partnerName,
   menu,
 }: {
-  mode: "trip" | "today"
-  onModeChange: (mode: "trip" | "today") => void
+  mode: "list" | "month"
+  onModeChange: (mode: "list" | "month") => void
   onOpenTrips: () => void
   onInvite: () => void
   youInitial: string
@@ -24,16 +24,20 @@ export function StoryChrome({
   partnerName?: string | null
   menu: ReactNode
 }) {
+  useEffect(() => {
+    document.documentElement.dataset.uiReady = "true"
+  }, [])
+
   return (
     <div className="story-chrome">
       <SegmentedControl
-        label="Trip view"
+        label="Calendar view"
         value={mode}
         onChange={onModeChange}
         className="story-segment"
         options={[
-          { value: "trip", label: "Trip" },
-          { value: "today", label: "Today" },
+          { value: "list", label: "List" },
+          { value: "month", label: "Month" },
         ]}
       />
       <button

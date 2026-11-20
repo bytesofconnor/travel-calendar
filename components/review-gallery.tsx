@@ -14,6 +14,7 @@ import { ShareTripDialog } from "@/components/share-trip-dialog"
 import { ThemePackPickerMenuItems } from "@/components/theme-pack-menu"
 import { TripCover, SpectrumHairline } from "@/components/trip-cover"
 import { TripHome } from "@/components/trip-home"
+import { TripMonthView } from "@/components/trip-month-view"
 import { TripStoryView } from "@/components/trip-story-view"
 import { TripsSheet } from "@/components/trips-sheet"
 import { useTripThemePack } from "@/components/use-trip-theme-pack"
@@ -130,16 +131,48 @@ const coveredItems: TripItem[] = [
   },
 ]
 
+const monthItems: TripItem[] = [
+  ...items,
+  {
+    id: "item_tram",
+    tripId: TRIP_ID,
+    title: "Tram 28",
+    startDate: "2026-11-18",
+    endDate: "2026-11-18",
+    location: "Alfama",
+    createdBy: USER_ID,
+    createdAt: "2026-11-03T14:00:00.000Z",
+    updatedAt: "2026-11-03T14:00:00.000Z",
+  },
+  {
+    id: "item_dinner",
+    tripId: TRIP_ID,
+    title: "Dinner",
+    startDate: "2026-11-18",
+    endDate: "2026-11-18",
+    location: "Baixa",
+    createdBy: "user_alex",
+    createdAt: "2026-11-03T15:00:00.000Z",
+    updatedAt: "2026-11-03T15:00:00.000Z",
+  },
+]
+
 const REVIEW_NOW = { instant: "2026-11-17T18:00:00.000Z", timeZone: "America/Los_Angeles" }
 
 function TripFrame({
   screen,
-  mode,
+  view,
+  onViewChange,
+  showCover,
+  captureHint,
   themePack,
   children,
 }: {
   screen: string
-  mode: "trip" | "today"
+  view: "list" | "month"
+  onViewChange: (view: "list" | "month") => void
+  showCover: boolean
+  captureHint: string
   themePack: ThemePackId | null
   children: ReactNode
 }) {
@@ -157,7 +190,7 @@ function TripFrame({
       <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
         <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
           <div className="story-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            {mode === "trip" ? (
+            {showCover ? (
               <TripCover
                 className="trip-cover--compact"
                 tripName="Lisbon with you"
@@ -170,8 +203,8 @@ function TripFrame({
               <header className="border-b border-border/80 bg-background">
                 <div className="story-shell">
                   <StoryChrome
-                    mode={mode}
-                    onModeChange={() => {}}
+                    mode={view}
+                    onModeChange={onViewChange}
                     onOpenTrips={() => {}}
                     onInvite={() => {}}
                     youInitial="C"
@@ -234,7 +267,7 @@ function TripFrame({
             ) : null}
             {children}
           </div>
-          <CaptureDock hint={mode === "today" ? "What’s happening today?" : "Add to the trip…"} onCapture={() => {}} />
+          <CaptureDock hint={captureHint} onCapture={() => {}} />
         </div>
       </div>
       <AddToCalendarSheet
@@ -280,6 +313,7 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
   const [planOpen, setPlanOpen] = useState(screen === "add" || screen === "edit")
   const [planSeed, setPlanSeed] = useState<Partial<TripItemInput> | null>(null)
   const [planEdit, setPlanEdit] = useState<TripItem | null>(screen === "edit" ? editItem : null)
+  const [view, setView] = useState<"list" | "month">(screen === "month" ? "month" : "list")
 
   if (screen === "join" || screen === "create") {
     const mode = screen === "join" ? "join" : "create"
@@ -318,7 +352,21 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
     )
   }
 
-  const mode = screen === "today" ? "today" : "trip"
+  const story = screen === "today" ? "today" : "trip"
+  const showCover = view === "list" && story === "trip"
+  const captureHint = story === "today" && view === "list" ? "What’s happening today?" : "Add to the trip…"
+
+  function openPlan(item: TripItem | null, date?: string) {
+    if (item) {
+      setPlanSeed(null)
+      setPlanEdit(item)
+      setPlanOpen(true)
+      return
+    }
+    setPlanEdit(null)
+    setPlanSeed(date ? { startDate: date, endDate: date } : null)
+    setPlanOpen(true)
+  }
 
   function openAction(action: GapAction) {
     if (action.itemId) {
@@ -343,57 +391,71 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
 
   return (
     <>
-      <TripFrame screen={screen} mode={mode} themePack={themePack}>
-        {showHome ? (
-          <TripHome
+      <TripFrame
+        screen={screen}
+        view={view}
+        onViewChange={setView}
+        showCover={showCover}
+        captureHint={captureHint}
+        themePack={themePack}
+      >
+        {view === "month" ? (
+          <TripMonthView
             className="story-shell"
-            model={home}
-            members={members}
-            claims={claims}
-            currentUserId={USER_ID}
-            onClaim={(gapId, claimed) => {
-              setClaims((current) => {
-                const rest = current.filter((claim) => claim.gapId !== gapId)
-                if (!claimed) return rest
-                return [...rest, { gapId, userId: USER_ID, displayName: "Connor" }]
-              })
-            }}
-            onAction={openAction}
-            onOpenItem={(id) => {
-              const item = homeItems.find((entry) => entry.id === id)
-              if (!item) return
-              setPlanSeed(null)
-              setPlanEdit(item)
-              setPlanOpen(true)
-            }}
+            items={screen === "month" ? monthItems : homeItems}
+            tripStart={tripStartDate}
+            tripEnd={tripEndDate}
+            today="2026-11-18"
+            onEditItem={(item) => openPlan(item)}
+            onAddItem={(date) => openPlan(null, date)}
           />
-        ) : null}
-        <TripStoryView
-          className="story-shell"
-          mode={mode}
-          items={homeItems}
-          today="2026-11-18"
-          tripStart={tripStartDate}
-          tripEnd={tripEndDate}
-          dayNumber={1}
-          currentUserId={USER_ID}
-          members={members}
-          packingChecked={2}
-          packingTotal={6}
-          notesCount={1}
-          onEditItem={(item) => {
-            setPlanSeed(null)
-            setPlanEdit(item)
-            setPlanOpen(true)
-          }}
-          onStartFlight={() => {}}
-          onStartStay={() => {}}
-          onStartPlace={() => {}}
-          onInvite={() => {}}
-          onOpenPacking={() => {}}
-          onOpenNotes={() => {}}
-          onOpenAsk={() => {}}
-        />
+        ) : (
+          <>
+            {showHome ? (
+              <TripHome
+                className="story-shell"
+                model={home}
+                members={members}
+                claims={claims}
+                currentUserId={USER_ID}
+                onClaim={(gapId, claimed) => {
+                  setClaims((current) => {
+                    const rest = current.filter((claim) => claim.gapId !== gapId)
+                    if (!claimed) return rest
+                    return [...rest, { gapId, userId: USER_ID, displayName: "Connor" }]
+                  })
+                }}
+                onAction={openAction}
+                onOpenItem={(id) => {
+                  const item = homeItems.find((entry) => entry.id === id)
+                  if (item) openPlan(item)
+                }}
+              />
+            ) : null}
+            <TripStoryView
+              className="story-shell"
+              mode={story}
+              items={homeItems}
+              today="2026-11-18"
+              tripStart={tripStartDate}
+              tripEnd={tripEndDate}
+              dayNumber={1}
+              currentUserId={USER_ID}
+              members={members}
+              packingChecked={2}
+              packingTotal={6}
+              notesCount={1}
+              onEditItem={(item) => openPlan(item)}
+              onStartFlight={() => {}}
+              onStartStay={() => {}}
+              onStartPlace={() => {}}
+              onInvite={() => {}}
+              onOpenPacking={() => {}}
+              onOpenNotes={() => {}}
+              onOpenAsk={() => {}}
+            />
+          </>
+        )}
       </TripFrame>
       <TripsSheet
         open={screen === "trips"}
