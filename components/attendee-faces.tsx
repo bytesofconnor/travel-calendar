@@ -4,6 +4,7 @@ import { Check, Minus } from "lucide-react"
 
 import {
   attendanceLabel,
+  attendanceSummary,
   faceInitials,
   resolveAttendance,
   toggleMember,
@@ -95,11 +96,7 @@ export function AttendeeToggles({
   if (members.length === 0) return null
   const memberIds = members.map((member) => member.userId)
   const attendance = resolveAttendance(attendeeIds, memberIds)
-  const names = attendance.includedIds.flatMap((id) => {
-    const member = members.find((entry) => entry.userId === id)
-    return member ? [member.displayName] : []
-  })
-  const summary = attendanceLabel(names, attendance.everyone)
+  const summary = attendanceSummary(members, attendeeIds)
 
   return (
     <div role="group" aria-labelledby="plan-who-label" data-who="in" className="space-y-2">
@@ -117,6 +114,7 @@ export function AttendeeToggles({
               key={member.userId}
               type="button"
               aria-pressed={included}
+              title={member.displayName}
               aria-label={`${member.displayName}, ${included ? "included" : "not included"}`}
               onClick={() => onChange(toggleMember(attendeeIds, memberIds, member.userId))}
               className={`relative inline-flex size-[44px] shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${

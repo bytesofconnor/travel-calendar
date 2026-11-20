@@ -69,7 +69,7 @@ test("a day opens its plans and an empty day can add that date", async ({ page }
   const add = page.getByRole("dialog")
   await expect(add).toBeVisible()
   await expect(add.locator("#plan-start")).toHaveValue("2026-11-02")
-  await expect(add.locator("#plan-end")).toHaveValue("2026-11-02")
+  await expect(add.getByRole("heading", { name: "Add a place" })).toBeVisible()
 })
 
 test("arrow keys move between days", async ({ page }) => {

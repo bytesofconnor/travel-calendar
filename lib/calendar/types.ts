@@ -30,6 +30,7 @@ export type SourceItem = {
   endDate: string
   location: string
   locationTo?: string
+  planType?: CalendarKind
   startTime?: string
   endTime?: string
   startTimeZone?: string

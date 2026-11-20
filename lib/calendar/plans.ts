@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 
 import { airportTimeZone, isIanaTimeZone } from "./airports.ts"
+import { resolvePlanType } from "../plan-form.ts"
 import type { CalendarKind, CalendarPlan, SourceItem, TripCalendarSource } from "./types.ts"
 
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/
@@ -24,10 +25,24 @@ export function addIsoDays(iso: string, days: number): string {
   return date.toISOString().slice(0, 10)
 }
 
-export function planKind(item: { locationTo?: string; startDate: string; endDate: string }): CalendarKind {
-  if (item.locationTo?.trim()) return "flight"
-  if (item.startDate !== item.endDate) return "stay"
-  return "place"
+export function planKind(item: {
+  planType?: SourceItem["planType"]
+  title?: string
+  notes?: string
+  location?: string
+  locationTo?: string
+  startDate: string
+  endDate: string
+}): CalendarKind {
+  return resolvePlanType({
+    planType: item.planType,
+    title: item.title ?? "",
+    notes: item.notes,
+    location: item.location ?? "",
+    locationTo: item.locationTo,
+    startDate: item.startDate,
+    endDate: item.endDate,
+  })
 }
 
 function cleanTime(value: string | undefined): string | undefined {

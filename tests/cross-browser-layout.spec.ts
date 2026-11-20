@@ -6,8 +6,8 @@ const coreScreens = [
   { id: "trip-list", path: "/review?screen=trips", ready: "Your trips" },
   { id: "trip", path: "/review?screen=trip", ready: "Lisbon with you" },
   { id: "today", path: "/review?screen=today", ready: "on for today" },
-  { id: "add", path: "/review?screen=add", ready: "Add for everyone" },
-  { id: "edit", path: "/review?screen=edit", ready: "Edit plan" },
+  { id: "add", path: "/review?screen=add", ready: "Add a place" },
+  { id: "edit", path: "/review?screen=edit", ready: "Edit place" },
   { id: "edit-trip", path: "/review?screen=edit-trip", ready: "Edit trip details" },
   { id: "invite", path: "/review?screen=invite", ready: "https://www.travelcalendar.space/?join=ab12cd34ef56" },
   { id: "join", path: "/review?screen=join", ready: "Join trip" },
@@ -309,7 +309,7 @@ async function audit(page: Page, safeTop: number, safeBottom: number) {
         }
         const scroller = document.querySelector<HTMLElement>(".story-scroll")
         const chrome = document.querySelector<HTMLElement>(".story-chrome-sticky")
-        if (scroller && chrome) {
+        if (scroller && chrome && getComputedStyle(chrome).position === "sticky") {
           const port = scroller.getBoundingClientRect().top
           scroller.scrollTop = Math.max(scroller.scrollHeight, 800)
           const stuck = chrome.getBoundingClientRect().top
@@ -399,7 +399,7 @@ test("core screens hold in this browser", async ({ page }, testInfo) => {
     await where.focus()
     await expect(where).toBeInViewport()
     const whereBox = await where.boundingBox()
-    const save = page.getByRole("button", { name: "Add plan" })
+    const save = page.getByRole("button", { name: "Add place" })
     const saveBox = await save.boundingBox()
     expect(whereBox!.y + whereBox!.height).toBeLessThanOrEqual((saveBox?.y ?? 520) + 1)
     const dates = await audit(page, 0, 0)

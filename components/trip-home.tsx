@@ -4,6 +4,7 @@ import { useState } from "react"
 
 import type { GapAction, TripGap, TripHomeModel, UpcomingItem } from "@/lib/trip-home/detect"
 import { initial } from "@/lib/trip-kind"
+import { DayWeather, type DayWeatherState } from "@/components/weather-chip"
 
 export type TripHomeMember = {
   userId: string
@@ -25,6 +26,7 @@ type TripHomeProps = {
   onClaim: (gapId: string, claimed: boolean) => void
   onAction: (action: GapAction) => void
   onOpenItem: (id: string) => void
+  weather?: DayWeatherState
   className?: string
 }
 
@@ -43,6 +45,7 @@ export function TripHome({
   onClaim,
   onAction,
   onOpenItem,
+  weather,
   className,
 }: TripHomeProps) {
   const [live, setLive] = useState("")
@@ -76,6 +79,9 @@ export function TripHome({
               </span>
               <span className="trip-home__countdown">{next.countdown}</span>
             </button>
+            {weather ? (
+              <DayWeather date={next.startDate} readings={weather.readings} units={weather.units} showScale choose={weather.choose} />
+            ) : null}
             {rest.length > 0 ? (
               <ol className="trip-home__list">
                 {rest.map((item) => (

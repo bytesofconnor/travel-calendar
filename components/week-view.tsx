@@ -14,6 +14,7 @@ import {
   type TripItemInput,
   useCalendarStore,
 } from "@/lib/kanban-store"
+import type { PlanType } from "@/lib/plan-types"
 import { ItemDialog } from "./item-dialog"
 import { TabViewHeader } from "./tab-view-header"
 import { TabViewShell } from "./tab-view-shell"
@@ -41,7 +42,7 @@ export function WeekView({
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [editingItem, setEditingItem] = useState<TripItem | null>(null)
   const [initialInput, setInitialInput] = useState<Partial<TripItemInput> | null>(null)
-  const [initialTravel, setInitialTravel] = useState(false)
+  const [initialType, setInitialType] = useState<PlanType | null>(null)
   const [mobileSelectedDate, setMobileSelectedDate] = useState(currentWeekStart)
   const [mounted, setMounted] = useState(false)
   const selectedDayRef = useRef<HTMLElement | null>(null)
@@ -77,11 +78,15 @@ export function WeekView({
     })
   }, [mobileSelectedDate, mounted])
 
-  function handleAddItem(date: string, opts?: { travel?: boolean; title?: string }) {
+  function handleAddItem(date: string, opts?: { type?: PlanType; title?: string }) {
     setSelectedDate(date)
     setEditingItem(null)
-    setInitialInput(opts?.title ? { title: opts.title } : null)
-    setInitialTravel(Boolean(opts?.travel))
+    setInitialType(opts?.type ?? "place")
+    setInitialInput({
+      title: opts?.title ?? "",
+      startDate: date,
+      endDate: date,
+    })
     setDialogOpen(true)
   }
 
@@ -89,7 +94,7 @@ export function WeekView({
     setEditingItem(item)
     setSelectedDate(null)
     setInitialInput(null)
-    setInitialTravel(false)
+    setInitialType(null)
     setDialogOpen(true)
   }
 
@@ -367,7 +372,7 @@ export function WeekView({
                       <button
                         type="button"
                         className="plan-composer__type"
-                        onClick={() => handleAddItem(day.date, { title: "Stay" })}
+                        onClick={() => handleAddItem(day.date, { type: "stay", title: "Stay" })}
                       >
                         <BedDouble className="h-3.5 w-3.5" />
                         Stay
@@ -375,7 +380,7 @@ export function WeekView({
                       <button
                         type="button"
                         className="plan-composer__type"
-                        onClick={() => handleAddItem(day.date, { travel: true, title: "Flight" })}
+                        onClick={() => handleAddItem(day.date, { type: "flight", title: "Flight" })}
                       >
                         <Plane className="h-3.5 w-3.5" />
                         Flight
@@ -383,7 +388,7 @@ export function WeekView({
                       <button
                         type="button"
                         className="plan-composer__type"
-                        onClick={() => handleAddItem(day.date, { title: "Idea" })}
+                        onClick={() => handleAddItem(day.date, { type: "place", title: "Idea" })}
                       >
                         <Lightbulb className="h-3.5 w-3.5" />
                         Idea
@@ -525,13 +530,13 @@ export function WeekView({
           setDialogOpen(open)
           if (!open) {
             setInitialInput(null)
-            setInitialTravel(false)
+            setInitialType(null)
           }
         }}
         defaultDate={selectedDate}
         editItem={editingItem}
         initialInput={initialInput}
-        initialTravel={initialTravel}
+        initialType={initialType}
         currentUserName={currentUserName}
         isSaving={isMutating}
         isDeleting={isMutating}

@@ -8,8 +8,8 @@ const screens = [
   { path: "/review?screen=trips", ready: "Your trips" },
   { path: "/review?screen=trip", ready: "Lisbon with you" },
   { path: "/review?screen=today", ready: "on for today" },
-  { path: "/review?screen=add", ready: "Add for everyone" },
-  { path: "/review?screen=edit", ready: "Edit plan" },
+  { path: "/review?screen=add", ready: "Add a place" },
+  { path: "/review?screen=edit", ready: "Edit place" },
   { path: "/review?screen=edit-trip", ready: "Edit trip details" },
   { path: "/review?screen=invite", ready: "https://www.travelcalendar.space/?join=ab12cd34ef56" },
   { path: "/review?screen=join", ready: "Join trip" },
@@ -181,7 +181,7 @@ test("the add bar stays within a fifth of a small phone", async ({ page }, testI
     page.getByRole("button", { name: "Add Place" }),
     page.getByRole("button", { name: "Add Note" }),
   ]
-  const field = page.getByRole("button", { name: "What’s happening today?" })
+  const field = page.getByRole("textbox", { name: "What’s happening today?" })
   const boxes = []
   for (const control of [field, ...chips]) {
     const box = await control.boundingBox()
@@ -214,7 +214,7 @@ test("the add bar stays within a fifth of a small phone", async ({ page }, testI
 
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.goto("/review?screen=trip")
-  const wideField = page.getByRole("button", { name: "Add to the trip…" })
+  const wideField = page.locator(".capture-dock__field")
   expect((await wideField.boundingBox())!.height).toBeGreaterThanOrEqual(56)
 })
 

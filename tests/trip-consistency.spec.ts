@@ -7,13 +7,23 @@ async function addPlan(
 ) {
   await page.getByRole("button", { name: `Add ${kind}` }).click()
   const dialog = page.getByRole("dialog")
-  await dialog.getByLabel("Plan").fill(fields.title)
-  if (fields.start) await dialog.getByLabel("Start").fill(fields.start)
-  if (fields.end) await dialog.getByLabel("End").fill(fields.end)
-  if (fields.where) await dialog.getByLabel("Where").fill(fields.where)
-  if (fields.from) await dialog.getByLabel("From").fill(fields.from)
-  if (fields.to) await dialog.getByLabel("To").fill(fields.to)
-  await dialog.getByRole("button", { name: "Add plan" }).click()
+  if (kind === "Stay") {
+    await dialog.getByLabel("Where are you staying?").fill(fields.where ?? "")
+    await dialog.getByLabel("Title").fill(fields.title)
+    if (fields.start) await dialog.getByLabel("Check-in").fill(fields.start)
+    if (fields.end) await dialog.getByLabel("Check-out").fill(fields.end)
+    await dialog.getByRole("button", { name: "Add stay" }).click()
+  } else if (kind === "Flight") {
+    if (fields.from) await dialog.getByLabel("From").fill(fields.from)
+    if (fields.to) await dialog.getByLabel("To").fill(fields.to)
+    await dialog.getByLabel("Title").fill(fields.title)
+    await dialog.getByRole("button", { name: "Add flight" }).click()
+  } else {
+    await dialog.getByLabel("What are you doing?").fill(fields.title)
+    if (fields.where) await dialog.getByLabel("Where").fill(fields.where)
+    if (fields.start) await dialog.getByLabel("Date").fill(fields.start)
+    await dialog.getByRole("button", { name: "Add place" }).click()
+  }
   await expect(dialog).toBeHidden()
 }
 
@@ -60,7 +70,7 @@ test("member B sees member A's trip edits live and after reload", async ({ brows
     await owner.getByRole("button", { name: /Place: Time Out Market/ }).click()
     const editPlan = owner.getByRole("dialog")
     await editPlan.getByLabel("Where").fill("Market hall")
-    await editPlan.getByRole("button", { name: "Save changes" }).click()
+    await editPlan.getByRole("button", { name: "Save", exact: true }).click()
     await expect(editPlan).toBeHidden()
     await expect(partner.getByRole("button", { name: /Place: Time Out Market\. Market hall/ })).toBeVisible()
 

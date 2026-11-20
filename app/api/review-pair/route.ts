@@ -37,8 +37,8 @@ function itemInput(record: Record<string, unknown>): ItemInput | null {
   const title = readString(record, "title")
   const startDate = readString(record, "startDate")
   const endDate = readString(record, "endDate")
-  const location = readString(record, "location")
-  if (!title || !startDate || !endDate || !location) return null
+  const location = typeof record.location === "string" ? record.location : null
+  if (!title || !startDate || !endDate || location === null) return null
   const notes = typeof record.notes === "string" ? record.notes : undefined
   const locationTo = typeof record.locationTo === "string" ? record.locationTo : undefined
   return { title, notes, startDate, endDate, location, locationTo }

@@ -48,6 +48,8 @@ import {
   tripDayCount,
 } from "@/lib/trip-kind"
 import { formatTripDateRange } from "@/lib/format-dates"
+import { guessPlanType, tripPlaceHint } from "@/lib/plan-form"
+import type { PlanType } from "@/lib/plan-types"
 import { addedPlanMessage, travelerLabel } from "@/lib/travelers"
 import { oauthRedirectTo } from "@/lib/oauth-redirect"
 import { parseThemePack } from "@/lib/theme-packs"
@@ -56,6 +58,7 @@ import { ThemePackPickerMenuItems } from "@/components/theme-pack-menu"
 import { useTripThemePack } from "@/components/use-trip-theme-pack"
 import { AddToCalendarSheet } from "./add-to-calendar-sheet"
 import { CaptureDock, type CaptureKind } from "./capture-dock"
+import { useDayWeather } from "./day-weather"
 import { ConfirmQueue } from "./confirm-queue"
 import { CreateJoinScreen } from "./create-join-screen"
 import { ItemDialog } from "./item-dialog"
@@ -98,6 +101,17 @@ type ConvexTripDoc = {
 
 function toIso(ms: number) {
   return new Date(ms).toISOString()
+}
+
+function storedPlace(place: TripItemInput["place"]) {
+  if (!place || typeof place.lat !== "number" || typeof place.lng !== "number") return null
+  return {
+    name: place.name,
+    lat: place.lat,
+    lng: place.lng,
+    ...(place.country ? { country: place.country } : {}),
+    ...(place.timeZone ? { timeZone: place.timeZone } : {}),
+  }
 }
 
 function mapTrip(doc: ConvexTripDoc): Trip {
@@ -233,7 +247,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
   const [editItem, setEditItem] = useState<TripItem | null>(null)
   const [defaultItemDate, setDefaultItemDate] = useState<string | null>(null)
   const [initialItemInput, setInitialItemInput] = useState<Partial<TripItemInput> | null>(null)
-  const [initialTravel, setInitialTravel] = useState(false)
+  const [initialType, setInitialType] = useState<PlanType | null>(null)
   const [emphasizeItemId, setEmphasizeItemId] = useState<string | null>(null)
   const [today] = useState(() => new Date().toISOString().slice(0, 10))
   const [homeNow] = useState(() => ({
@@ -289,6 +303,12 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
           endDate: item.endDate,
           location: item.location,
           locationTo: item.locationTo,
+          planType: item.planType,
+          place: item.place,
+          placeTo: item.placeTo,
+          confirmation: item.confirmation,
+          flightCode: item.flightCode,
+          address: item.address,
           startTime: item.startTime,
           endTime: item.endTime,
           startTimeZone: item.startTimeZone,
@@ -365,10 +385,15 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         startTimeZone: item.startTimeZone,
         endTimeZone: item.endTimeZone,
         notes: item.notes,
+        planType: item.planType,
       })),
       now: homeNow,
     })
   }, [homeNow, items, trip])
+  const weather = useDayWeather(items, {
+    start: trip?.startDate ?? today,
+    end: trip?.endDate ?? today,
+  })
   const homeClaims = useMemo(() => {
     const byGap = new Map<string, { gapId: string; userId: string; displayName: string }>()
     for (const claim of bundle?.gapClaims ?? []) {
@@ -694,6 +719,12 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         endDate: input.endDate,
         location: input.location,
         locationTo: input.locationTo,
+        planType: input.planType,
+        place: storedPlace(input.place),
+        placeTo: storedPlace(input.placeTo),
+        confirmation: input.confirmation ?? "",
+        flightCode: input.flightCode ?? "",
+        address: input.address ?? "",
         startTime: input.startTime,
         endTime: input.endTime,
         startTimeZone: input.startTimeZone,
@@ -730,7 +761,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
     }
     setEditItem(null)
     setDefaultItemDate(action.startDate)
-    setInitialTravel(action.flow === "flight" || action.flow === "transport")
+    setInitialType(action.flow === "stay" ? "stay" : action.flow === "place" ? "place" : "flight")
     setInitialItemInput({
       title: action.title,
       startDate: action.startDate,
@@ -762,20 +793,17 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
     }
   }
 
-  function openCapture(kind?: CaptureKind, date?: string) {
+  function openCapture(kind?: CaptureKind, date?: string, text?: string) {
     const baseDate = date ?? trip?.startDate ?? today
+    const typed = kind ?? (text?.trim() ? guessPlanType(text) : "place")
     setEditItem(null)
     setDefaultItemDate(baseDate)
-    setInitialTravel(kind === "flight")
-    if (kind === "flight") {
-      setInitialItemInput({ title: "Flight", startDate: baseDate, endDate: baseDate })
-    } else if (kind === "stay") {
-      setInitialItemInput({ title: "Stay", startDate: baseDate, endDate: baseDate })
-    } else if (kind === "place") {
-      setInitialItemInput({ title: "", startDate: baseDate, endDate: baseDate })
-    } else {
-      setInitialItemInput(null)
-    }
+    setInitialType(typed)
+    setInitialItemInput({
+      title: text?.trim() ?? "",
+      startDate: baseDate,
+      endDate: baseDate,
+    })
     setItemDialogOpen(true)
   }
 
@@ -783,7 +811,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
     setEditItem(item)
     setDefaultItemDate(item.startDate)
     setInitialItemInput(null)
-    setInitialTravel(Boolean(item.locationTo))
+    setInitialType(null)
     setItemDialogOpen(true)
   }
 
@@ -1258,7 +1286,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
                 />
               ) : null}
 
-              <div className="story-chrome-sticky sticky z-20">
+              <div className="story-chrome-sticky z-20">
                 <SpectrumHairline />
                 <header className="border-b border-border/80 bg-background">
                   <div className="story-shell">
@@ -1360,6 +1388,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
                     const item = items.find((entry) => entry.id === id)
                     if (item) openEditItem(item)
                   }}
+                  weather={weather}
                 />
               ) : null}
               {storyMode === "month" ? (
@@ -1371,6 +1400,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
                   today={today}
                   onEditItem={openEditItem}
                   onAddItem={(date) => openCapture(undefined, date)}
+                  weather={weather}
                 />
               ) : (
                 <TripStoryView
@@ -1395,13 +1425,13 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
                   onOpenPacking={() => setPeek("packing")}
                   onOpenNotes={() => setPeek("notes")}
                   onOpenAsk={() => setDesktopAiOpen(true)}
+                  weather={weather}
                 />
               )}
             </div>
             <CaptureDock
               hint={captureHint}
-              onCapture={(kind) => openCapture(kind)}
-              onOpenNotes={() => setPeek("notes")}
+              onCapture={(kind, text) => openCapture(kind, undefined, text)}
             />
           </div>
 
@@ -1541,7 +1571,9 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         defaultDate={defaultItemDate}
         editItem={editItem}
         initialInput={initialItemInput}
-        initialTravel={initialTravel}
+        initialType={initialType}
+        placeHint={tripPlaceHint(trip.name)}
+        units={weather.units}
         currentUserName={currentMember?.displayName ?? guessDisplayName(me)}
         members={members}
         isSaving={isMutating}

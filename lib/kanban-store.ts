@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import { defaultTripDates } from "@/lib/format-dates"
+import type { GeoPlace, PlanType } from "@/lib/plan-types"
 import type { ThemePackId } from "@/lib/theme-packs"
 
 export type Location = string
@@ -45,6 +46,12 @@ export interface TripItem {
   endTime?: string
   startTimeZone?: string
   endTimeZone?: string
+  planType?: PlanType
+  place?: GeoPlace
+  placeTo?: GeoPlace
+  confirmation?: string
+  flightCode?: string
+  address?: string
   createdBy: string
   createdAt: string
   updatedAt: string
@@ -87,6 +94,12 @@ export interface TripItemInput {
   endTime?: string
   startTimeZone?: string
   endTimeZone?: string
+  planType?: PlanType
+  place?: GeoPlace
+  placeTo?: GeoPlace
+  confirmation?: string
+  flightCode?: string
+  address?: string
   attendeeIds?: string[]
 }
 
