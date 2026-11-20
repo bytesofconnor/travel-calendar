@@ -1393,7 +1393,6 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
               ) : null}
               {storyMode === "month" ? (
                 <TripMonthView
-                  className="story-shell"
                   items={items}
                   tripStart={trip.startDate}
                   tripEnd={trip.endDate}

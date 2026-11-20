@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 
 import type { TripItem } from "@/lib/kanban-store"
+import { itemsOnDay, stayBarsForWeek, tripEdges, type MonthDayCell } from "@/lib/month-layout"
 import { inferPlanKind, kindLabel, type PlanKind } from "@/lib/trip-kind"
 import { cn } from "@/lib/utils"
 import { DayWeather, type DayWeatherState } from "@/components/weather-chip"
@@ -22,18 +23,6 @@ const MONTHS = [
   "November",
   "December",
 ] as const
-
-const KIND_ORDER: Record<PlanKind, number> = {
-  flight: 0,
-  stay: 1,
-  place: 2,
-  note: 3,
-  ask: 4,
-  now: 5,
-}
-
-const WIDE_CHIP_CAP = 2
-const NARROW_DOT_CAP = 3
 
 interface TripMonthViewProps {
   items: TripItem[]
@@ -65,7 +54,7 @@ function localIso(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 }
 
-function buildDays(key: string) {
+function buildDays(key: string): MonthDayCell[] {
   const [year, month] = key.split("-").map(Number)
   const first = new Date(year, month - 1, 1)
   const start = new Date(year, month - 1, 1 - first.getDay())
@@ -96,30 +85,35 @@ function eventPhrase(item: TripItem) {
   return `${kindLabel(kind)} ${item.title}`
 }
 
-function itemsOnDay(items: TripItem[], iso: string) {
-  return items
-    .filter((item) => item.startDate <= iso && item.endDate >= iso)
-    .sort((left, right) => {
-      const kind = KIND_ORDER[inferPlanKind(left)] - KIND_ORDER[inferPlanKind(right)]
-      if (kind !== 0) return kind
-      return left.title.localeCompare(right.title)
-    })
-}
-
-function dayName(iso: string, dayItems: TripItem[], isToday: boolean) {
+function dayName(iso: string, dayItems: TripItem[], isToday: boolean, inTrip: boolean) {
   const { weekday, month, day } = dateParts(iso)
-  const head = `${weekday} ${month} ${day}`
-  const when = isToday ? `${head}, today` : head
-  if (dayItems.length === 0) return `${when}, no events`
+  const head = isToday ? `${weekday} ${month} ${day}, today` : `${weekday} ${month} ${day}`
+  const trip = inTrip ? ", on the trip" : ""
+  if (dayItems.length === 0) return `${head}, no events${trip}`
   const noun = dayItems.length === 1 ? "event" : "events"
-  return `${when}, ${dayItems.length} ${noun}: ${dayItems.map(eventPhrase).join(", ")}`
+  return `${head}, ${dayItems.length} ${noun}: ${dayItems.map(eventPhrase).join(", ")}${trip}`
 }
 
-function focusIndexFor(days: Array<{ iso: string; inMonth: boolean }>, today: string) {
+function focusIndexFor(days: MonthDayCell[], today: string) {
   const todayIndex = days.findIndex((day) => day.inMonth && day.iso === today)
   if (todayIndex >= 0) return todayIndex
   const first = days.findIndex((day) => day.inMonth)
   return first >= 0 ? first : 0
+}
+
+function indexForDayNumber(days: MonthDayCell[], iso: string) {
+  const dayNumber = iso.slice(8, 10)
+  const match = days.findIndex((day) => day.inMonth && day.iso.slice(8, 10) === dayNumber)
+  if (match >= 0) return match
+  for (let index = days.length - 1; index >= 0; index -= 1) {
+    if (days[index].inMonth) return index
+  }
+  return 0
+}
+
+function indexForIso(days: MonthDayCell[], iso: string) {
+  const match = days.findIndex((day) => day.iso === iso)
+  return match >= 0 ? match : focusIndexFor(days, iso)
 }
 
 export function TripMonthView({
@@ -139,23 +133,73 @@ export function TripMonthView({
   const [selected, setSelected] = useState<string | null>(null)
   const moveFocus = useRef(false)
   const focusRef = useRef<HTMLButtonElement | null>(null)
+  const addRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     if (!moveFocus.current) return
     moveFocus.current = false
     focusRef.current?.focus()
-  }, [focusIndex])
+  }, [focusIndex, month])
 
-  function changeMonth(delta: number) {
-    const next = shiftMonth(month, delta)
-    setMonth(next)
-    setFocusIndex(focusIndexFor(buildDays(next), today))
+  useEffect(() => {
+    if (!selected) return
+    addRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" })
+  }, [selected])
+
+  function showMonth(nextMonth: string, nextIndex: number, focus: boolean) {
+    moveFocus.current = focus
+    setMonth(nextMonth)
+    setFocusIndex(nextIndex)
     setSelected(null)
   }
 
+  function changeMonth(delta: number) {
+    const next = shiftMonth(month, delta)
+    showMonth(next, focusIndexFor(buildDays(next), today), false)
+  }
+
+  function jumpTo(iso: string) {
+    const nextMonth = monthKey(iso)
+    const built = buildDays(nextMonth)
+    setMonth(nextMonth)
+    setFocusIndex(indexForIso(built, iso))
+    setSelected(iso)
+  }
+
   function onDayKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    const key = event.key
+    if ((event.ctrlKey || event.metaKey) && (key === "Home" || key === "End")) {
+      event.preventDefault()
+      if (key === "Home") {
+        const first = days.findIndex((day) => day.inMonth)
+        moveFocus.current = true
+        setFocusIndex(first >= 0 ? first : 0)
+        return
+      }
+      let last = 0
+      days.forEach((day, dayIndex) => {
+        if (day.inMonth) last = dayIndex
+      })
+      moveFocus.current = true
+      setFocusIndex(last)
+      return
+    }
+    if (key === "Home" || key === "End") {
+      event.preventDefault()
+      const weekStart = Math.floor(index / 7) * 7
+      moveFocus.current = true
+      setFocusIndex(key === "Home" ? weekStart : weekStart + 6)
+      return
+    }
+    if (key === "PageUp" || key === "PageDown") {
+      event.preventDefault()
+      const nextMonth = shiftMonth(month, key === "PageUp" ? -1 : 1)
+      const current = days[index]?.iso ?? today
+      showMonth(nextMonth, indexForDayNumber(buildDays(nextMonth), current), true)
+      return
+    }
     const delta =
-      event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : event.key === "ArrowDown" ? 7 : event.key === "ArrowUp" ? -7 : 0
+      key === "ArrowRight" ? 1 : key === "ArrowLeft" ? -1 : key === "ArrowDown" ? 7 : key === "ArrowUp" ? -7 : 0
     if (!delta) return
     event.preventDefault()
     const next = index + delta
@@ -166,118 +210,288 @@ export function TripMonthView({
 
   const selectedItems = selected ? itemsOnDay(items, selected) : []
   const selectedParts = selected ? dateParts(selected) : null
+  const tripMonth = monthKey(tripStart)
+  const todayMonth = monthKey(today)
+  const showTripStart = month !== tripMonth && tripMonth !== todayMonth
+  const showToday = month !== todayMonth
 
   return (
     <section className={cn("month-view", className)} data-month-view>
       <div className="month-nav">
-        <button type="button" className="month-nav__btn" aria-label="Previous month" onClick={() => changeMonth(-1)}>
-          <span aria-hidden="true">‹</span>
-        </button>
-        <h2 className="month-nav__title">{monthTitle(month)}</h2>
-        <button type="button" className="month-nav__btn" aria-label="Next month" onClick={() => changeMonth(1)}>
-          <span aria-hidden="true">›</span>
-        </button>
+        <div className="month-nav__cluster">
+          <button type="button" className="month-nav__btn" aria-label="Previous month" onClick={() => changeMonth(-1)}>
+            <span aria-hidden="true">‹</span>
+          </button>
+          <h2 className="month-nav__title" id="month-view-title">
+            {monthTitle(month)}
+          </h2>
+          <button type="button" className="month-nav__btn" aria-label="Next month" onClick={() => changeMonth(1)}>
+            <span aria-hidden="true">›</span>
+          </button>
+        </div>
+        <div className="month-nav__jumps">
+          {showTripStart ? (
+            <button type="button" className="month-nav__jump" onClick={() => jumpTo(tripStart)}>
+              Trip start
+            </button>
+          ) : null}
+          {showToday ? (
+            <button type="button" className="month-nav__jump" onClick={() => jumpTo(today)}>
+              Today
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      <div role="grid" aria-label={monthTitle(month)} className="month-grid">
-        <div role="row" className="month-grid__row">
-          {WEEKDAYS.map((weekday) => (
-            <div key={weekday} role="columnheader" aria-label={weekday} className="month-dow">
-              <span className="month-dow__long">{weekday.slice(0, 3)}</span>
-              <span className="month-dow__short">{weekday.slice(0, 1)}</span>
+      <div className="month-scale">
+        <div className="month-body">
+          <div role="grid" aria-labelledby="month-view-title" className="month-grid">
+            <div role="row" className="month-dow-row">
+              {WEEKDAYS.map((weekday) => (
+                <div key={weekday} role="columnheader" aria-label={weekday} className="month-dow">
+                  <span className="month-dow__long">{weekday.slice(0, 3)}</span>
+                  <span className="month-dow__short">{weekday.slice(0, 1)}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        {Array.from({ length: 6 }, (_, week) => (
-          <div key={week} role="row" className="month-grid__row">
-            {days.slice(week * 7, week * 7 + 7).map((day, column) => {
-              const index = week * 7 + column
-              const dayItems = itemsOnDay(items, day.iso)
-              const inTrip = day.iso >= tripStart && day.iso <= tripEnd
-              const isToday = day.iso === today
-              const wideMore = Math.max(0, dayItems.length - WIDE_CHIP_CAP)
-              const narrowMore = Math.max(0, dayItems.length - NARROW_DOT_CAP)
+            {Array.from({ length: 6 }, (_, week) => {
+              const weekDays = days.slice(week * 7, week * 7 + 7)
+              const bars = stayBarsForWeek(weekDays, items)
               return (
-                <button
-                  key={day.iso}
-                  type="button"
-                  role="gridcell"
-                  ref={index === focusIndex ? focusRef : undefined}
-                  tabIndex={index === focusIndex ? 0 : -1}
-                  aria-selected={selected === day.iso}
-                  aria-current={isToday ? "date" : undefined}
-                  data-trip={inTrip ? "true" : "false"}
-                  data-outside={day.inMonth ? "false" : "true"}
-                  data-today={isToday ? "true" : "false"}
-                  className="month-day"
-                  onClick={() => {
-                    setFocusIndex(index)
-                    setSelected(day.iso)
-                  }}
-                  onKeyDown={(event) => onDayKeyDown(event, index)}
-                >
-                  <span className="sr-only">{dayName(day.iso, dayItems, isToday)}</span>
-                  <span className="month-day__num">{dateParts(day.iso).day}</span>
-                  {dayItems.length > 0 ? (
-                    <>
-                      <span className="month-day__chips" aria-hidden="true">
-                        {dayItems.slice(0, WIDE_CHIP_CAP).map((item) => (
-                          <span key={item.id} className="month-chip" data-kind={inferPlanKind(item)}>
-                            {item.title}
+                <div key={weekDays[0]?.iso ?? week} role="row" className="month-week">
+                  {weekDays.map((day, column) => {
+                    const index = week * 7 + column
+                    const dayItems = itemsOnDay(items, day.iso)
+                    const edges = tripEdges(days, index, tripStart, tripEnd)
+                    const isToday = day.iso === today
+                    return (
+                      <button
+                        key={day.iso}
+                        type="button"
+                        role="gridcell"
+                        ref={index === focusIndex ? focusRef : undefined}
+                        tabIndex={index === focusIndex ? 0 : -1}
+                        aria-selected={selected === day.iso}
+                        aria-current={isToday ? "date" : undefined}
+                        data-trip={edges.inTrip ? "true" : "false"}
+                        data-outside={day.inMonth ? "false" : "true"}
+                        data-today={isToday ? "true" : "false"}
+                        className="month-day"
+                        style={{ gridColumn: column + 1 }}
+                        onClick={() => {
+                          setFocusIndex(index)
+                          setSelected(day.iso)
+                        }}
+                        onKeyDown={(event) => onDayKeyDown(event, index)}
+                      >
+                        <span className="sr-only">{dayName(day.iso, dayItems, isToday, edges.inTrip)}</span>
+                      </button>
+                    )
+                  })}
+                  <div className="month-face" aria-hidden="true">
+                    {weekDays.map((day, column) => {
+                      const index = week * 7 + column
+                      const edges = tripEdges(days, index, tripStart, tripEnd)
+                      return (
+                        <span
+                          key={`bg-${day.iso}`}
+                          className="month-bg"
+                          data-trip={edges.inTrip ? "true" : "false"}
+                          data-outside={day.inMonth ? "false" : "true"}
+                          data-edge={edges.edges || undefined}
+                          data-join-left={edges.joinLeft ? "true" : "false"}
+                          data-join-top={edges.joinTop ? "true" : "false"}
+                          data-column={column}
+                          style={{ gridColumn: column + 1 }}
+                        />
+                      )
+                    })}
+                    {weekDays.map((day, column) => {
+                      const dayItems = itemsOnDay(items, day.iso)
+                      const isToday = day.iso === today
+                      return (
+                        <span
+                          key={`num-${day.iso}`}
+                          className="month-day__num"
+                          data-outside={day.inMonth ? "false" : "true"}
+                          style={{ gridColumn: column + 1 }}
+                        >
+                          <span className="month-day__date" data-today={isToday ? "true" : "false"}>
+                            {dateParts(day.iso).day}
                           </span>
-                        ))}
-                      </span>
-                      <span className="month-day__dots" aria-hidden="true">
-                        {dayItems.slice(0, NARROW_DOT_CAP).map((item) => (
-                          <span key={item.id} className="month-dot" data-kind={inferPlanKind(item)} />
-                        ))}
-                      </span>
-                      {wideMore > 0 ? <span className="month-more month-more--wide">+{wideMore} more</span> : null}
-                      {narrowMore > 0 ? <span className="month-more month-more--narrow">+{narrowMore} more</span> : null}
-                    </>
-                  ) : null}
-                </button>
+                          {isToday ? <span className="month-day__today">Today</span> : null}
+                          {dayItems.length > 0 ? <span className="month-badge">{dayItems.length}</span> : null}
+                        </span>
+                      )
+                    })}
+                    <div className="month-bars">
+                      {bars.map((bar) => (
+                        <span
+                          key={`${bar.id}-${bar.start}`}
+                          className="month-bar"
+                          data-kind={bar.kind}
+                          data-continues-before={bar.continuesBefore ? "true" : "false"}
+                          data-continues-after={bar.continuesAfter ? "true" : "false"}
+                          style={{ gridColumn: `${bar.start + 1} / ${bar.end + 2}`, gridRow: bar.lane + 1 }}
+                        >
+                          {bar.continuesBefore ? null : <span className="month-bar__kind">Stay</span>}
+                          <span className="month-bar__title">{bar.title}</span>
+                        </span>
+                      ))}
+                    </div>
+                    {weekDays.map((day, column) => {
+                      const singles = itemsOnDay(items, day.iso).filter((item) => inferPlanKind(item) !== "stay")
+                      return (
+                        <span key={`chips-${day.iso}`} className="month-day__chips" style={{ gridColumn: column + 1 }}>
+                          {singles.map((item) => {
+                            const kind = inferPlanKind(item)
+                            return (
+                              <span key={item.id} className="month-chip" data-kind={kind}>
+                                <span className="month-chip__kind">{kindLabel(kind)}</span>
+                                <span className="month-chip__title">{item.title}</span>
+                              </span>
+                            )
+                          })}
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
               )
             })}
           </div>
-        ))}
-      </div>
 
-      {selected && selectedParts ? (
-        <div className="month-detail">
-          <h3 className="month-detail__title">
-            {selectedParts.weekday}, {selectedParts.month} {selectedParts.day}
-          </h3>
-          {weather ? (
-            <DayWeather date={selected} readings={weather.readings} units={weather.units} showScale choose={weather.choose} />
+          {selected && selectedParts ? (
+            <div className="month-detail">
+              <h3 className="month-detail__title">
+                {selectedParts.weekday}, {selectedParts.month} {selectedParts.day}
+              </h3>
+              {weather ? (
+                <DayWeather
+                  date={selected}
+                  readings={weather.readings}
+                  units={weather.units}
+                  showScale
+                  choose={weather.choose}
+                />
+              ) : null}
+              {selectedItems.length > 0 ? (
+                <ul className="month-detail__list">
+                  {selectedItems.map((item) => {
+                    const kind = inferPlanKind(item)
+                    return (
+                      <li key={item.id}>
+                        <button type="button" className={`plan-card plan-card--${kind}`} onClick={() => onEditItem(item)}>
+                          <span className="plan-card__rail" aria-hidden="true" />
+                          <span className="min-w-0 flex-1">
+                            <span className="plan-card__kind">{kindLabel(kind)}</span>
+                            <span className="plan-card__title">{item.title}</span>
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : (
+                <p className="month-detail__empty">Nothing on this day yet.</p>
+              )}
+              <button ref={addRef} type="button" className="month-add" onClick={() => onAddItem(selected)}>
+                Add something
+              </button>
+            </div>
           ) : null}
-          {selectedItems.length > 0 ? (
-            <ul className="month-detail__list">
-              {selectedItems.map((item) => {
-                const kind = inferPlanKind(item)
-                return (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      className={`plan-card plan-card--${kind}`}
-                      onClick={() => onEditItem(item)}
-                    >
-                      <span className="plan-card__rail" aria-hidden="true" />
-                      <span className="min-w-0 flex-1">
-                        <span className="plan-card__kind">{kindLabel(kind)}</span>
-                        <span className="plan-card__title">{item.title}</span>
-                      </span>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          ) : null}
-          <button type="button" className="month-add" onClick={() => onAddItem(selected)}>
-            Add something
-          </button>
         </div>
-      ) : null}
+
+        <MonthAgenda
+          days={days}
+          items={items}
+          tripStart={tripStart}
+          tripEnd={tripEnd}
+          today={today}
+          weather={weather}
+          onEditItem={onEditItem}
+          onAddItem={onAddItem}
+        />
+      </div>
     </section>
+  )
+}
+
+function MonthAgenda({
+  days,
+  items,
+  tripStart,
+  tripEnd,
+  today,
+  weather,
+  onEditItem,
+  onAddItem,
+}: {
+  days: MonthDayCell[]
+  items: TripItem[]
+  tripStart: string
+  tripEnd: string
+  today: string
+  weather?: DayWeatherState
+  onEditItem: (item: TripItem) => void
+  onAddItem: (date: string) => void
+}) {
+  const firstInMonth = days.find((day) => day.inMonth)?.iso
+  const weeks = Array.from({ length: 6 }, (_, week) => days.slice(week * 7, week * 7 + 7))
+  return (
+    <div className="month-agenda">
+      {weeks.map((weekDays) => {
+        const visible = weekDays.filter((day) => day.inMonth)
+        if (visible.length === 0) return null
+        const start = dateParts(visible[0].iso)
+        return (
+          <section key={weekDays[0].iso} className="month-agenda__week">
+            <h3 className="month-agenda__week-title">
+              Week of {start.month} {start.day}
+            </h3>
+            {visible.map((day) => {
+              const parts = dateParts(day.iso)
+              const dayItems = itemsOnDay(items, day.iso)
+              const inTrip = day.iso >= tripStart && day.iso <= tripEnd
+              const label = `${parts.weekday} ${parts.month} ${parts.day}`
+              return (
+                <article key={day.iso} className="month-agenda__day" data-trip={inTrip ? "true" : "false"} data-today={day.iso === today ? "true" : "false"}>
+                  <h4 className="month-agenda__date">{label}</h4>
+                  {weather ? (
+                    <DayWeather
+                      date={day.iso}
+                      readings={weather.readings}
+                      units={weather.units}
+                      showScale={day.iso === firstInMonth}
+                      choose={weather.choose}
+                    />
+                  ) : null}
+                  {dayItems.length > 0 ? (
+                    <ul className="month-agenda__list">
+                      {dayItems.map((item) => {
+                        const kind: PlanKind = inferPlanKind(item)
+                        return (
+                          <li key={item.id}>
+                            <button type="button" className="month-agenda__event" data-kind={kind} onClick={() => onEditItem(item)}>
+                              <span className="month-agenda__kind">{kindLabel(kind)}</span>
+                              <span className="month-agenda__title">{item.title}</span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="month-agenda__empty">No events</p>
+                  )}
+                  <button type="button" className="month-add" onClick={() => onAddItem(day.iso)}>
+                    Add something on {label}
+                  </button>
+                </article>
+              )
+            })}
+          </section>
+        )
+      })}
+    </div>
   )
 }
