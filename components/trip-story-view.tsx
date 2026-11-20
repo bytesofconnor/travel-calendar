@@ -250,7 +250,7 @@ export function TripStoryView({
 
         <div className="mt-auto space-y-4 pt-8">
           <button type="button" onClick={onInvite} className="create-join__submit">
-            <span>Invite your partner</span>
+            <span>Invite people</span>
             <span className="create-join__submit-arrow" aria-hidden="true">
               →
             </span>

@@ -234,7 +234,7 @@ export function MonthView({
             <div className="rounded-2xl border border-dashed border-border/60 bg-background/25 px-4 py-5 text-center">
               <div className="text-base font-medium text-foreground">Your trip is empty for now</div>
               <div className="mt-1 text-sm text-muted-foreground">
-                Add your first plan from any day cell, then invite your partner to start filling things in together.
+                Add your first plan from any day cell, then invite the people you&apos;re traveling with.
               </div>
             </div>
           </div>

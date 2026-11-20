@@ -1,6 +1,6 @@
 # Travel Calendar
 
-Shared trip calendar for couples and travel partners. One trip, two people, always in sync.
+Shared trip calendar for the people on a trip. One calendar, from one person to a group of ten, always in sync.
 
 Production: **https://www.travelcalendar.space**
 

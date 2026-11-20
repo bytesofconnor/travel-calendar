@@ -86,8 +86,8 @@ export function LoginScreen({
           </p>
           <h1 className="create-join__title">Plan the trip together</h1>
           <p className="create-join__sub">
-            One shared story for flights, stays, and the days between — always in sync with your
-            partner.
+            One shared story for flights, stays, and the days between — always in sync with everyone
+            on the trip.
           </p>
         </div>
         <SpectrumHairline />

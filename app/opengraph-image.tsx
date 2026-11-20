@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og'
 
-export const alt = 'Travel Calendar — Shared Trip Planner for Couples'
+export const alt = 'Travel Calendar — a shared trip calendar'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -57,7 +57,7 @@ export default function OGImage() {
             fontFamily: 'system-ui, sans-serif',
           }}
         >
-          One calendar for couples and travel partners — flights, stays, notes, and packing in one place.
+          One calendar for everyone on the trip — flights, stays, notes, and packing in one place.
         </div>
 
         <div

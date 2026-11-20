@@ -21,6 +21,7 @@ import { useTripThemePack } from "@/components/use-trip-theme-pack"
 import { AddToCalendarSheet } from "@/components/add-to-calendar-sheet"
 import { Button } from "@/components/ui/button"
 import { StoryChrome } from "@/components/story-chrome"
+import { travelerLabel } from "@/lib/travelers"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -166,6 +167,10 @@ function TripFrame({
   showCover,
   captureHint,
   themePack,
+  travelers,
+  meta,
+  tripName,
+  onOpenMembers,
   children,
 }: {
   screen: string
@@ -174,6 +179,10 @@ function TripFrame({
   showCover: boolean
   captureHint: string
   themePack: ThemePackId | null
+  travelers: TripMember[]
+  meta: string
+  tripName: string
+  onOpenMembers: () => void
   children: ReactNode
 }) {
   const [menuOpen, setMenuOpen] = useState(screen === "theme")
@@ -193,8 +202,8 @@ function TripFrame({
             {showCover ? (
               <TripCover
                 className="trip-cover--compact"
-                tripName="Lisbon with you"
-                meta="Nov 18 – 24 · 7 days · you & Alex · Connor proposed · Alex confirmed"
+                tripName={tripName}
+                meta={meta}
                 showHairline={false}
               />
             ) : null}
@@ -206,10 +215,10 @@ function TripFrame({
                     mode={view}
                     onModeChange={onViewChange}
                     onOpenTrips={() => {}}
-                    onInvite={() => {}}
-                    youInitial="C"
-                    partnerInitial="A"
-                    partnerName="Alex"
+                    onInvite={onOpenMembers}
+                    travelers={travelers}
+                    currentUserId={USER_ID}
+                    onOpenMembers={onOpenMembers}
                     menu={
                       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
                         <DropdownMenuTrigger asChild>
@@ -286,7 +295,28 @@ function TripFrame({
   )
 }
 
-export function ReviewGallery({ screen, theme }: { screen: string; theme: string | null }) {
+const PARTY: TripMember[] = [
+  { tripId: TRIP_ID, userId: USER_ID, role: "owner", displayName: "Connor" },
+  { tripId: TRIP_ID, userId: "user_caitlin", role: "editor", displayName: "Caitlin" },
+  { tripId: TRIP_ID, userId: "user_alex", role: "editor", displayName: "Alex" },
+  { tripId: TRIP_ID, userId: "user_sam", role: "editor", displayName: "Sam" },
+  { tripId: TRIP_ID, userId: "user_jordan", role: "editor", displayName: "Jordan" },
+]
+
+function partyMembers(party: number | null): TripMember[] {
+  if (!party) return members
+  return PARTY.slice(0, Math.min(PARTY.length, Math.max(1, party)))
+}
+
+export function ReviewGallery({
+  screen,
+  theme,
+  party = null,
+}: {
+  screen: string
+  theme: string | null
+  party?: number | null
+}) {
   const themePack = parseThemePack(theme)
   useTripThemePack(themePack)
   const [tripName, setTripName] = useState("Lisbon with you")
@@ -314,6 +344,10 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
   const [planSeed, setPlanSeed] = useState<Partial<TripItemInput> | null>(null)
   const [planEdit, setPlanEdit] = useState<TripItem | null>(screen === "edit" ? editItem : null)
   const [view, setView] = useState<"list" | "month">(screen === "month" ? "month" : "list")
+  const [shareOpen, setShareOpen] = useState(screen === "invite")
+  const roster = partyMembers(party)
+  const tripTitle = party === 5 ? "Vietnam '27" : "Lisbon with you"
+  const coverMeta = `Nov 18 – 24 · 7 days · ${travelerLabel(roster, USER_ID)} · Connor proposed · Alex confirmed`
 
   if (screen === "join" || screen === "create") {
     const mode = screen === "join" ? "join" : "create"
@@ -398,6 +432,10 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
         showCover={showCover}
         captureHint={captureHint}
         themePack={themePack}
+        travelers={roster}
+        meta={coverMeta}
+        tripName={tripTitle}
+        onOpenMembers={() => setShareOpen(true)}
       >
         {view === "month" ? (
           <TripMonthView
@@ -415,7 +453,7 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
               <TripHome
                 className="story-shell"
                 model={home}
-                members={members}
+                members={roster}
                 claims={claims}
                 currentUserId={USER_ID}
                 onClaim={(gapId, claimed) => {
@@ -441,7 +479,7 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
               tripEnd={tripEndDate}
               dayNumber={1}
               currentUserId={USER_ID}
-              members={members}
+              members={roster}
               packingChecked={2}
               packingTotal={6}
               notesCount={1}
@@ -449,7 +487,7 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
               onStartFlight={() => {}}
               onStartStay={() => {}}
               onStartPlace={() => {}}
-              onInvite={() => {}}
+              onInvite={() => setShareOpen(true)}
               onOpenPacking={() => {}}
               onOpenNotes={() => {}}
               onOpenAsk={() => {}}
@@ -474,7 +512,7 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
         initialInput={planSeed}
         initialTravel={Boolean(planSeed?.locationTo)}
         currentUserName="Connor"
-        members={members}
+        members={roster}
         onSave={(input, existing) => {
           if (!existing) return
           const nextIds = input.attendeeIds && input.attendeeIds.length > 0 ? input.attendeeIds : undefined
@@ -486,12 +524,12 @@ export function ReviewGallery({ screen, theme }: { screen: string; theme: string
         onDelete={() => {}}
       />
       <ShareTripDialog
-        open={screen === "invite"}
-        onOpenChange={() => {}}
-        tripName="Lisbon with you"
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        tripName={tripTitle}
         inviteCode="ab12cd34ef56"
         inviteUrl="https://www.travelcalendar.space/?join=ab12cd34ef56"
-        members={members}
+        members={roster}
         currentUserId={USER_ID}
       />
       <EditTripDialog

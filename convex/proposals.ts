@@ -754,11 +754,11 @@ export async function propose(
 function websiteMessage(error: ShellError) {
   switch (error) {
     case "self_confirm":
-      return "You proposed this. Your partner confirms it."
+      return "You proposed this. Someone else on the trip confirms it."
     case "no_partner":
-      return "A partner still needs to join before this can be confirmed."
+      return "Someone else still needs to join before this can be confirmed."
     case "not_pending_for":
-      return "Your partner confirms this one."
+      return "Someone else on the trip confirms this one."
     case "display_name_required":
       return "Add your name before confirming."
     case "not_owner":

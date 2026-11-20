@@ -26,7 +26,7 @@ export function LiveWhisper({ items, currentUserId }: LiveWhisperProps) {
     for (const item of newcomers) {
       seen.add(item.id)
       if (currentUserId && item.createdBy === currentUserId) continue
-      const who = item.authorName?.trim() || "Your partner"
+      const who = item.authorName?.trim() || "Someone"
       setMessage(`${who} just added ${item.title}`)
       const timeout = window.setTimeout(() => setMessage(null), 3200)
       return () => window.clearTimeout(timeout)

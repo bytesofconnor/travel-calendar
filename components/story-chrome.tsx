@@ -4,24 +4,26 @@ import { useEffect, type ReactNode } from "react"
 import { ChevronDown, UserPlus } from "lucide-react"
 
 import { SegmentedControl } from "@/components/ds"
+import { TravelerStack } from "@/components/traveler-stack"
+import type { TravelerName } from "@/lib/travelers"
 
 export function StoryChrome({
   mode,
   onModeChange,
   onOpenTrips,
   onInvite,
-  youInitial,
-  partnerInitial,
-  partnerName,
+  travelers,
+  currentUserId,
+  onOpenMembers,
   menu,
 }: {
   mode: "list" | "month"
   onModeChange: (mode: "list" | "month") => void
   onOpenTrips: () => void
   onInvite: () => void
-  youInitial: string
-  partnerInitial?: string | null
-  partnerName?: string | null
+  travelers: readonly TravelerName[]
+  currentUserId?: string
+  onOpenMembers?: () => void
   menu: ReactNode
 }) {
   useEffect(() => {
@@ -49,34 +51,23 @@ export function StoryChrome({
         <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
       </button>
       <div className="story-chrome__cluster ml-auto flex shrink-0 items-center gap-1.5 max-[430px]:gap-1">
-        <div
-          className="story-chrome__travelers flex items-center pl-1 max-[374px]:hidden"
-          role="group"
-          aria-label="Travelers"
-        >
-          <span className="avatar-you flex h-9 w-9 items-center justify-center rounded-full text-[12px] font-bold" aria-label="You">
-            {youInitial}
-          </span>
-          {partnerInitial ? (
-            <span
-              className="avatar-partner -ml-2.5 flex h-9 w-9 items-center justify-center rounded-full border-2 border-background text-[12px] font-bold max-[430px]:-ml-3"
-              aria-label={partnerName ?? "Partner"}
-            >
-              {partnerInitial}
-            </span>
-          ) : null}
-        </div>
         <button
           type="button"
-          className="story-chrome__invite btn-together inline-flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full px-0 text-[13px] font-bold tracking-tight max-[374px]:w-11 min-[375px]:px-2.5 min-[431px]:min-w-[4.75rem] min-[431px]:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--together)]"
+          className="story-chrome__invite btn-together inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full text-[13px] font-bold tracking-tight min-[375px]:px-2.5 min-[431px]:min-w-[4.75rem] min-[431px]:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--together)]"
           onClick={onInvite}
-          aria-label="Invite your partner"
+          aria-label="Invite"
         >
           <UserPlus className="hidden size-4 max-[430px]:block" aria-hidden="true" />
           <span className="max-[374px]:sr-only">Invite</span>
         </button>
         {menu}
       </div>
+      <TravelerStack
+        travelers={travelers}
+        currentUserId={currentUserId}
+        onOpen={onOpenMembers}
+        className="story-chrome__travelers"
+      />
     </div>
   )
 }

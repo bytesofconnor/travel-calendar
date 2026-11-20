@@ -51,7 +51,7 @@ export function confirmRowText(input: {
 }): string {
   const proposed = `${input.proposedByName} proposed ${input.summary}.`
   if (input.status === "confirmed") {
-    const who = input.confirmedByName?.trim() || "A partner"
+    const who = input.confirmedByName?.trim() || "Someone else"
     return `${proposed} ${who} confirmed.`
   }
   if (input.status === "rejected") {
@@ -60,5 +60,5 @@ export function confirmRowText(input: {
   if (input.gate === "named" && input.pendingForName?.trim()) {
     return `${proposed} ${input.pendingForName.trim()} still owes confirm.`
   }
-  return `${proposed} A partner still owes confirm.`
+  return `${proposed} Someone else still owes confirm.`
 }

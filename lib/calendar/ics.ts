@@ -204,7 +204,7 @@ export function buildCalendar(source: TripCalendarSource, origin = CANONICAL_ORI
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     line(`X-WR-CALNAME:${escapeText(name)}`),
-    "X-WR-CALDESC:Plans from your trip. They stay up to date.",
+    "X-WR-CALDESC:Plans from the trip. Everyone on it stays up to date.",
     "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
     "X-PUBLISHED-TTL:PT1H",
     ...timezoneLines(plans),

@@ -45,10 +45,10 @@ import {
 import { buildTripHome, type GapAction } from "@/lib/trip-home/detect"
 import {
   dayIndexInTrip,
-  initial,
   tripDayCount,
 } from "@/lib/trip-kind"
 import { formatTripDateRange } from "@/lib/format-dates"
+import { addedPlanMessage, travelerLabel } from "@/lib/travelers"
 import { oauthRedirectTo } from "@/lib/oauth-redirect"
 import { parseThemePack } from "@/lib/theme-packs"
 import { StatusBanner } from "@/components/ds"
@@ -710,7 +710,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         if (typeof created.itemId === "string") {
           setEmphasizeItemId(created.itemId)
         }
-        setShareMessage("Added for both of you.")
+        setShareMessage(addedPlanMessage(input.attendeeIds, members))
         window.setTimeout(() => setShareMessage(""), 2000)
       }
     } catch (error) {
@@ -1232,9 +1232,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
   const coverMeta = [
     formatTripDateRange(trip.startDate, trip.endDate),
     `${dayCount} day${dayCount === 1 ? "" : "s"}`,
-    members.length > 1
-      ? `you & ${members.find((m) => m.userId !== userId)?.displayName?.split(" ")[0] || "partner"}`
-      : "you",
+    travelerLabel(members, userId),
     tripAttribution,
   ]
     .filter((part): part is string => Boolean(part))
@@ -1242,9 +1240,6 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
   const packingChecked = packingItems.filter((item) => item.isChecked).length
   const notesCount = noteDraft.trim() ? 1 : 0
   const captureHint = "Add to the trip…"
-  const partner = members.find((member) => member.userId !== userId)
-  const youInitial = initial(currentMember?.displayName ?? guessDisplayName(me) ?? "Y")
-  const partnerInitial = partner ? initial(partner.displayName) : null
 
   return (
     <>
@@ -1272,9 +1267,9 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
                       onModeChange={setStoryMode}
                       onOpenTrips={() => setTripsOpen(true)}
                       onInvite={() => setShareOpen(true)}
-                      youInitial={youInitial}
-                      partnerInitial={partnerInitial}
-                      partnerName={partner?.displayName}
+                      travelers={members}
+                      currentUserId={userId}
+                      onOpenMembers={() => setShareOpen(true)}
                       menu={
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

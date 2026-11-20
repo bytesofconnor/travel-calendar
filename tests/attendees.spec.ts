@@ -67,7 +67,7 @@ test("who's in keeps contrast in light, dark, and each theme pack", async ({ pag
     { path: "/review?screen=edit&theme=sage-coast", scheme: "light" as const },
   ]
   for (const theme of themes) {
-    await page.emulateMedia({ colorScheme: theme.scheme })
+    await page.emulateMedia({ colorScheme: theme.scheme, reducedMotion: "reduce" })
     await page.goto(theme.path, { waitUntil: "domcontentloaded" })
     if (theme.scheme === "dark") {
       await expect(page.locator("html")).toHaveClass(/dark/, { timeout: 5000 })

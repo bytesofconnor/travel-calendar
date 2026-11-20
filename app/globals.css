@@ -1009,11 +1009,28 @@
 
   .story-chrome {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.4rem;
     min-height: 3.25rem;
     padding-block: 0.45rem;
+  }
+
+  .story-chrome__travelers {
+    flex: 1 0 100%;
+    min-width: 0;
+  }
+
+  @media (min-width: 768px) {
+    .story-chrome__travelers {
+      order: 3;
+      flex: 0 1 auto;
+      max-width: min(100%, 22rem);
+    }
+
+    .story-chrome__cluster {
+      order: 4;
+    }
   }
 
   @media (max-width: 430px) {
@@ -1027,8 +1044,16 @@
     }
 
     .story-segment .mara-segment__btn {
-      min-width: 2.75rem;
+      min-width: 44px;
       padding: 0.2rem 0.4rem;
+    }
+  }
+
+  @media (max-width: 374px) {
+    .story-chrome__invite {
+      width: 44px;
+      min-width: 44px;
+      padding-inline: 0;
     }
   }
 
@@ -1036,8 +1061,17 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 2.75rem;
-    min-width: 2.75rem;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .story-chrome__invite {
+    width: auto;
+    height: 44px;
+    min-height: 44px;
+    min-width: 44px;
   }
 
   .story-segment.mara-segment {
@@ -1050,8 +1084,8 @@
   }
 
   .story-segment .mara-segment__btn {
-    min-height: 2.75rem;
-    min-width: 3.25rem;
+    min-height: 44px;
+    min-width: 52px;
     padding: 0.4rem 0.85rem;
     font-size: 0.8125rem;
     font-weight: 600;

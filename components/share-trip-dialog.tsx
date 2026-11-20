@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import type { TripMember } from "@/lib/kanban-store"
+import { inviteCopy } from "@/lib/travelers"
 
 interface ShareTripDialogProps {
   open: boolean
@@ -34,6 +35,7 @@ export function ShareTripDialog({
   currentUserId,
 }: ShareTripDialogProps) {
   const [copied, setCopied] = useState<"link" | "code" | null>(null)
+  const copyText = inviteCopy(tripName, members, currentUserId)
 
   async function copy(value: string, kind: "link" | "code") {
     await navigator.clipboard.writeText(value)
@@ -44,89 +46,88 @@ export function ShareTripDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom)-1.5rem)] w-[min(28rem,calc(100vw-1rem))] min-w-0 flex-col gap-0 overflow-hidden border-border bg-card p-0 text-foreground">
-        <DialogHeader className="space-y-2 border-b border-border px-6 py-5 text-left">
-          <DialogTitle className="trip-title text-2xl font-normal tracking-tight text-foreground">
-            This trip needs a second heartbeat.
-          </DialogTitle>
-          <DialogDescription className="text-sm leading-6 text-muted-foreground">
-            Share {tripName} with your partner — they see every plan the moment you add it.
-          </DialogDescription>
-        </DialogHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <DialogHeader className="space-y-2 border-b border-border px-6 py-5 pr-16 text-left">
+            <DialogTitle className="trip-title text-2xl font-normal leading-tight tracking-tight text-foreground">
+              {copyText.title}
+            </DialogTitle>
+            <DialogDescription className="text-sm leading-6 text-foreground">
+              {copyText.description}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
-          <div className="space-y-2">
-            <Label htmlFor="invite-link">Invite link</Label>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <p
-                id="invite-link"
-                className="min-w-0 flex-1 break-all rounded-xl bg-secondary px-3 py-3 text-sm leading-5 text-foreground"
-              >
-                {inviteUrl}
-              </p>
-              <Button
-                type="button"
-                size="lg"
-                className="btn-together h-11 shrink-0 rounded-xl px-3.5 shadow-none"
-                onClick={() => void copy(inviteUrl, "link")}
-                aria-label={copied === "link" ? "Invite link copied" : "Copy invite link"}
-              >
-                {copied === "link" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                <span className="ml-1.5">{copied === "link" ? "Copied" : "Copy"}</span>
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="invite-code">Invite code</Label>
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-secondary px-4 py-2">
-              <code id="invite-code" className="min-w-0 break-all font-mono text-lg tracking-[0.12em] text-foreground uppercase">
-                {inviteCode}
-              </code>
-              <Button
-                type="button"
-                variant="ghost"
-                size="lg"
-                className="h-11 rounded-lg px-3"
-                onClick={() => void copy(inviteCode, "code")}
-                aria-label={copied === "code" ? "Invite code copied" : "Copy invite code"}
-              >
-                {copied === "code" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                {copied === "code" ? "Copied" : "Copy"}
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Users className="h-3.5 w-3.5" aria-hidden="true" />
-              Travelers ({members.length})
-            </div>
-            <ul className="space-y-2" aria-label="Trip travelers">
-              {members.map((member) => (
-                <li
-                  key={member.userId}
-                  className="flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5"
+          <div className="space-y-5 px-6 py-5">
+            <div className="space-y-2">
+              <Label htmlFor="invite-link">Invite link</Label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <p
+                  id="invite-link"
+                  className="min-w-0 flex-1 break-all rounded-xl bg-secondary px-3 py-3 text-sm leading-5 text-foreground"
                 >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
-                        member.userId === currentUserId ? "avatar-you" : "avatar-partner"
-                      }`}
-                      aria-hidden="true"
-                    >
-                      {member.displayName.trim().charAt(0).toUpperCase() || "?"}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-foreground">
+                  {inviteUrl}
+                </p>
+                <Button
+                  type="button"
+                  size="lg"
+                  className="btn-together h-11 shrink-0 rounded-xl px-3.5 shadow-none"
+                  onClick={() => void copy(inviteUrl, "link")}
+                  aria-label={copied === "link" ? "Invite link copied" : "Copy invite link"}
+                >
+                  {copied === "link" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  <span className="ml-1.5">{copied === "link" ? "Copied" : "Copy"}</span>
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="invite-code">Invite code</Label>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-secondary px-4 py-2">
+                <code id="invite-code" className="min-w-0 break-all font-mono text-lg tracking-[0.12em] text-foreground uppercase">
+                  {inviteCode}
+                </code>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="lg"
+                  className="h-11 rounded-lg px-3"
+                  onClick={() => void copy(inviteCode, "code")}
+                  aria-label={copied === "code" ? "Invite code copied" : "Copy invite code"}
+                >
+                  {copied === "code" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {copied === "code" ? "Copied" : "Copy"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Users className="h-3.5 w-3.5" aria-hidden="true" />
+                {members.length > 1 ? "Already on this trip" : "On this trip"} ({members.length})
+              </div>
+              <ul className="space-y-2" aria-label="Trip travelers">
+                {members.map((member) => (
+                  <li
+                    key={member.userId}
+                    className="flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-foreground text-sm font-semibold ${
+                          member.userId === currentUserId ? "bg-foreground text-background" : "bg-background text-foreground"
+                        }`}
+                        aria-hidden="true"
+                      >
+                        {member.displayName.trim().charAt(0).toUpperCase() || "?"}
+                      </span>
+                      <div className="min-w-0 truncate text-sm font-medium text-foreground">
                         {member.displayName}
                         {member.userId === currentUserId ? " (you)" : ""}
                       </div>
-                      <div className="text-xs capitalize text-muted-foreground">{member.role}</div>
                     </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </DialogContent>
