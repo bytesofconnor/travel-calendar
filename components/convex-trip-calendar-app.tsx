@@ -68,6 +68,7 @@ import { TripCover, SpectrumHairline } from "./trip-cover"
 import { TripNotesView } from "./trip-notes-view"
 import { TripPackingView } from "./trip-packing-view"
 import { TripHome } from "./trip-home"
+import { TripMonthView } from "./trip-month-view"
 import { TripStoryView } from "./trip-story-view"
 import { TripsSheet } from "./trips-sheet"
 
@@ -224,7 +225,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
   const [calendarToken, setCalendarToken] = useState<string | null>(null)
   const [calendarError, setCalendarError] = useState("")
   const [isRefreshingCover, setIsRefreshingCover] = useState(false)
-  const [storyMode, setStoryMode] = useState<"trip" | "today">("trip")
+  const [storyMode, setStoryMode] = useState<"list" | "month">("list")
   const [storyModeReady, setStoryModeReady] = useState(false)
   const [peek, setPeek] = useState<"notes" | "packing" | null>(null)
   const [tripsOpen, setTripsOpen] = useState(false)
@@ -342,7 +343,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
   useEffect(() => {
     if (!trip || storyModeReady) return
     if (planId) {
-      setStoryMode("trip")
+      setStoryMode("list")
       setEmphasizeItemId(planId)
     }
     setStoryModeReady(true)
@@ -762,7 +763,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
   }
 
   function openCapture(kind?: CaptureKind, date?: string) {
-    const baseDate = date ?? (storyMode === "today" ? today : trip?.startDate ?? today)
+    const baseDate = date ?? trip?.startDate ?? today
     setEditItem(null)
     setDefaultItemDate(baseDate)
     setInitialTravel(kind === "flight")
@@ -1240,7 +1241,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
     .join(" · ")
   const packingChecked = packingItems.filter((item) => item.isChecked).length
   const notesCount = noteDraft.trim() ? 1 : 0
-  const captureHint = storyMode === "today" ? "What’s happening today?" : "Add to the trip…"
+  const captureHint = "Add to the trip…"
   const partner = members.find((member) => member.userId !== userId)
   const youInitial = initial(currentMember?.displayName ?? guessDisplayName(me) ?? "Y")
   const partnerInitial = partner ? initial(partner.displayName) : null
@@ -1251,7 +1252,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
           <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
             <div className="story-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
-              {storyMode === "trip" ? (
+              {storyMode === "list" ? (
                 <TripCover
                   className="trip-cover--compact"
                   tripName={trip.name}
@@ -1349,7 +1350,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
               </div>
 
               {confirmQueue}
-              {storyMode === "trip" && homeModel ? (
+              {storyMode === "list" && homeModel ? (
                 <TripHome
                   className="story-shell"
                   model={homeModel}
@@ -1366,29 +1367,41 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
                   }}
                 />
               ) : null}
-              <TripStoryView
-                className="story-shell"
-                mode={storyMode}
-                items={items}
-                today={today}
-                tripStart={trip.startDate}
-                tripEnd={trip.endDate}
-                dayNumber={dayIndexInTrip(today, trip.startDate)}
-                currentUserId={userId}
-                members={members}
-                emphasizeItemId={emphasizeItemId}
-                packingChecked={packingChecked}
-                packingTotal={packingItems.length}
-                notesCount={notesCount}
-                onEditItem={openEditItem}
-                onStartFlight={() => openCapture("flight")}
-                onStartStay={() => openCapture("stay")}
-                onStartPlace={() => openCapture("place")}
-                onInvite={() => setShareOpen(true)}
-                onOpenPacking={() => setPeek("packing")}
-                onOpenNotes={() => setPeek("notes")}
-                onOpenAsk={() => setDesktopAiOpen(true)}
-              />
+              {storyMode === "month" ? (
+                <TripMonthView
+                  className="story-shell"
+                  items={items}
+                  tripStart={trip.startDate}
+                  tripEnd={trip.endDate}
+                  today={today}
+                  onEditItem={openEditItem}
+                  onAddItem={(date) => openCapture(undefined, date)}
+                />
+              ) : (
+                <TripStoryView
+                  className="story-shell"
+                  mode="trip"
+                  items={items}
+                  today={today}
+                  tripStart={trip.startDate}
+                  tripEnd={trip.endDate}
+                  dayNumber={dayIndexInTrip(today, trip.startDate)}
+                  currentUserId={userId}
+                  members={members}
+                  emphasizeItemId={emphasizeItemId}
+                  packingChecked={packingChecked}
+                  packingTotal={packingItems.length}
+                  notesCount={notesCount}
+                  onEditItem={openEditItem}
+                  onStartFlight={() => openCapture("flight")}
+                  onStartStay={() => openCapture("stay")}
+                  onStartPlace={() => openCapture("place")}
+                  onInvite={() => setShareOpen(true)}
+                  onOpenPacking={() => setPeek("packing")}
+                  onOpenNotes={() => setPeek("notes")}
+                  onOpenAsk={() => setDesktopAiOpen(true)}
+                />
+              )}
             </div>
             <CaptureDock
               hint={captureHint}
