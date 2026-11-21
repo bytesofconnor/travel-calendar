@@ -22,8 +22,10 @@ import { TripsSheet } from "@/components/trips-sheet"
 import { useTripThemePack } from "@/components/use-trip-theme-pack"
 import { AddToCalendarSheet } from "@/components/add-to-calendar-sheet"
 import { Button } from "@/components/ui/button"
+import { PersonFilter } from "@/components/person-filter"
 import { StoryChrome } from "@/components/story-chrome"
-import { travelerLabel } from "@/lib/travelers"
+import { filterItems, writeWho } from "@/lib/person-filter"
+import { firstName, travelerLabel } from "@/lib/travelers"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -163,7 +165,7 @@ const vietnamItems: TripItem[] = [
     tripId: TRIP_ID,
     title: "Old Quarter apartment",
     startDate: "2027-06-11",
-    endDate: "2027-06-16",
+    endDate: "2027-06-19",
     location: "Hanoi",
     createdBy: USER_ID,
     createdAt: "2027-01-02T13:00:00.000Z",
@@ -184,8 +186,8 @@ const vietnamItems: TripItem[] = [
     id: "vn-flight-danang",
     tripId: TRIP_ID,
     title: "HAN to DAD",
-    startDate: "2027-06-16",
-    endDate: "2027-06-16",
+    startDate: "2027-06-23",
+    endDate: "2027-06-23",
     location: "HAN",
     locationTo: "DAD",
     createdBy: USER_ID,
@@ -196,7 +198,7 @@ const vietnamItems: TripItem[] = [
     id: "vn-hoian",
     tripId: TRIP_ID,
     title: "Hội An house",
-    startDate: "2027-06-16",
+    startDate: "2027-06-23",
     endDate: "2027-06-24",
     location: "Hội An",
     createdBy: "user_mom",
@@ -262,6 +264,78 @@ const vietnamItems: TripItem[] = [
   },
 ]
 
+const timingItems: TripItem[] = [
+  {
+    id: "dc-flight",
+    tripId: TRIP_ID,
+    title: "MN to DC",
+    startDate: "2027-06-11",
+    endDate: "2027-06-11",
+    location: "MSP",
+    locationTo: "DC",
+    planType: "flight",
+    startTime: "09:40",
+    endTime: "13:15",
+    createdBy: USER_ID,
+    createdAt: "2027-01-02T12:00:00.000Z",
+    updatedAt: "2027-01-02T12:00:00.000Z",
+    authorName: "Connor",
+  },
+  {
+    id: "dc-stay",
+    tripId: TRIP_ID,
+    title: "Airbnb",
+    startDate: "2027-06-11",
+    endDate: "2027-06-14",
+    location: "Washington DC",
+    planType: "stay",
+    createdBy: USER_ID,
+    createdAt: "2027-01-02T13:00:00.000Z",
+    updatedAt: "2027-01-02T13:00:00.000Z",
+    authorName: "Connor",
+  },
+  {
+    id: "dc-lunch",
+    tripId: TRIP_ID,
+    title: "Lunch",
+    startDate: "2027-06-12",
+    endDate: "2027-06-12",
+    location: "Washington DC",
+    planType: "place",
+    startTime: "12:30",
+    createdBy: "user_caitlin",
+    createdAt: "2027-01-03T12:00:00.000Z",
+    updatedAt: "2027-01-03T12:00:00.000Z",
+  },
+  {
+    id: "dc-museum",
+    tripId: TRIP_ID,
+    title: "Museum",
+    startDate: "2027-06-12",
+    endDate: "2027-06-12",
+    location: "Washington DC",
+    planType: "place",
+    createdBy: USER_ID,
+    createdAt: "2027-01-03T13:00:00.000Z",
+    updatedAt: "2027-01-03T13:00:00.000Z",
+  },
+  {
+    id: "dc-back",
+    tripId: TRIP_ID,
+    title: "DC to MN",
+    startDate: "2027-06-14",
+    endDate: "2027-06-14",
+    location: "DC",
+    locationTo: "MSP",
+    planType: "flight",
+    startTime: "16:00",
+    endTime: "18:10",
+    createdBy: USER_ID,
+    createdAt: "2027-01-04T12:00:00.000Z",
+    updatedAt: "2027-01-04T12:00:00.000Z",
+  },
+]
+
 const monthItems: TripItem[] = [
   ...items,
   {
@@ -289,6 +363,7 @@ const monthItems: TripItem[] = [
 ]
 
 const REVIEW_NOW = { instant: "2026-11-17T18:00:00.000Z", timeZone: "America/Los_Angeles" }
+const LATER_NOW = { instant: "2027-06-01T12:00:00.000Z", timeZone: "Asia/Ho_Chi_Minh" }
 
 const REVIEW_WEATHER: Record<string, WeatherReading> = Object.fromEntries(
   ["2026-11-18", "2026-11-19", "2026-11-20", "2026-11-21", "2026-11-22", "2026-11-23"].map((date) => [
@@ -318,6 +393,8 @@ function TripFrame({
   units,
   onUnits,
   onOpenMembers,
+  selectedUserId,
+  onSelectPerson,
   onCapture,
   children,
 }: {
@@ -332,6 +409,8 @@ function TripFrame({
   units: WeatherUnits
   onUnits: (units: WeatherUnits) => void
   onOpenMembers: () => void
+  selectedUserId?: string | null
+  onSelectPerson?: (userId: string) => void
   onCapture?: (kind?: CaptureKind, text?: string) => void
   children: ReactNode
 }) {
@@ -354,6 +433,8 @@ function TripFrame({
                     travelers={travelers}
                     currentUserId={USER_ID}
                     onOpenMembers={onOpenMembers}
+                    selectedUserId={selectedUserId}
+                    onSelectPerson={onSelectPerson}
                     menu={
                       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
                         <DropdownMenuTrigger asChild>
@@ -447,10 +528,12 @@ export function ReviewGallery({
   screen,
   theme,
   party = null,
+  who = null,
 }: {
   screen: string
   theme: string | null
   party?: number | null
+  who?: string | null
 }) {
   const themePack = parseThemePack(theme)
   useTripThemePack(themePack)
@@ -461,33 +544,41 @@ export function ReviewGallery({
   const [joinInput, setJoinInput] = useState("ab12cd34ef56")
   const [createName, setCreateName] = useState("")
   const [plans, setPlans] = useState(items)
-  const showHome = screen === "trip" || screen === "covered"
-  const homeItems = screen === "covered" ? coveredItems : plans
-  const tripStartDate = "2026-11-18"
-  const tripEndDate = screen === "covered" ? "2026-11-18" : "2026-11-24"
+  const vietnam = screen === "vietnam"
+  const timing = screen === "timing"
+  const showHome = screen === "trip" || screen === "covered" || vietnam || timing
+  const tripStartDate = vietnam || timing ? "2027-06-11" : "2026-11-18"
+  const tripEndDate = vietnam ? "2027-07-02" : timing ? "2027-06-14" : screen === "covered" ? "2026-11-18" : "2026-11-24"
+  const catalog = vietnam ? vietnamItems : timing ? timingItems : screen === "month" ? monthItems : screen === "covered" ? coveredItems : plans
+  const homePlans = vietnam ? vietnamItems : timing ? timingItems : screen === "covered" ? coveredItems : plans
+  const homeNow = vietnam || timing ? LATER_NOW : REVIEW_NOW
   const home = useMemo(
     () =>
       buildTripHome({
         trip: { startDate: tripStartDate, endDate: tripEndDate },
-        plans: homeItems,
-        now: REVIEW_NOW,
+        plans: homePlans,
+        now: homeNow,
       }),
-    [homeItems, tripEndDate],
+    [homePlans, homeNow, tripEndDate, tripStartDate],
   )
   const [claims, setClaims] = useState<Array<{ gapId: string; userId: string; displayName: string }>>([])
   const [planOpen, setPlanOpen] = useState(screen === "add" || screen === "edit")
   const [planSeed, setPlanSeed] = useState<Partial<TripItemInput> | null>(null)
   const [planEdit, setPlanEdit] = useState<TripItem | null>(screen === "edit" ? editItem : null)
   const [initialType, setInitialType] = useState<PlanType | null>(screen === "add" ? "place" : null)
-  const weather = useDayWeather(homeItems, { start: tripStartDate, end: tripEndDate }, REVIEW_WEATHER)
-  const vietnam = screen === "vietnam"
+  const [personId, setPersonId] = useState<string | null>(who)
+  const weather = useDayWeather(homePlans, { start: tripStartDate, end: tripEndDate }, REVIEW_WEATHER)
   const [view, setView] = useState<"list" | "month">(screen === "month" || vietnam ? "month" : "list")
   const [shareOpen, setShareOpen] = useState(screen === "invite")
-  const roster = partyMembers(vietnam ? 5 : party)
-  const tripTitle = vietnam || party === 5 ? "Vietnam '27" : "Lisbon with you"
+  const roster = partyMembers(vietnam ? 5 : timing ? 2 : party)
+  const activePerson = roster.find((member) => member.userId === personId) ?? null
+  const visibleItems = filterItems(catalog, activePerson?.userId ?? null, roster.map((member) => member.userId))
+  const tripTitle = timing ? "DC weekend" : vietnam || party === 5 ? "Vietnam '27" : "Lisbon with you"
   const coverMeta = vietnam
     ? `Jun 11 – Jul 2 · 22 days · ${travelerLabel(roster, USER_ID)}`
-    : `Nov 18 – 24 · 7 days · ${travelerLabel(roster, USER_ID)} · Connor proposed · Alex confirmed`
+    : timing
+      ? `Jun 11 – 14 · 4 days · ${travelerLabel(roster, USER_ID)}`
+      : `Nov 18 – 24 · 7 days · ${travelerLabel(roster, USER_ID)} · Connor proposed · Alex confirmed`
 
   if (screen === "join" || screen === "create") {
     const mode = screen === "join" ? "join" : "create"
@@ -545,7 +636,7 @@ export function ReviewGallery({
 
   function openAction(action: GapAction) {
     if (action.itemId) {
-      const item = homeItems.find((entry) => entry.id === action.itemId)
+      const item = homePlans.find((entry) => entry.id === action.itemId)
       if (item) {
         setPlanEdit(item)
         setPlanSeed(null)
@@ -580,6 +671,14 @@ export function ReviewGallery({
         units={weather.units}
         onUnits={weather.choose}
         onOpenMembers={() => setShareOpen(true)}
+        selectedUserId={activePerson?.userId ?? null}
+        onSelectPerson={(userId) => {
+          setPersonId((current) => {
+            const next = current === userId ? null : userId
+            writeWho(next)
+            return next
+          })
+        }}
         onCapture={(kind, text) => {
           setPlanEdit(null)
           setInitialType(kind ?? (text?.trim() ? guessPlanType(text) : "place"))
@@ -591,12 +690,23 @@ export function ReviewGallery({
           setPlanOpen(true)
         }}
       >
+        {activePerson ? (
+          <PersonFilter
+            name={firstName(activePerson.displayName)}
+            count={visibleItems.length}
+            total={catalog.length}
+            onClear={() => {
+              setPersonId(null)
+              writeWho(null)
+            }}
+          />
+        ) : null}
         {view === "month" ? (
           <TripMonthView
-            items={vietnam ? vietnamItems : screen === "month" ? monthItems : homeItems}
-            tripStart={vietnam ? "2027-06-11" : tripStartDate}
-            tripEnd={vietnam ? "2027-07-02" : tripEndDate}
-            today={vietnam ? "2027-06-18" : "2026-11-18"}
+            items={visibleItems}
+            tripStart={tripStartDate}
+            tripEnd={tripEndDate}
+            today={vietnam ? "2027-06-18" : timing ? "2027-06-11" : "2026-11-18"}
             onEditItem={(item) => openPlan(item)}
             onAddItem={(date) => openPlan(null, date)}
             weather={weather}
@@ -619,7 +729,7 @@ export function ReviewGallery({
                 }}
                 onAction={openAction}
                 onOpenItem={(id) => {
-                  const item = homeItems.find((entry) => entry.id === id)
+                  const item = homePlans.find((entry) => entry.id === id)
                   if (item) openPlan(item)
                 }}
                 weather={weather}
@@ -628,8 +738,9 @@ export function ReviewGallery({
             <TripStoryView
               className="trip-list__story"
               mode={story}
-              items={homeItems}
-              today="2026-11-18"
+              items={visibleItems}
+              filterName={activePerson ? firstName(activePerson.displayName) : undefined}
+              today={timing ? "2027-06-11" : vietnam ? "2027-06-18" : "2026-11-18"}
               tripStart={tripStartDate}
               tripEnd={tripEndDate}
               dayNumber={1}
@@ -668,7 +779,7 @@ export function ReviewGallery({
           defaultPlanDate({
             tripStart: tripStartDate,
             tripEnd: tripEndDate,
-            plans: homeItems,
+            plans: homePlans,
             today: "2026-11-18",
           })
         }

@@ -97,6 +97,7 @@ const CITIES: Record<string, { label: string; names: string[] }> = {
   CLT: { label: "Charlotte", names: ["charlotte"] },
   CPH: { label: "Copenhagen", names: ["copenhagen"] },
   CUN: { label: "Cancun", names: ["cancun", "cancún"] },
+  DAD: { label: "Da Nang", names: ["da nang", "danang"] },
   DEN: { label: "Denver", names: ["denver"] },
   DFW: { label: "Dallas", names: ["dallas"] },
   DUB: { label: "Dublin", names: ["dublin"] },
@@ -105,6 +106,7 @@ const CITIES: Record<string, { label: string; names: string[] }> = {
   FCO: { label: "Rome", names: ["rome"] },
   FRA: { label: "Frankfurt", names: ["frankfurt"] },
   GRU: { label: "Sao Paulo", names: ["sao paulo", "são paulo"] },
+  HAN: { label: "Hanoi", names: ["hanoi"] },
   HKG: { label: "Hong Kong", names: ["hong kong"] },
   HND: { label: "Tokyo", names: ["tokyo"] },
   HNL: { label: "Honolulu", names: ["honolulu"] },
@@ -130,6 +132,7 @@ const CITIES: Record<string, { label: string; names: string[] }> = {
   SAN: { label: "San Diego", names: ["san diego"] },
   SEA: { label: "Seattle", names: ["seattle"] },
   SFO: { label: "San Francisco", names: ["san francisco"] },
+  SGN: { label: "Ho Chi Minh City", names: ["ho chi minh", "saigon"] },
   SIN: { label: "Singapore", names: ["singapore"] },
   SJC: { label: "San Jose", names: ["san jose"] },
   SLC: { label: "Salt Lake City", names: ["salt lake"] },
@@ -220,9 +223,9 @@ function normalize(value: string): string {
 
 function iataOf(place: string): string | undefined {
   const trimmed = place.trim().toUpperCase()
-  if (/^[A-Z]{3}$/.test(trimmed) && airportTimeZone(trimmed)) return trimmed
+  if (/^[A-Z]{3}$/.test(trimmed) && (airportTimeZone(trimmed) || trimmed in CITIES)) return trimmed
   const paren = trimmed.match(/\(([A-Z]{3})\)/)
-  if (paren?.[1] && airportTimeZone(paren[1])) return paren[1]
+  if (paren?.[1] && (airportTimeZone(paren[1]) || paren[1] in CITIES)) return paren[1]
   return undefined
 }
 
@@ -252,10 +255,61 @@ function samePlace(a: string, b: string): boolean {
 }
 
 function prettyDate(iso: string): string {
+  const parts = dateParts(iso)
+  return parts ? `${parts.month} ${parts.day}` : iso
+}
+
+function dateParts(iso: string): { month: string; day: string } | null {
   const match = DATE.exec(iso)
-  if (!match) return iso
+  if (!match) return null
   const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])))
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(date)
+  const formatted = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).formatToParts(date)
+  const month = formatted.find((part) => part.type === "month")?.value
+  const day = formatted.find((part) => part.type === "day")?.value
+  return month && day ? { month, day } : null
+}
+
+function prettyRange(start: string, end: string): string {
+  const left = dateParts(start)
+  const right = dateParts(end)
+  if (!left || !right) return `${prettyDate(start)}–${prettyDate(end)}`
+  if (left.month === right.month) return `${left.month} ${left.day}–${right.day}`
+  return `${left.month} ${left.day}–${right.month} ${right.day}`
+}
+
+function collapseNightGaps(holes: Array<{ night: string; where: string; location: string }>): TripGap[] {
+  const ranges: Array<{ start: string; end: string; where: string; location: string; count: number }> = []
+  for (const hole of holes) {
+    const last = ranges[ranges.length - 1]
+    if (last && addDays(last.end, 1) === hole.night && last.where === hole.where) {
+      last.end = hole.night
+      last.count += 1
+      continue
+    }
+    ranges.push({ start: hole.night, end: hole.night, where: hole.where, location: hole.location, count: 1 })
+  }
+  return ranges.map((range) => {
+    const place = range.where ? ` in ${range.where}` : ""
+    const when = range.count === 1 ? prettyDate(range.start) : prettyRange(range.start, range.end)
+    const nights = range.count === 1 ? "1 night" : `${range.count} nights`
+    return {
+      id: gapId(range.count === 1 ? `night:${range.start}` : `nights:${range.start}:${range.end}`),
+      kind: "uncovered-night" as const,
+      title: `No stay${place} · ${when} · ${nights}`,
+      detail:
+        range.count === 1
+          ? `Nothing covers the night of ${prettyDate(range.start)}${place}.`
+          : `Nothing covers ${when}, ${nights}${place}.`,
+      action: actionOf({
+        flow: "stay",
+        label: "Add stay",
+        title: range.where ? `Stay in ${range.where}` : "Stay",
+        startDate: range.start,
+        endDate: addDays(range.end, 1),
+        location: range.location,
+      }),
+    }
+  })
 }
 
 function clockLabel(time: string): string {
@@ -539,26 +593,15 @@ export function buildTripHome(input: {
   const gaps: TripGap[] = []
 
   if (validRange && spans.length > 0) {
+    const holes: Array<{ night: string; where: string; location: string }> = []
     for (const night of tripNights) {
       const state = nights.get(night)
       if (state?.kind === "air") continue
       if (stays.some((stay) => stayCovers(stay, night))) continue
-      const where = state?.kind === "city" ? state.label : "this trip"
-      gaps.push({
-        id: gapId(`night:${night}`),
-        kind: "uncovered-night",
-        title: `No stay ${prettyDate(night)}`,
-        detail: `Nothing covers the night of ${prettyDate(night)} in ${where}.`,
-        action: actionOf({
-          flow: "stay",
-          label: "Add stay",
-          title: "Stay",
-          startDate: night,
-          endDate: addDays(night, 1),
-          location: state?.kind === "city" ? state.label : "",
-        }),
-      })
+      const where = state?.kind === "city" ? state.label : ""
+      holes.push({ night, where, location: where })
     }
+    gaps.push(...collapseNightGaps(holes))
 
     for (const journey of journeys) {
       const arrivalAirport = journey.arrive.destination

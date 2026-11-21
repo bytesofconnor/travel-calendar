@@ -15,7 +15,7 @@ async function addPlan(
     await dialog.getByRole("button", { name: "Add stay" }).click()
   } else if (kind === "Flight") {
     if (fields.from) await dialog.getByLabel("From").fill(fields.from)
-    if (fields.to) await dialog.getByLabel("To").fill(fields.to)
+    if (fields.to) await dialog.getByLabel("To", { exact: true }).fill(fields.to)
     await dialog.getByLabel("Title").fill(fields.title)
     await dialog.getByRole("button", { name: "Add flight" }).click()
   } else {
@@ -54,7 +54,7 @@ test("member B sees member A's trip edits live and after reload", async ({ brows
       end: "2026-05-18",
       where: "Alfama",
     })
-    await expect(partner.getByRole("button", { name: /Stay: Alfama apartment/ })).toBeVisible()
+    await expect(partner.getByRole("button", { name: /Stay: Alfama apartment/ }).first()).toBeVisible()
 
     await addPlan(owner, "Flight", { title: "TAP", from: "SFO", to: "LIS" })
     await expect(partner.getByRole("button", { name: /Flight: TAP/ })).toBeVisible()
@@ -82,7 +82,7 @@ test("member B sees member A's trip edits live and after reload", async ({ brows
 
     await expect(partner.getByTestId("trip-dates")).toHaveAttribute("data-end", "2026-05-08")
     await expect(partner.getByTestId("trip-dates")).toContainText("May 8, 2026")
-    await expect(partner.getByRole("button", { name: /Stay: Alfama apartment/ })).toBeVisible()
+    await expect(partner.getByRole("button", { name: /Stay: Alfama apartment/ }).first()).toBeVisible()
     await expect(partner.getByRole("button", { name: /Flight: TAP/ })).toBeVisible()
     await expect(partner.getByRole("button", { name: /Place: Time Out Market/ })).toBeVisible()
 
@@ -91,7 +91,7 @@ test("member B sees member A's trip edits live and after reload", async ({ brows
     await deleting.getByRole("button", { name: "Delete" }).click()
     await expect(deleting).toBeHidden()
     await expect(partner.getByRole("button", { name: /Place: Time Out Market/ })).toHaveCount(0)
-    await expect(partner.getByRole("button", { name: /Stay: Alfama apartment/ })).toBeVisible()
+    await expect(partner.getByRole("button", { name: /Stay: Alfama apartment/ }).first()).toBeVisible()
 
     await owner.getByLabel("Shared planning notes").fill("Meet at the lockbox")
     await expect(partner.getByRole("status", { name: "Shared note" })).toHaveText("Meet at the lockbox")
@@ -101,7 +101,7 @@ test("member B sees member A's trip edits live and after reload", async ({ brows
     await expect(partner.getByTestId("trip-dates")).toHaveAttribute("data-start", "2026-05-01")
     await expect(partner.getByTestId("trip-dates")).toHaveAttribute("data-end", "2026-05-08")
     await expect(partner.getByTestId("trip-dates")).toContainText("May 8, 2026")
-    await expect(partner.getByRole("button", { name: /Stay: Alfama apartment/ })).toBeVisible()
+    await expect(partner.getByRole("button", { name: /Stay: Alfama apartment/ }).first()).toBeVisible()
     await expect(partner.getByRole("button", { name: /Flight: TAP/ })).toBeVisible()
     await expect(partner.getByRole("button", { name: /Place: Time Out Market/ })).toHaveCount(0)
     await expect(partner.getByRole("status", { name: "Shared note" })).toHaveText("Meet at the lockbox")

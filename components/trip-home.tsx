@@ -4,6 +4,7 @@ import { useState } from "react"
 
 import type { GapAction, TripGap, TripHomeModel, UpcomingItem } from "@/lib/trip-home/detect"
 import { initial } from "@/lib/trip-kind"
+import { firstName } from "@/lib/travelers"
 import { DayWeather, type DayWeatherState } from "@/components/weather-chip"
 
 export type TripHomeMember = {
@@ -54,7 +55,7 @@ export function TripHome({
 
   function claim(gap: TripGap, claimed: boolean) {
     onClaim(gap.id, claimed)
-    setLive(claimed ? `You have ${gap.title}` : `Released ${gap.title}`)
+    setLive(claimed ? `You're handling ${gap.title}` : `Undid ${gap.title}`)
   }
 
   return (
@@ -104,6 +105,11 @@ export function TripHome({
       </div>
       <div className="trip-home__section">
         <h2 className="trip-home__kicker">What&apos;s missing</h2>
+        {model.gaps.length > 0 ? (
+          <p className="trip-home__hint">
+            I&apos;ll handle it means you&apos;re taking this on. Everyone on the trip sees your name. It doesn&apos;t add the plan.
+          </p>
+        ) : null}
         {model.covered ? (
           <p className="trip-home__covered" role="status">
             Everything&apos;s covered
@@ -114,9 +120,9 @@ export function TripHome({
               const claimRow = claims.find((entry) => entry.gapId === gap.id)
               const holder = claimRow ? members.find((member) => member.userId === claimRow.userId) : undefined
               const mine = Boolean(claimRow && currentUserId && claimRow.userId === currentUserId)
-              const holderName = mine ? "You" : (holder?.displayName ?? claimRow?.displayName ?? "Someone")
+              const holderName = firstName(holder?.displayName ?? claimRow?.displayName ?? "Someone")
               return (
-                <li key={gap.id} className="trip-home__gap" data-kind={gap.kind}>
+                <li key={gap.id} className="trip-home__gap" data-kind={gap.kind} data-claimed={claimRow ? "true" : "false"}>
                   <p className="trip-home__name">{gap.title}</p>
                   <p className="trip-home__detail">{gap.detail}</p>
                   {claimRow ? (
@@ -128,12 +134,10 @@ export function TripHome({
                             style={{ backgroundImage: `url("${holder.image.replace(/["\\)]/g, "")}")` }}
                           />
                         ) : (
-                          initial(holderName === "You" ? (holder?.displayName ?? "You") : holderName)
+                          initial(holder?.displayName ?? holderName)
                         )}
                       </span>
-                      <span>
-                        {holderName} {mine ? "have" : "has"} this
-                      </span>
+                      <span>{mine ? "You're handling this" : `${holderName}'s handling this`}</span>
                     </p>
                   ) : null}
                   <div className="trip-home__actions">
@@ -150,18 +154,18 @@ export function TripHome({
                         type="button"
                         className="trip-home__btn trip-home__btn--ghost"
                         onClick={() => claim(gap, false)}
-                        aria-label={`Release ${gap.title}`}
+                        aria-label={`Undo handling ${gap.title}`}
                       >
-                        Release
+                        Undo
                       </button>
-                    ) : (
+                    ) : claimRow ? null : (
                       <button
                         type="button"
                         className="trip-home__btn trip-home__btn--ghost"
                         onClick={() => claim(gap, true)}
-                        aria-label={claimRow ? `I'll take it: ${gap.title}` : `I've got it: ${gap.title}`}
+                        aria-label={`I'll handle it: ${gap.title}`}
                       >
-                        {claimRow ? "I'll take it" : "I've got it"}
+                        I&apos;ll handle it
                       </button>
                     )}
                   </div>

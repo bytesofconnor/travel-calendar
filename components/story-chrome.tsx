@@ -15,6 +15,8 @@ export function StoryChrome({
   travelers,
   currentUserId,
   onOpenMembers,
+  selectedUserId,
+  onSelectPerson,
   menu,
 }: {
   mode: "list" | "month"
@@ -24,6 +26,8 @@ export function StoryChrome({
   travelers: readonly TravelerName[]
   currentUserId?: string
   onOpenMembers?: () => void
+  selectedUserId?: string | null
+  onSelectPerson?: (userId: string) => void
   menu: ReactNode
 }) {
   useEffect(() => {
@@ -66,6 +70,8 @@ export function StoryChrome({
         travelers={travelers}
         currentUserId={currentUserId}
         onOpen={onOpenMembers}
+        selectedUserId={selectedUserId}
+        onSelectPerson={onSelectPerson}
         className="story-chrome__travelers"
       />
     </div>

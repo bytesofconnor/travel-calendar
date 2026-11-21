@@ -6,6 +6,7 @@ interface PageProps {
     confirm?: string
     trip?: string
     plan?: string
+    who?: string
   }>
 }
 
@@ -15,6 +16,7 @@ export default async function Page({ searchParams }: PageProps) {
   const confirmId = resolvedSearchParams?.confirm
   const tripId = resolvedSearchParams?.trip
   const planId = resolvedSearchParams?.plan
+  const who = resolvedSearchParams?.who
 
-  return <ConvexTripCalendarApp joinCode={joinCode} confirmId={confirmId} tripId={tripId} planId={planId} />
+  return <ConvexTripCalendarApp joinCode={joinCode} confirmId={confirmId} tripId={tripId} planId={planId} who={who} />
 }

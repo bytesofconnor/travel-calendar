@@ -474,12 +474,12 @@ export function ItemDialog({
                 </button>
               )
             ) : null}
+            {draft.type !== "note" ? (
+              <p className="text-xs text-foreground">Cities by Open-Meteo. Addresses © OpenStreetMap via Photon.</p>
+            ) : null}
           </div>
 
           <div data-dialog-footer="" className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 pb-[max(1rem,var(--safe-bottom))]">
-            {draft.type !== "note" ? (
-              <p className="basis-full text-xs text-foreground">Cities by Open-Meteo. Addresses © OpenStreetMap via Photon.</p>
-            ) : null}
             {editItem ? (
               <Button
                 type="button"

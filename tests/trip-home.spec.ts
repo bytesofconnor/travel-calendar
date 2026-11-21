@@ -20,7 +20,7 @@ test("trip home shows what's next, a hole, and a claim", async ({ page }) => {
   await expect(page.getByText("No ride to SFO")).toBeVisible()
   await expect(page.getByText("Everything's covered")).toHaveCount(0)
 
-  const claim = page.getByRole("button", { name: "I've got it: No ride from LIS" })
+  const claim = page.getByRole("button", { name: "I'll handle it: No ride from LIS" })
   await claim.focus()
   const focus = await claim.evaluate((element) => {
     const style = getComputedStyle(element)
@@ -29,9 +29,10 @@ test("trip home shows what's next, a hole, and a claim", async ({ page }) => {
   expect(focus.style).not.toBe("none")
   expect(focus.width).toBeGreaterThan(0)
   await claim.press("Enter")
-  await expect(page.getByText("You have this").first()).toBeVisible()
-  await expect(page.locator(".trip-home__live")).toHaveText("You have No ride from LIS")
-  await expect(page.getByRole("button", { name: "Release No ride from LIS" })).toBeVisible()
+  await expect(page.getByText("You're handling this").first()).toBeVisible()
+  await expect(page.locator(".trip-home__live")).toHaveText("You're handling No ride from LIS")
+  await expect(page.getByRole("button", { name: "Undo handling No ride from LIS" })).toBeVisible()
+  await expect(page.getByText("I'll handle it means you're taking this on.")).toBeVisible()
 
   await page.getByRole("button", { name: "Add ride: No ride from LIS" }).click()
   const dialog = page.getByRole("dialog")
@@ -46,7 +47,7 @@ test("a covered trip says everything is covered", async ({ page }) => {
   await page.goto("/review?screen=covered", { waitUntil: "domcontentloaded" })
   await expect(page.getByRole("heading", { name: "What's next" })).toBeVisible()
   await expect(page.getByRole("status")).toHaveText("Everything's covered")
-  await expect(page.getByRole("button", { name: /I've got it/ })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: /I'll handle it/ })).toHaveCount(0)
 })
 
 test("trip home stays on the screen at phone widths and at 200% text", async ({ page }, testInfo) => {
@@ -55,7 +56,7 @@ test("trip home stays on the screen at phone widths and at 200% text", async ({ 
     await page.setViewportSize({ width, height: width >= 1024 ? 800 : 844 })
     await openTrip(page)
     expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
-    const button = page.getByRole("button", { name: "I've got it: No ride from LIS" })
+    const button = page.getByRole("button", { name: "I'll handle it: No ride from LIS" })
     const box = await button.boundingBox()
     expect(box?.width ?? 0).toBeGreaterThanOrEqual(44)
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)

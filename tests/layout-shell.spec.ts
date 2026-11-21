@@ -161,7 +161,12 @@ test("trip shell keeps contrast in light, dark, and each theme pack", async ({ p
     if (theme.scheme === "dark") {
       await expect(page.locator("html")).toHaveClass(/dark/, { timeout: 5000 })
     }
-    const results = await new AxeBuilder({ page }).include("#main-content").analyze()
+    await page.evaluate(() => document.fonts.ready)
+    let results = await new AxeBuilder({ page }).include("#main-content").analyze()
+    if (results.violations.some((violation) => violation.id === "color-contrast")) {
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+      results = await new AxeBuilder({ page }).include("#main-content").analyze()
+    }
     expect(results.violations, theme.path).toEqual([])
   }
 })

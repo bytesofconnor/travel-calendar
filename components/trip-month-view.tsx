@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 
+import { PlanWhen } from "@/components/plan-when"
 import type { TripItem } from "@/lib/kanban-store"
 import { itemsOnDay, stayBarsForWeek, tripEdges, type MonthDayCell } from "@/lib/month-layout"
+import { describePlanWhen } from "@/lib/plan-when"
 import { inferPlanKind, kindLabel, type PlanKind } from "@/lib/trip-kind"
 import { cn } from "@/lib/utils"
 import { DayWeather, type DayWeatherState } from "@/components/weather-chip"
@@ -373,13 +375,21 @@ export function TripMonthView({
                 <ul className="month-detail__list">
                   {selectedItems.map((item) => {
                     const kind = inferPlanKind(item)
+                    const described = describePlanWhen(item, selected, selectedItems)
+                    const raw = `${kindLabel(kind)}${item.title}${described.parts.map((part) => part.text).join("")}`
                     return (
                       <li key={item.id}>
-                        <button type="button" className={`plan-card plan-card--${kind}`} onClick={() => onEditItem(item)}>
+                        <button
+                          type="button"
+                          className={`plan-card plan-card--${kind}`}
+                          aria-label={`${raw}. ${kindLabel(kind)} ${item.title}. ${described.label}`}
+                          onClick={() => onEditItem(item)}
+                        >
                           <span className="plan-card__rail" aria-hidden="true" />
                           <span className="min-w-0 flex-1">
                             <span className="plan-card__kind">{kindLabel(kind)}</span>
                             <span className="plan-card__title">{item.title}</span>
+                            <PlanWhen item={item} day={selected} dayItems={selectedItems} />
                           </span>
                         </button>
                       </li>
@@ -457,11 +467,20 @@ function MonthAgenda({
                     <ul className="month-agenda__list">
                       {dayItems.map((item) => {
                         const kind: PlanKind = inferPlanKind(item)
+                        const described = describePlanWhen(item, day.iso, dayItems)
+                        const raw = `${kindLabel(kind)}${item.title}${described.parts.map((part) => part.text).join("")}`
                         return (
                           <li key={item.id}>
-                            <button type="button" className="month-agenda__event" data-kind={kind} onClick={() => onEditItem(item)}>
+                            <button
+                              type="button"
+                              className="month-agenda__event"
+                              data-kind={kind}
+                              aria-label={`${raw}. ${kindLabel(kind)} ${item.title}. ${described.label}`}
+                              onClick={() => onEditItem(item)}
+                            >
                               <span className="month-agenda__kind">{kindLabel(kind)}</span>
                               <span className="month-agenda__title">{item.title}</span>
+                              <PlanWhen item={item} day={day.iso} dayItems={dayItems} />
                             </button>
                           </li>
                         )

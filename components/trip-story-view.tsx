@@ -1,11 +1,12 @@
 "use client"
 
-import { AttendeeStack, visibleFaceLabel, whoLine, type AttendeeMember } from "@/components/attendee-faces"
+import { AttendeeStack, whoLine, type AttendeeMember } from "@/components/attendee-faces"
+import { PlanWhen } from "@/components/plan-when"
 import { cn } from "@/lib/utils"
 import type { TripItem } from "@/lib/kanban-store"
+import { describePlanWhen, groupItemsByDay, orderDay } from "@/lib/plan-when"
 import {
   formatChapterDate,
-  groupItemsByStartDate,
   inferPlanKind,
   itemMetaLine,
   kindLabel,
@@ -37,34 +38,45 @@ interface TripStoryViewProps {
   onOpenNotes: () => void
   onOpenAsk: () => void
   weather?: DayWeatherState
+  filterName?: string
   className?: string
 }
 
 function PlanCard({
   item,
+  day,
+  dayItems,
   kind,
   members,
   emphasize,
   onClick,
 }: {
   item: TripItem
+  day: string
+  dayItems: readonly TripItem[]
   kind: PlanKind
   members: readonly AttendeeMember[]
   emphasize?: boolean
   onClick: () => void
 }) {
   const meta = itemMetaLine(item, kind)
+  const described = describePlanWhen(item, day, dayItems)
   const who = whoLine(item.attendeeIds, members)
-  const faces = visibleFaceLabel(item.attendeeIds, members)
-  const visible = [kindLabel(kind), item.authorName, item.confirmLine, item.title, meta, faces]
-    .filter((part) => part && part.trim())
-    .join(" ")
-  const detail = `${kindLabel(kind)}: ${item.title}${meta ? `. ${meta}` : ""}${who ? `. ${who}` : ""}${item.confirmLine ? `. ${item.confirmLine}` : ""}`
+  const word = "\u200B"
+  const raw = [
+    `${kindLabel(kind)}${word}`,
+    item.authorName ? `${item.authorName}${word}` : "",
+    item.confirmLine ? `${item.confirmLine}${word}` : "",
+    `${item.title}${word}`,
+    described.parts.map((part) => part.text).join(""),
+    meta ? `${meta}${word}` : "",
+  ].join("")
+  const detail = `${kindLabel(kind)}: ${item.title}${meta ? `. ${meta}` : ""}. ${described.label}${who ? `. ${who}` : ""}${item.confirmLine ? `. ${item.confirmLine}` : ""}`
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={`${visible}. ${detail}`}
+      aria-label={`${raw}. ${detail}`}
       className={cn(
         "plan-card w-full",
         `plan-card--${kind}`,
@@ -88,6 +100,7 @@ function PlanCard({
           </span>
         ) : null}
         <span className="plan-card__title">{item.title}{"\u200B"}</span>
+        <PlanWhen item={item} day={day} dayItems={dayItems} />
         {meta ? <span className="plan-card__meta">{meta}{"\u200B"}</span> : null}
         <AttendeeStack attendeeIds={item.attendeeIds} members={members} />
       </span>
@@ -149,11 +162,13 @@ export function TripStoryView({
   onOpenNotes,
   onOpenAsk,
   weather,
+  filterName,
   className,
 }: TripStoryViewProps) {
-  const chapters = groupItemsByStartDate(items)
-  const todayItems = items.filter(
-    (item) => item.startDate <= today && item.endDate >= today,
+  const chapters = groupItemsByDay(items)
+  const todayItems = orderDay(
+    items.filter((item) => item.startDate <= today && item.endDate >= today),
+    today,
   )
   const tomorrowHint = chapters.find((chapter) => chapter.date > today)
 
@@ -187,6 +202,8 @@ export function TripStoryView({
               <div key={item.id} role="listitem">
                 <PlanCard
                   item={item}
+                  day={today}
+                  dayItems={todayItems}
                   kind={kind}
                   members={members}
                   emphasize={index === 0 || item.id === emphasizeItemId}
@@ -214,6 +231,14 @@ export function TripStoryView({
           />
         </div>
       </div>
+    )
+  }
+
+  if (items.length === 0 && filterName) {
+    return (
+      <p className={cn("story-lede py-6", className)} role="status">
+        No plans for {filterName}.
+      </p>
     )
   }
 
@@ -287,11 +312,17 @@ export function TripStoryView({
       {chapters.map((chapter) => {
         const stay = chapter.items.find((item) => inferPlanKind(item) === "stay")
         const place = stay?.location || chapter.items[0]?.location || "—"
-        const note = stay?.notes?.trim() || undefined
+        const note = stay && stay.startDate === chapter.date ? stay.notes?.trim() || undefined : undefined
         return (
-          <section key={chapter.date} className="pb-1" aria-labelledby={`chapter-${chapter.date}`}>
+          <section
+            key={chapter.date}
+            className="pb-1"
+            aria-labelledby={`chapter-date-${chapter.date} chapter-${chapter.date}`}
+          >
             <header className="pb-3 pt-6">
-              <p className="story-chapter__date">{formatChapterDate(chapter.date)}</p>
+              <p id={`chapter-date-${chapter.date}`} className="story-chapter__date">
+                {formatChapterDate(chapter.date)}
+              </p>
               <h2 id={`chapter-${chapter.date}`} className="story-chapter__place mt-1.5">
                 {place}
               </h2>
@@ -307,6 +338,8 @@ export function TripStoryView({
                   <div key={item.id} role="listitem">
                     <PlanCard
                       item={item}
+                      day={chapter.date}
+                      dayItems={chapter.items}
                       kind={kind}
                       members={members}
                       emphasize={item.id === emphasizeItemId}

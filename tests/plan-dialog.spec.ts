@@ -96,7 +96,7 @@ test("each type shows its own fields and the flight toggle is gone", async ({ pa
   await dialog.getByRole("radio", { name: "Flight" }).click()
   await expect(dialog.getByRole("heading", { name: "Add a flight" })).toBeVisible()
   await expect(dialog.getByLabel("From")).toBeVisible()
-  await expect(dialog.getByLabel("To")).toBeVisible()
+  await expect(dialog.getByLabel("To", { exact: true })).toBeVisible()
   await expect(dialog.getByLabel("Where are you staying?")).toHaveCount(0)
 
   await dialog.getByRole("radio", { name: "Note" }).click()
@@ -113,14 +113,14 @@ test("a typed route becomes a flight and a legacy flight opens as a flight", asy
   const dialog = page.getByRole("dialog")
   await expect(dialog.getByRole("radio", { name: "Flight" })).toHaveAttribute("aria-checked", "true")
   await expect(dialog.getByLabel("From")).toHaveValue("DC")
-  await expect(dialog.getByLabel("To")).toHaveValue("Hanoi")
+  await expect(dialog.getByLabel("To", { exact: true })).toHaveValue("Hanoi")
   await expect(dialog.getByLabel("Title")).toHaveAttribute("placeholder", "Fly DC to Hanoi")
   await page.keyboard.press("Escape")
 
   await page.getByRole("button", { name: /Flight: TAP to Lisbon/ }).click()
   await expect(dialog.getByRole("heading", { name: "Edit flight" })).toBeVisible()
   await expect(dialog.getByLabel("From")).toHaveValue("SFO")
-  await expect(dialog.getByLabel("To")).toHaveValue("LIS")
+  await expect(dialog.getByLabel("To", { exact: true })).toHaveValue("LIS")
   await expect(dialog.locator("#plan-title")).toHaveValue("TAP to Lisbon")
 })
 

@@ -961,6 +961,7 @@
   }
 
   .trip-home__kind {
+    color: var(--foreground);
     font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.12em;
@@ -1132,6 +1133,249 @@
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
+  }
+
+  .trip-home__hint {
+    margin: 0;
+    max-width: var(--layout-measure);
+    color: var(--foreground);
+    font-size: 0.875rem;
+    font-weight: 650;
+    line-height: 1.4;
+  }
+
+  .trip-home__gap[data-claimed="true"] {
+    border-width: 2px;
+    border-left-width: 4px;
+  }
+
+  .plan-when {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    max-width: 100%;
+    min-width: 0;
+    margin-top: 0.45rem;
+  }
+
+  .plan-when__tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    max-width: 100%;
+    min-height: 1.5rem;
+    padding: 0.15rem 0.4rem;
+    border: 1px solid var(--foreground);
+    border-radius: 2px;
+    background: var(--background);
+    color: var(--foreground);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .plan-when__icon {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex-shrink: 0;
+  }
+
+  .month-agenda__event .plan-when {
+    flex-basis: 100%;
+  }
+
+  .person-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 0.75rem;
+    margin-top: 0.85rem;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid var(--foreground);
+    background: var(--card);
+    color: var(--foreground);
+  }
+
+  .person-filter__line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.6rem;
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .person-filter__clear {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--foreground);
+    background: var(--foreground);
+    color: var(--background);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
+
+  .person-filter__clear:focus-visible,
+  .traveler-face:focus-visible,
+  .traveler-label:focus-visible,
+  .who-face:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .traveler-face {
+    position: relative;
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--foreground);
+    border-radius: 999px;
+    padding: 0;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .traveler-face--you {
+    background: var(--foreground);
+    color: var(--background);
+  }
+
+  .traveler-face--other {
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  .traveler-face--pressed {
+    box-shadow: inset 0 0 0 2px var(--background), inset 0 0 0 4px var(--foreground);
+  }
+
+  .traveler-face__dot {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    width: 8px;
+    height: 8px;
+    border: 2px solid var(--background);
+    border-radius: 999px;
+    background: var(--foreground);
+  }
+
+  .traveler-face--you .traveler-face__dot {
+    border-color: var(--foreground);
+    background: var(--background);
+  }
+
+  .traveler-label {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 0.35rem;
+    border: 0;
+    background: transparent;
+    color: var(--foreground);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: left;
+  }
+
+  .traveler-extra {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    left: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.35rem;
+    border: 1px solid var(--foreground);
+    background: var(--card);
+  }
+
+  .who-face {
+    display: flex;
+    width: 4.75rem;
+    min-width: 44px;
+    min-height: 44px;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--foreground);
+    font: inherit;
+  }
+
+  .who-face__portrait {
+    position: relative;
+    display: flex;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 2px solid var(--foreground);
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
+
+  .who-face__portrait--in {
+    background: var(--foreground);
+    color: var(--background);
+  }
+
+  .who-face__portrait--out {
+    background: var(--secondary);
+    color: var(--foreground);
+  }
+
+  .who-face__mark {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    display: flex;
+    width: 16px;
+    height: 16px;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--foreground);
+    border-radius: 999px;
+  }
+
+  .who-face__mark--in {
+    background: var(--foreground);
+    color: var(--background);
+  }
+
+  .who-face__mark--out {
+    background: var(--background);
+  }
+
+  .who-face__name {
+    max-width: 100%;
+    color: var(--foreground);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .who-face[data-included="false"] .who-face__name {
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
   }
 
   .spectrum-hairline {
