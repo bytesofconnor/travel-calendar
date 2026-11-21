@@ -7,6 +7,15 @@ export const planTypeValidator = v.union(
   v.literal("note"),
 )
 
+export const travelModeValidator = v.union(
+  v.literal("flight"),
+  v.literal("train"),
+  v.literal("bus"),
+  v.literal("shuttle"),
+  v.literal("taxi"),
+  v.literal("walk"),
+)
+
 export const geoPlaceValidator = v.object({
   name: v.string(),
   lat: v.number(),

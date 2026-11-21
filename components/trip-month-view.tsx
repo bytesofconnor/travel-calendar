@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 
 import type { TripItem } from "@/lib/kanban-store"
 import { itemsOnDay, stayBarsForWeek, tripEdges, type MonthDayCell } from "@/lib/month-layout"
-import { inferPlanKind, kindLabel, type PlanKind } from "@/lib/trip-kind"
+import { inferPlanKind, shownLabel, shownMode, type PlanKind } from "@/lib/trip-kind"
+import { TravelMark } from "@/components/travel-mark"
 import { cn } from "@/lib/utils"
 import { DayWeather, type DayWeatherState } from "@/components/weather-chip"
 
@@ -75,14 +76,22 @@ function dateParts(iso: string) {
 }
 
 function eventPhrase(item: TripItem) {
+  const label = shownLabel(item)
   const kind = inferPlanKind(item)
-  if (kind === "flight") {
+  if (kind === "flight" || shownMode(item)) {
     const from = item.location.trim()
     const to = item.locationTo?.trim()
-    return to ? `Flight ${from} to ${to}` : `Flight ${item.title}`
+    return to ? `${label} ${from} to ${to}` : `${label} ${item.title}`
   }
   if (kind === "stay") return `Stay ${item.title}`
-  return `${kindLabel(kind)} ${item.title}`
+  return `${label} ${item.title}`
+}
+
+function KindMark({ item }: { item: TripItem }) {
+  const label = shownLabel(item)
+  const mode = shownMode(item)
+  if (!mode) return <>{label}</>
+  return <TravelMark mode={mode} label={label} />
 }
 
 function dayName(iso: string, dayItems: TripItem[], isToday: boolean, inTrip: boolean) {
@@ -347,7 +356,7 @@ export function TripMonthView({
                             const kind = inferPlanKind(item)
                             return (
                               <span key={item.id} className="month-chip" data-kind={kind}>
-                                <span className="month-chip__kind">{kindLabel(kind)}</span>
+                                <span className="month-chip__kind"><KindMark item={item} /></span>
                                 <span className="month-chip__title">{item.title}</span>
                               </span>
                             )
@@ -378,7 +387,7 @@ export function TripMonthView({
                         <button type="button" className={`plan-card plan-card--${kind}`} onClick={() => onEditItem(item)}>
                           <span className="plan-card__rail" aria-hidden="true" />
                           <span className="min-w-0 flex-1">
-                            <span className="plan-card__kind">{kindLabel(kind)}</span>
+                            <span className="plan-card__kind"><KindMark item={item} /></span>
                             <span className="plan-card__title">{item.title}</span>
                           </span>
                         </button>
@@ -460,7 +469,7 @@ function MonthAgenda({
                         return (
                           <li key={item.id}>
                             <button type="button" className="month-agenda__event" data-kind={kind} onClick={() => onEditItem(item)}>
-                              <span className="month-agenda__kind">{kindLabel(kind)}</span>
+                              <span className="month-agenda__kind"><KindMark item={item} /></span>
                               <span className="month-agenda__title">{item.title}</span>
                             </button>
                           </li>

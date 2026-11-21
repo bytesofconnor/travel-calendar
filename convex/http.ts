@@ -711,6 +711,7 @@ http.route({
         location: item.location,
         locationTo: item.locationTo,
         planType: item.planType,
+        travelMode: item.travelMode,
         startTime: item.startTime,
         endTime: item.endTime,
         startTimeZone: item.startTimeZone,

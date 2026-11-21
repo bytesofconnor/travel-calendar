@@ -6,7 +6,7 @@ test("typing, picking, and closing does not jump", async ({ page }, testInfo) =>
   test.skip(testInfo.project.name !== "chromium", "One desktop recording")
   await page.goto("/review?screen=add&party=5", { waitUntil: "domcontentloaded" })
   const dialog = page.getByRole("dialog")
-  await dialog.getByRole("radio", { name: "Flight" }).click()
+  await dialog.getByRole("radio", { name: "Travel" }).click()
   const to = dialog.getByRole("combobox", { name: "To" })
   await to.evaluate((el) => {
     const scroller = el.closest(".overflow-y-auto")

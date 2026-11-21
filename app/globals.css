@@ -1367,42 +1367,42 @@
     background: var(--kind-flight);
   }
   .plan-card--flight .plan-card__kind {
-    color: var(--kind-flight);
+    color: var(--foreground);
   }
 
   .plan-card--stay .plan-card__rail {
     background: var(--kind-stay);
   }
   .plan-card--stay .plan-card__kind {
-    color: var(--kind-stay);
+    color: var(--foreground);
   }
 
   .plan-card--place .plan-card__rail {
     background: var(--kind-place);
   }
   .plan-card--place .plan-card__kind {
-    color: var(--kind-place);
+    color: var(--foreground);
   }
 
   .plan-card--note .plan-card__rail {
     background: var(--kind-note);
   }
   .plan-card--note .plan-card__kind {
-    color: var(--kind-note);
+    color: var(--foreground);
   }
 
   .plan-card--ask .plan-card__rail {
     background: var(--kind-ask);
   }
   .plan-card--ask .plan-card__kind {
-    color: var(--kind-ask);
+    color: var(--foreground);
   }
 
   .plan-card--now .plan-card__rail {
     background: var(--live);
   }
   .plan-card--now .plan-card__kind {
-    color: var(--live);
+    color: var(--foreground);
   }
 
   .plan-card--emphasize {
@@ -1429,7 +1429,7 @@
 
   .plan-card__kind {
     font-size: 0.6875rem;
-    font-weight: 650;
+    font-weight: 700;
     letter-spacing: -0.01em;
     text-transform: none;
   }

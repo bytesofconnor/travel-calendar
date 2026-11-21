@@ -8,9 +8,10 @@ import { internalQuery, mutation } from "./_generated/server"
 import type { MutationCtx } from "./_generated/server"
 import { getCurrentUserId, getMembership, requireMembership } from "./lib/auth"
 import { bundleItemValidator, serializeItem } from "./lib/tripData"
-import { geoPlaceValidator, planTypeValidator } from "./lib/place"
+import { geoPlaceValidator, planTypeValidator, travelModeValidator } from "./lib/place"
 
 type PlanTypeName = "stay" | "flight" | "place" | "note"
+type TravelModeName = "flight" | "train" | "bus" | "shuttle" | "taxi" | "walk"
 
 type StoredPlace = {
   name: string
@@ -34,6 +35,7 @@ type ItemWrite = {
   location: string
   locationTo?: string
   planType?: PlanTypeName
+  travelMode?: TravelModeName
   place?: StoredPlace | null
   placeTo?: StoredPlace | null
   confirmation?: string
@@ -48,6 +50,7 @@ type ItemWrite = {
 
 const extraItemArgs = {
   planType: v.optional(planTypeValidator),
+  travelMode: v.optional(travelModeValidator),
   place: v.optional(v.union(geoPlaceValidator, v.null())),
   placeTo: v.optional(v.union(geoPlaceValidator, v.null())),
   confirmation: v.optional(v.string()),
@@ -82,6 +85,7 @@ function detailInsert(input: ItemWrite) {
   const placeTo = cleanPlace(input.placeTo)
   return {
     ...(input.planType ? { planType: input.planType } : {}),
+    ...(input.planType === "flight" && input.travelMode ? { travelMode: input.travelMode } : {}),
     ...(place ? { place } : {}),
     ...(placeTo ? { placeTo } : {}),
     ...(input.confirmation?.trim() ? { confirmation: input.confirmation.trim() } : {}),
@@ -93,6 +97,7 @@ function detailInsert(input: ItemWrite) {
 function detailPatch(input: ItemWrite) {
   const patch: {
     planType?: PlanTypeName
+    travelMode?: TravelModeName
     place?: StoredPlace
     placeTo?: StoredPlace
     confirmation?: string
@@ -100,6 +105,8 @@ function detailPatch(input: ItemWrite) {
     address?: string
   } = {}
   if ("planType" in input) patch.planType = input.planType
+  if (input.planType && input.planType !== "flight") patch.travelMode = undefined
+  else if (input.travelMode) patch.travelMode = input.travelMode
   if ("place" in input) patch.place = cleanPlace(input.place)
   if ("placeTo" in input) patch.placeTo = cleanPlace(input.placeTo)
   if (input.confirmation !== undefined) patch.confirmation = input.confirmation.trim() || undefined

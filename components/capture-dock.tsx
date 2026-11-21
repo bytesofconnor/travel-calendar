@@ -16,7 +16,7 @@ interface CaptureDockProps {
 
 const CHIPS: { kind: CaptureKind; label: string }[] = [
   { kind: "stay", label: "Stay" },
-  { kind: "flight", label: "Flight" },
+  { kind: "flight", label: "Travel" },
   { kind: "place", label: "Place" },
   { kind: "note", label: "Note" },
 ]

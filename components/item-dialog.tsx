@@ -31,13 +31,15 @@ import {
   stayPlaceholder,
   type PlanDraft,
 } from "@/lib/plan-form"
-import type { GeoPlace, PlanType } from "@/lib/plan-types"
+import type { GeoPlace, PlanType, TravelMode } from "@/lib/plan-types"
+import { modeKeepsArriveDay, TRAVEL_MODES } from "@/lib/travel-mode"
+import { travelIcon } from "@/components/travel-mark"
 import type { TripItem, TripItemInput } from "@/lib/kanban-store"
 import type { WeatherUnits } from "@/lib/weather"
 
 const TYPES: { id: PlanType; label: string }[] = [
   { id: "stay", label: "Stay" },
-  { id: "flight", label: "Flight" },
+  { id: "flight", label: "Travel" },
   { id: "place", label: "Place" },
   { id: "note", label: "Note" },
 ]
@@ -171,7 +173,7 @@ export function ItemDialog({
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
             <DialogHeader className="border-b border-border px-0 pb-3 pr-10 text-left">
               <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
-                {headingFor(draft.type, editing)}
+                {headingFor(draft.type, editing, draft.mode)}
               </DialogTitle>
               {editing && editItem?.authorName ? (
                 <p className="text-sm text-foreground">Added by {editItem.authorName}</p>
@@ -210,7 +212,20 @@ export function ItemDialog({
               })}
             </div>
 
-            <SmoothFields watch={draft.type}>
+            {draft.type === "flight" ? (
+              <ModePicker
+                mode={draft.mode}
+                onChange={(mode) => {
+                  setShowZones(false)
+                  patch({
+                    mode,
+                    ...(modeKeepsArriveDay(mode) ? {} : { endDate: draft.startDate || draft.endDate }),
+                  })
+                }}
+              />
+            ) : null}
+
+            <SmoothFields watch={`${draft.type}:${draft.mode}`}>
             {draft.type === "stay" ? (
               <>
                 <PlaceField
@@ -241,8 +256,8 @@ export function ItemDialog({
                     id="plan-location"
                     label="From"
                     value={draft.from}
-                    placeholder="City or airport"
-                    flight
+                    placeholder={draft.mode === "flight" ? "City or airport" : modeKeepsArriveDay(draft.mode) ? "Station or city" : "Place or address"}
+                    flight={draft.mode === "flight"}
                     invalid={Boolean(errors.from)}
                     describedBy={described("from", "plan-location")}
                     bias={placeHint}
@@ -260,8 +275,14 @@ export function ItemDialog({
                     id="plan-location-to"
                     label="To"
                     value={draft.to}
-                    placeholder={placeHint || "City or airport"}
-                    flight
+                    placeholder={
+                      draft.mode === "flight"
+                        ? placeHint || "City or airport"
+                        : modeKeepsArriveDay(draft.mode)
+                          ? "Station or city"
+                          : "Place or address"
+                    }
+                    flight={draft.mode === "flight"}
                     invalid={Boolean(errors.to)}
                     describedBy={described("to", "plan-location-to")}
                     bias={placeHint}
@@ -278,16 +299,18 @@ export function ItemDialog({
                 </div>
                 <FieldError id="plan-location-error" message={errors.from} />
                 <FieldError id="plan-location-to-error" message={errors.to} />
-                <TextField
-                  id="plan-flight-code"
-                  label="Airline or flight number"
-                  value={draft.flightCode}
-                  placeholder="VN 123"
-                  onChange={(flightCode) => patch({ flightCode })}
-                />
+                {draft.mode === "walk" ? null : (
+                  <TextField
+                    id="plan-flight-code"
+                    label={draft.mode === "flight" ? "Airline or flight number" : draft.mode === "train" || draft.mode === "bus" ? "Carrier or number" : "Carrier"}
+                    value={draft.flightCode}
+                    placeholder={draft.mode === "flight" ? "VN 123" : draft.mode === "taxi" || draft.mode === "shuttle" ? "Grab" : "Optional"}
+                    onChange={(flightCode) => patch({ flightCode })}
+                  />
+                )}
                 <TitleField
                   value={draft.customTitle}
-                  placeholder={titlePreview || "Fly from one place to another"}
+                  placeholder={titlePreview || (draft.mode === "flight" ? "Fly from one place to another" : "Title fills in from the places")}
                   describedBy={described("customTitle", "plan-title")}
                   invalid={Boolean(errors.customTitle)}
                   onChange={(customTitle) => patch({ customTitle, titleEdited: true })}
@@ -352,7 +375,7 @@ export function ItemDialog({
               />
             ) : null}
 
-            {draft.type === "flight" ? (
+            {draft.type === "flight" && modeKeepsArriveDay(draft.mode) ? (
               <>
                 <DatePair
                   startLabel="Depart"
@@ -368,13 +391,34 @@ export function ItemDialog({
                   <TextField id="plan-depart" label="Depart time" type="time" value={draft.startTime} onChange={(startTime) => patch({ startTime })} />
                   <TextField id="plan-arrive" label="Arrive time" type="time" value={draft.endTime} onChange={(endTime) => patch({ endTime })} />
                 </div>
-                <FlightClock
-                  draft={draft}
-                  showZones={showZones}
-                  onShowZones={() => setShowZones(true)}
-                  onDepartZone={(startZone) => patch({ startZone })}
-                  onArriveZone={(endZone) => patch({ endZone })}
+                {draft.mode === "flight" ? (
+                  <FlightClock
+                    draft={draft}
+                    showZones={showZones}
+                    onShowZones={() => setShowZones(true)}
+                    onDepartZone={(startZone) => patch({ startZone })}
+                    onArriveZone={(endZone) => patch({ endZone })}
+                  />
+                ) : null}
+              </>
+            ) : null}
+
+            {draft.type === "flight" && !modeKeepsArriveDay(draft.mode) ? (
+              <>
+                <TextField
+                  id="plan-start"
+                  label="Date"
+                  type="date"
+                  value={draft.startDate}
+                  invalid={Boolean(errors.startDate)}
+                  describedBy={described("startDate", "plan-start")}
+                  onChange={(startDate) => patch({ startDate, endDate: startDate })}
                 />
+                <FieldError id="plan-start-error" message={errors.startDate} />
+                <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2">
+                  <TextField id="plan-depart" label="Time" type="time" value={draft.startTime} onChange={(startTime) => patch({ startTime })} />
+                  <TextField id="plan-arrive" label="End time" type="time" value={draft.endTime} onChange={(endTime) => patch({ endTime })} />
+                </div>
               </>
             ) : null}
 
@@ -502,7 +546,7 @@ export function ItemDialog({
                 Cancel
               </Button>
               <Button type="submit" size="lg" className="rounded-full px-5" aria-busy={isSaving}>
-                {isSaving ? "Saving…" : saveLabel(draft.type, editing)}
+                {isSaving ? "Saving…" : saveLabel(draft.type, editing, draft.mode)}
               </Button>
             </div>
           </div>
@@ -734,6 +778,48 @@ function placeStillMatches(text: string, place: GeoPlace | null | undefined): Ge
   return null
 }
 
+function ModePicker({ mode, onChange }: { mode: TravelMode; onChange: (mode: TravelMode) => void }) {
+  function onKey(event: KeyboardEvent<HTMLButtonElement>) {
+    const index = TRAVEL_MODES.findIndex((entry) => entry.id === mode)
+    let next = index
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") next = (index + 1) % TRAVEL_MODES.length
+    else if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = (index - 1 + TRAVEL_MODES.length) % TRAVEL_MODES.length
+    else return
+    event.preventDefault()
+    const picked = TRAVEL_MODES[next]
+    if (!picked) return
+    onChange(picked.id)
+    document.getElementById(`plan-mode-${picked.id}`)?.focus()
+  }
+
+  return (
+    <div role="radiogroup" aria-label="Travel mode" className="grid grid-cols-2 gap-2 min-[30rem]:grid-cols-3">
+      {TRAVEL_MODES.map((entry) => {
+        const selected = mode === entry.id
+        const Icon = travelIcon(entry.id)
+        return (
+          <button
+            key={entry.id}
+            id={`plan-mode-${entry.id}`}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            tabIndex={selected ? 0 : -1}
+            onClick={() => onChange(entry.id)}
+            onKeyDown={onKey}
+            className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-foreground px-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              selected ? "bg-foreground text-background" : "bg-background text-foreground"
+            }`}
+          >
+            <Icon className="size-4 shrink-0" aria-hidden="true" />
+            <span>{entry.picker}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function SmoothFields({ watch, children }: { watch: string; children: ReactNode }) {
   const innerRef = useRef<HTMLDivElement>(null)
   const [height, setHeight] = useState<number | null>(null)
@@ -776,8 +862,14 @@ function SmoothFields({ watch, children }: { watch: string; children: ReactNode 
       className="min-w-0"
       style={
         motion && height != null
-          ? { height, transition: "height 150ms ease-out", overflow: clip ? "hidden" : "visible" }
-          : undefined
+          ? {
+              height,
+              minHeight: height,
+              flexShrink: 0,
+              transition: "height 150ms ease-out",
+              overflow: clip ? "hidden" : "visible",
+            }
+          : { flexShrink: 0 }
       }
     >
       <div ref={innerRef} className="flex flex-col gap-4 py-1">

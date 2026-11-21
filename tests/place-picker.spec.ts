@@ -17,7 +17,7 @@ const themes = [
 async function openFlight(page: Page) {
   await page.goto("/review?screen=add&party=5", { waitUntil: "domcontentloaded" })
   const dialog = page.getByRole("dialog")
-  await dialog.getByRole("radio", { name: "Flight" }).click()
+  await dialog.getByRole("radio", { name: "Travel" }).click()
   return dialog
 }
 
@@ -136,7 +136,7 @@ test("the open place menu keeps contrast in every theme", async ({ page }, testI
       await expect(page.locator("html")).toHaveClass(/dark/, { timeout: 5000 })
     }
     const dialog = page.getByRole("dialog")
-    await dialog.getByRole("radio", { name: "Flight" }).click()
+    await dialog.getByRole("radio", { name: "Travel" }).click()
     const to = dialog.getByRole("combobox", { name: "To" })
     await scrollField(to)
     await to.fill("DC")

@@ -1,10 +1,29 @@
 import type { TripItem } from "@/lib/kanban-store"
-import { resolvePlanType } from "@/lib/plan-form"
+import { isGroundTransit, resolvePlanType } from "@/lib/plan-form"
+import { guessTravelMode, readTravelMode, travelLabel, type TravelMode } from "@/lib/travel-mode"
 
 export type PlanKind = "flight" | "stay" | "place" | "note" | "ask" | "now"
 
 export function inferPlanKind(item: TripItem): PlanKind {
   return resolvePlanType(item)
+}
+
+export function shownMode(item: TripItem): TravelMode | "ride" | null {
+  const kind = inferPlanKind(item)
+  if (kind !== "flight") return null
+  const stored = readTravelMode(item.travelMode)
+  if (stored) return stored
+  const guessed = guessTravelMode(`${item.title} ${item.notes ?? ""}`)
+  if (guessed !== "flight") return guessed
+  if (isGroundTransit(item.title, item.notes)) return "ride"
+  return "flight"
+}
+
+export function shownLabel(item: TripItem): string {
+  const mode = shownMode(item)
+  if (mode === "ride") return "Ride"
+  if (mode) return travelLabel(mode)
+  return kindLabel(inferPlanKind(item))
 }
 
 export function kindLabel(kind: PlanKind): string {
@@ -61,7 +80,7 @@ export function stayNights(startDate: string, endDate: string): number {
 }
 
 export function itemMetaLine(item: TripItem, kind: PlanKind): string {
-  if (kind === "flight") {
+  if (kind === "flight" || shownMode(item)) {
     const from = item.location.trim()
     const to = item.locationTo?.trim()
     return [from && to ? `${from} → ${to}` : from || to, item.flightCode, item.notes].filter(Boolean).join(" · ")
