@@ -11,27 +11,30 @@ async function openEdit(page: Page) {
 
 test("a member can include or exclude faces on a plan", async ({ page }) => {
   const dialog = await openEdit(page)
-  await expect(dialog.getByText("2 of 4, Mom and Dad out", { exact: true })).toBeVisible()
+  await expect(dialog.getByText("Tap a face to leave someone out")).toBeVisible()
+  await expect(dialog.getByText("2 of 4 · not Mom or Dad", { exact: true })).toBeVisible()
 
-  const mom = dialog.getByRole("button", { name: "Mom, not included" })
-  const connor = dialog.getByRole("button", { name: "Connor, included" })
+  const mom = dialog.getByRole("button", { name: "Mom, not included, toggle" })
+  const connor = dialog.getByRole("button", { name: "Connor, included, toggle" })
   await dialog.locator("#plan-time").focus()
   for (let step = 0; step < 4; step += 1) {
     if (await connor.evaluate((element) => element === document.activeElement)) break
     await page.keyboard.press("Tab")
   }
   await expect(connor).toBeFocused()
-  const focus = await connor.evaluate((element) => getComputedStyle(element).boxShadow)
+  const focus = await connor.evaluate((element) => getComputedStyle(element).outlineStyle)
   expect(focus).not.toBe("none")
   await expect.poll(async () => (await mom.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(44)
   await expect.poll(async () => (await mom.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
 
   await mom.press("Space")
-  await expect(dialog.getByRole("button", { name: "Mom, included" })).toHaveAttribute("aria-pressed", "true")
-  await expect(dialog.getByText("3 of 4, Dad out", { exact: true })).toBeVisible()
+  await expect(dialog.getByRole("button", { name: "Mom, included, toggle" })).toHaveAttribute("aria-pressed", "true")
+  await expect(mom.locator(".who-face__mark--out")).toHaveCount(0)
+  await expect(dialog.getByText("3 of 4 · not Dad", { exact: true })).toBeVisible()
 
   await connor.click()
-  await expect(dialog.getByRole("button", { name: "Connor, not included" })).toHaveAttribute("aria-pressed", "false")
+  await expect(dialog.getByRole("button", { name: "Connor, not included, toggle" })).toHaveAttribute("aria-pressed", "false")
+  await expect(dialog.getByRole("button", { name: "Connor, not included, toggle" }).locator(".who-face__mark--out")).toBeVisible()
   await dialog.getByRole("button", { name: "Save", exact: true }).click()
   await expect(dialog).toBeHidden()
 
@@ -45,7 +48,7 @@ test("a new plan starts as Everyone", async ({ page }) => {
   const dialog = page.getByRole("dialog")
   await expect(dialog.getByText("Everyone", { exact: true })).toBeVisible()
   for (const name of ["Connor", "Alex", "Mom", "Dad"]) {
-    await expect(dialog.getByRole("button", { name: `${name}, included` })).toHaveAttribute("aria-pressed", "true")
+    await expect(dialog.getByRole("button", { name: `${name}, included, toggle` })).toHaveAttribute("aria-pressed", "true")
   }
 })
 
@@ -53,7 +56,7 @@ test("the trip calendar shows faces only when someone is left out", async ({ pag
   await page.goto("/review?screen=trip", { waitUntil: "domcontentloaded" })
   const dinner = page.getByRole("button", { name: /Place: Time Out Market/ })
   await expect(dinner).toHaveAttribute("aria-label", /Connor and Alex/)
-  const stay = page.getByRole("button", { name: /Stay: Alfama apartment/ })
+  const stay = page.getByRole("button", { name: /Stay: Alfama apartment/ }).first()
   await expect(stay).not.toHaveAttribute("aria-label", /Connor and Alex/)
   await expect(dinner.locator("span.h-6.w-6")).toHaveCount(2)
   await expect(stay.locator("span.h-6.w-6")).toHaveCount(0)
@@ -76,7 +79,7 @@ test("who's in keeps contrast in light, dark, and each theme pack", async ({ pag
       await expect(page.locator("html")).toHaveClass(/dark/, { timeout: 5000 })
     }
     const dialog = page.getByRole("dialog")
-    await expect(dialog.getByRole("button", { name: "Mom, not included" })).toBeVisible()
+    await expect(dialog.getByRole("button", { name: "Mom, not included, toggle" })).toBeVisible()
     const results = await new AxeBuilder({ page }).include("[data-who=in]").analyze()
     expect(results.violations).toEqual([])
   }
@@ -96,16 +99,16 @@ test("who's in stays on screen at large text and 200% zoom", async ({ page }, te
   await page.evaluate(() => {
     document.documentElement.style.fontSize = "32px"
   })
-  await expect(dialog.getByRole("button", { name: "Mom, not included" })).toBeVisible()
+  await expect(dialog.getByRole("button", { name: "Mom, not included, toggle" })).toBeVisible()
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(overflow).toBeLessThanOrEqual(1)
-  const dad = dialog.getByRole("button", { name: "Dad, not included" })
+  const dad = dialog.getByRole("button", { name: "Dad, not included, toggle" })
   await expect.poll(async () => (await dad.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(44)
   await expect.poll(async () => (await dad.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
 
   await page.setViewportSize({ width: 320, height: 568 })
-  await dad.scrollIntoViewIfNeeded()
   await expect.poll(async () => dad.evaluate((element) => {
+    element.scrollIntoView({ block: "center", inline: "nearest" })
     const button = element.getBoundingClientRect()
     const scroller = element.closest(".overflow-y-auto")?.getBoundingClientRect()
     if (!scroller) return 0
@@ -118,7 +121,7 @@ test("who's in stays on screen at large text and 200% zoom", async ({ page }, te
     document.documentElement.style.fontSize = "16px"
     document.documentElement.style.zoom = "2"
   })
-  await expect(dialog.getByText("2 of 4, Mom and Dad out", { exact: true })).toBeVisible()
+  await expect(dialog.getByText("2 of 4 · not Mom or Dad", { exact: true })).toBeVisible()
   const zoomed = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(zoomed).toBeLessThanOrEqual(1)
 })

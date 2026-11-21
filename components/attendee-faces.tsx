@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, Minus } from "lucide-react"
+import { Check } from "lucide-react"
 
 import {
   attendanceLabel,
@@ -125,34 +125,38 @@ export function AttendeeToggles({
   const summary = attendanceSummary(members, attendeeIds)
 
   return (
-    <div role="group" aria-labelledby="plan-who-label" data-who="in" className="space-y-2">
-      <p id="plan-who-label" className="text-sm font-medium text-foreground">
+    <div role="group" aria-labelledby="plan-who-label" aria-describedby="plan-who-hint" data-who="in" className="space-y-2">
+      <p id="plan-who-label" className="text-sm font-semibold text-foreground">
         Who&apos;s in
       </p>
-      <p id="plan-who-status" aria-live="polite" className="text-sm font-medium text-foreground">
+      <p id="plan-who-hint" className="text-sm font-medium text-foreground">
+        Tap a face to leave someone out
+      </p>
+      <p id="plan-who-status" aria-live="polite" className="text-sm font-semibold text-foreground">
         {summary}
       </p>
       <div className="flex flex-wrap gap-2">
         {members.map((member) => {
           const included = attendance.includedIds.includes(member.userId)
+          const given = member.displayName.trim().split(/\s+/)[0] || member.displayName
+          const letter = faceInitials(member.displayName)
           return (
             <button
               key={member.userId}
               type="button"
               aria-pressed={included}
-              title={member.displayName}
-              aria-label={`${member.displayName}, ${included ? "included" : "not included"}`}
+              aria-label={`${letter}${given}, ${included ? "included" : "not included"}, toggle`}
+              data-included={included ? "true" : "false"}
               onClick={() => onChange(toggleMember(attendeeIds, memberIds, member.userId))}
-              className={`relative inline-flex size-[44px] shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                included
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-foreground bg-background text-foreground"
-              }`}
+              className="who-face"
             >
-              <Face member={member} />
-              <span className="absolute -right-0.5 -bottom-0.5 flex size-[16px] items-center justify-center rounded-full border border-foreground bg-background text-foreground">
-                {included ? <Check className="size-[10px]" strokeWidth={3} aria-hidden="true" /> : <Minus className="size-[10px]" strokeWidth={3} aria-hidden="true" />}
+              <span className={`who-face__portrait ${included ? "who-face__portrait--in" : "who-face__portrait--out"}`}>
+                <Face member={member} />
+                <span className={`who-face__mark ${included ? "who-face__mark--in" : "who-face__mark--out"}`}>
+                  {included ? <Check className="size-[10px]" strokeWidth={3} aria-hidden="true" /> : null}
+                </span>
               </span>
+              <span className="who-face__name">{given}</span>
             </button>
           )
         })}

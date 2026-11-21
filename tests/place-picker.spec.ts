@@ -122,6 +122,8 @@ test("the place menu overlays the field and ranks DC, Vietnam, and HAN", async (
     await to.fill("DC")
     await expect(list.getByRole("option").first()).toContainText("Washington", { timeout: 10_000 })
     await dialog.screenshot({ path: `/opt/cursor/artifacts/place-menu-${testInfo.project.name}.png` })
+    await page.keyboard.press("Escape")
+    await expect(list).toBeHidden()
   }
   await dialog.getByRole("button", { name: "Change" }).click()
   await expect(dialog.getByLabel("Arriving time zone")).toBeVisible()

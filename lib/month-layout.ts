@@ -1,4 +1,5 @@
 import type { TripItem } from "./kanban-store.ts"
+import { orderDay } from "./plan-when.ts"
 import { resolvePlanType } from "./plan-form.ts"
 import type { PlanKind } from "./trip-kind.ts"
 
@@ -22,23 +23,11 @@ export interface StayBar {
   continuesAfter: boolean
 }
 
-const KIND_ORDER: Record<PlanKind, number> = {
-  flight: 0,
-  stay: 1,
-  place: 2,
-  note: 3,
-  ask: 4,
-  now: 5,
-}
-
 export function itemsOnDay(items: TripItem[], iso: string) {
-  return items
-    .filter((item) => item.startDate <= iso && item.endDate >= iso)
-    .sort((left, right) => {
-      const kind = KIND_ORDER[planKind(left)] - KIND_ORDER[planKind(right)]
-      if (kind !== 0) return kind
-      return left.title.localeCompare(right.title)
-    })
+  return orderDay(
+    items.filter((item) => item.startDate <= iso && item.endDate >= iso),
+    iso,
+  )
 }
 
 export function stayBarsForWeek(days: MonthDayCell[], items: TripItem[]): StayBar[] {
