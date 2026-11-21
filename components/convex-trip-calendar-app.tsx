@@ -18,7 +18,9 @@ import {
 
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
+import { SaveErrorBanner } from "@/components/save-error-banner"
 import { Button } from "@/components/ui/button"
+import { publicError } from "@/lib/client-error"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -145,11 +147,11 @@ function guessDisplayName(user: { email: string | null; name: string | null } | 
 }
 
 function authErrorMessage(error: unknown, fallback: string) {
-  const message = error instanceof Error ? error.message : fallback
+  const message = error instanceof Error ? error.message : ""
   if (/AUTH_RESEND_KEY|Missing AUTH_RESEND/i.test(message)) {
     return "Email OTP needs AUTH_RESEND_KEY set in your Convex deployment env (npx convex env set AUTH_RESEND_KEY …)."
   }
-  return message
+  return publicError(error, fallback)
 }
 
 function LoadingJourney({ label = "Loading your trip", detail = "Pulling plans, notes, and packing lists together." }: { label?: string; detail?: string }) {
@@ -231,6 +233,8 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
   const [joinInput, setJoinInput] = useState(joinCode ?? "")
   const [authMessage, setAuthMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
+  const failedSave = useRef<{ input: TripItemInput; existing?: TripItem } | null>(null)
+  const [canRetrySave, setCanRetrySave] = useState(false)
   const [isSendingAuth, setIsSendingAuth] = useState(false)
   const [isSendingEmailCode, setIsSendingEmailCode] = useState(false)
   const [isVerifyingCode, setIsVerifyingCode] = useState(false)
@@ -503,7 +507,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
           window.localStorage.setItem(LAST_TRIP_KEY, tripId)
         }
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Invite code not found.")
+        clearSaveRetry(); setErrorMessage(publicError(error, "Invite code not found."))
         setShowCreateJoin(true)
       } finally {
         setIsMutating(false)
@@ -579,7 +583,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         noteDirtyRef.current = false
       }
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to save notes.")
+      clearSaveRetry(); setErrorMessage(publicError(error, "Unable to save notes."))
       throw error
     } finally {
       setIsSavingNote(false)
@@ -593,7 +597,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
     try {
       await signIn("google", { redirectTo: oauthRedirectTo(window.location.href) })
     } catch (error) {
-      setErrorMessage(authErrorMessage(error, "Unable to sign in with Google."))
+      clearSaveRetry(); setErrorMessage(authErrorMessage(error, "Unable to sign in with Google."))
       setIsSigningInWithGoogle(false)
     }
   }
@@ -609,7 +613,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
       setHasPendingCode(true)
       setAuthMessage(`Code sent to ${email.trim()}.`)
     } catch (error) {
-      setErrorMessage(authErrorMessage(error, "Unable to send email code."))
+      clearSaveRetry(); setErrorMessage(authErrorMessage(error, "Unable to send email code."))
     } finally {
       setIsSendingEmailCode(false)
     }
@@ -627,7 +631,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
       setVerificationCode("")
       setAuthMessage("You’re signed in. Loading your trip…")
     } catch (error) {
-      setErrorMessage(authErrorMessage(error, "Invalid or expired code."))
+      clearSaveRetry(); setErrorMessage(authErrorMessage(error, "Invalid or expired code."))
     } finally {
       setIsVerifyingCode(false)
     }
@@ -684,7 +688,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
       }
       void applyCoverForTrip(tripId, tripName.trim())
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to create trip.")
+      clearSaveRetry(); setErrorMessage(publicError(error, "Unable to create trip."))
     } finally {
       setIsMutating(false)
     }
@@ -706,14 +710,19 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         window.localStorage.setItem(LAST_TRIP_KEY, tripId)
       }
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Invite code not found.")
+      clearSaveRetry(); setErrorMessage(publicError(error, "Invite code not found."))
     } finally {
       setIsMutating(false)
     }
   }
 
+  function clearSaveRetry() {
+    failedSave.current = null
+    setCanRetrySave(false)
+  }
+
   async function handleSaveItem(input: TripItemInput, existingItem?: TripItem) {
-    if (!trip || !userId) return
+    if (!trip || !userId) return false
 
     setIsMutating(true)
     setErrorMessage("")
@@ -753,11 +762,23 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         setShareMessage(addedPlanMessage(input.attendeeIds, members))
         window.setTimeout(() => setShareMessage(""), 2000)
       }
+      clearSaveRetry()
+      return true
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to save plan.")
+      console.error("Couldn't save that plan.", error)
+      failedSave.current = { input, existing: existingItem }
+      setCanRetrySave(true)
+      setErrorMessage("Couldn't save that plan. Try again.")
+      return false
     } finally {
       setIsMutating(false)
     }
+  }
+
+  async function retrySave() {
+    const pending = failedSave.current
+    if (!pending) return
+    await handleSaveItem(pending.input, pending.existing)
   }
 
   function openGap(action: GapAction) {
@@ -798,7 +819,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         delete next[gapId]
         return next
       })
-      setErrorMessage(error instanceof Error ? error.message : "Couldn't update who has this.")
+      clearSaveRetry(); setErrorMessage(publicError(error, "Couldn't update who has this."))
     }
   }
 
@@ -838,7 +859,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
     try {
       await removeItem({ itemId: itemId as Id<"tripItems"> })
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to delete plan.")
+      clearSaveRetry(); setErrorMessage(publicError(error, "Unable to delete plan."))
     } finally {
       setIsMutating(false)
     }
@@ -920,7 +941,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
       setShareMessage(payload?.caution ? `Notes organized. ${payload.caution}` : "Notes organized.")
       window.setTimeout(() => setShareMessage(""), 2500)
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Couldn’t organize the notes yet.")
+      clearSaveRetry(); setErrorMessage(publicError(error, "Couldn’t organize the notes yet."))
     } finally {
       setIsOrganizingNote(false)
     }
@@ -960,7 +981,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
     try {
       await addPacking({ tripId: trip.id as Id<"trips">, label: label.trim() })
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to add packing item.")
+      clearSaveRetry(); setErrorMessage(publicError(error, "Unable to add packing item."))
     } finally {
       setIsMutating(false)
     }
@@ -985,7 +1006,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
       setShareMessage(`${nextLabels.length} packing idea${nextLabels.length === 1 ? "" : "s"} added.`)
       window.setTimeout(() => setShareMessage(""), 2000)
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to add packing ideas.")
+      clearSaveRetry(); setErrorMessage(publicError(error, "Unable to add packing ideas."))
     } finally {
       setIsMutating(false)
     }
@@ -997,7 +1018,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
     try {
       await togglePacking({ itemId: item.id as Id<"tripPackingItems">, isChecked: nextChecked })
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to update packing item.")
+      clearSaveRetry(); setErrorMessage(publicError(error, "Unable to update packing item."))
     } finally {
       setIsMutating(false)
     }
@@ -1009,7 +1030,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
     try {
       await renamePacking({ itemId: item.id as Id<"tripPackingItems">, label })
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to rename packing item.")
+      clearSaveRetry(); setErrorMessage(publicError(error, "Unable to rename packing item."))
     } finally {
       setIsMutating(false)
     }
@@ -1021,7 +1042,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
     try {
       await removePacking({ itemId: item.id as Id<"tripPackingItems"> })
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to delete packing item.")
+      clearSaveRetry(); setErrorMessage(publicError(error, "Unable to delete packing item."))
     } finally {
       setIsMutating(false)
     }
@@ -1057,7 +1078,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
       setShareMessage("Cover updated.")
       window.setTimeout(() => setShareMessage(""), 2000)
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to refresh cover.")
+      clearSaveRetry(); setErrorMessage(publicError(error, "Unable to refresh cover."))
     } finally {
       setIsRefreshingCover(false)
     }
@@ -1077,7 +1098,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
       })
       setIsEditingTripDetails(false)
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to update trip.")
+      clearSaveRetry(); setErrorMessage(publicError(error, "Unable to update trip."))
     } finally {
       setIsMutating(false)
     }
@@ -1103,7 +1124,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
       setShareMessage("Confirmed.")
       window.setTimeout(() => setShareMessage(""), 2000)
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to confirm.")
+      clearSaveRetry(); setErrorMessage(publicError(error, "Unable to confirm."))
     } finally {
       setIsMutating(false)
     }
@@ -1117,7 +1138,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
       setShareMessage("Rejected.")
       window.setTimeout(() => setShareMessage(""), 2000)
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to reject.")
+      clearSaveRetry(); setErrorMessage(publicError(error, "Unable to reject."))
     } finally {
       setIsMutating(false)
     }
@@ -1336,7 +1357,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
                               void ensureCalendar({ tripId: trip.id as Id<"trips"> })
                                 .then((result) => setCalendarToken(result.token))
                                 .catch((error: unknown) => {
-                                  setCalendarError(error instanceof Error ? error.message : "Couldn't make a calendar link.")
+                                  setCalendarError(publicError(error, "Couldn't make a calendar link."))
                                 })
                             }}
                           >
@@ -1346,7 +1367,10 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
                           <ThemePackPickerMenuItems
                             tripId={trip.id as Id<"trips">}
                             themePack={trip.themePack}
-                            onError={setErrorMessage}
+                            onError={(message) => {
+                              clearSaveRetry()
+                              setErrorMessage(publicError(new Error(message), "Could not set the theme."))
+                            }}
                           />
                           {currentMember?.role === "owner" ? (
                             <DropdownMenuItem onSelect={() => setIsEditingTripDetails(true)}>
@@ -1376,7 +1400,11 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         banners={
           <>
             {shareMessage ? <StatusBanner tone="success">{shareMessage}</StatusBanner> : null}
-            {errorMessage ? <StatusBanner tone="error">{errorMessage}</StatusBanner> : null}
+            {errorMessage && canRetrySave ? (
+              <SaveErrorBanner onRetry={() => void retrySave()} pending={isMutating} />
+            ) : errorMessage ? (
+              <StatusBanner tone="error">{errorMessage}</StatusBanner>
+            ) : null}
           </>
         }
         composer={
@@ -1422,7 +1450,8 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
                   onSaveToBrainstorm={handleSaveBrainstormContent}
                   onAddPackingIdeas={handleAddPackingIdeas}
                   onAddCalendarItem={async (input) => {
-                    await handleSaveItem(input)
+                    const saved = await handleSaveItem(input)
+                    if (!saved) throw new Error("Couldn't save that plan. Try again.")
                   }}
                   currentUserName={currentMember?.displayName ?? guessDisplayName(me)}
                   isMutating={isMutating}
@@ -1450,7 +1479,8 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
             onSaveToBrainstorm={handleSaveBrainstormContent}
             onAddPackingIdeas={handleAddPackingIdeas}
             onAddCalendarItem={async (input) => {
-              await handleSaveItem(input)
+              const saved = await handleSaveItem(input)
+              if (!saved) throw new Error("Couldn't save that plan. Try again.")
             }}
             currentUserName={currentMember?.displayName ?? guessDisplayName(me)}
             isMutating={isMutating}
@@ -1589,7 +1619,8 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         isSaving={isMutating}
         isDeleting={isMutating}
         onSave={async (input, existing) => {
-          await handleSaveItem(input, existing)
+          const saved = await handleSaveItem(input, existing)
+          if (!saved) return
           setItemDialogOpen(false)
         }}
         onDelete={async (itemId) => {

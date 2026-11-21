@@ -9,6 +9,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
+import { publicError } from "@/lib/client-error"
 import { parseThemePack, THEME_PACKS, type ThemePackId } from "@/lib/theme-packs"
 
 export function ThemePackPickerMenuItems({
@@ -25,7 +26,7 @@ export function ThemePackPickerMenuItems({
   function apply(next: ThemePackId | null) {
     if (next === themePack) return
     void setThemePack({ tripId, themePack: next }).catch((error: unknown) => {
-      onError(error instanceof Error ? error.message : "Could not set the theme.")
+      onError(publicError(error, "Could not set the theme."))
     })
   }
 
