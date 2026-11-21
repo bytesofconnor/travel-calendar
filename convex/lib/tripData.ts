@@ -3,7 +3,7 @@ import { v } from "convex/values"
 import type { Doc, Id } from "../_generated/dataModel"
 import type { QueryCtx } from "../_generated/server"
 import { parseThemePack } from "../../lib/theme-packs"
-import { geoPlaceValidator, planTypeValidator } from "./place"
+import { geoPlaceValidator, planTypeValidator, travelModeValidator } from "./place"
 import { themePackValidator } from "./themePack"
 
 export const tripValidator = v.object({
@@ -36,6 +36,7 @@ export const bundleItemValidator = v.object({
   location: v.string(),
   locationTo: v.optional(v.string()),
   planType: v.optional(planTypeValidator),
+  travelMode: v.optional(travelModeValidator),
   place: v.optional(geoPlaceValidator),
   placeTo: v.optional(geoPlaceValidator),
   confirmation: v.optional(v.string()),
@@ -87,6 +88,7 @@ export function serializeItem(item: Doc<"tripItems">) {
     location: item.location,
     locationTo: item.locationTo,
     ...(item.planType ? { planType: item.planType } : {}),
+    ...(item.travelMode ? { travelMode: item.travelMode } : {}),
     ...(item.place ? { place: item.place } : {}),
     ...(item.placeTo ? { placeTo: item.placeTo } : {}),
     ...(item.confirmation ? { confirmation: item.confirmation } : {}),

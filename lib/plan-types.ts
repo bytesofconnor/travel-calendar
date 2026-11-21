@@ -1,5 +1,7 @@
 export type PlanType = "stay" | "flight" | "place" | "note"
 
+export type TravelMode = "flight" | "train" | "bus" | "shuttle" | "taxi" | "walk"
+
 export type PlaceFeature = "city" | "airport" | "address" | "country" | "region"
 
 export type GeoPlace = {

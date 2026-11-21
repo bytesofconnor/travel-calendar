@@ -177,7 +177,7 @@ test("the add bar stays within a fifth of a small phone", async ({ page }, testI
 
   const chips = [
     page.getByRole("button", { name: "Add Stay" }),
-    page.getByRole("button", { name: "Add Flight" }),
+    page.getByRole("button", { name: "Add Travel" }),
     page.getByRole("button", { name: "Add Place" }),
     page.getByRole("button", { name: "Add Note" }),
   ]

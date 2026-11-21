@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { defaultTripDates } from "@/lib/format-dates"
-import type { GeoPlace, PlanType } from "@/lib/plan-types"
+import type { GeoPlace, PlanType, TravelMode } from "@/lib/plan-types"
 import type { ThemePackId } from "@/lib/theme-packs"
 
 export type Location = string
@@ -47,6 +47,7 @@ export interface TripItem {
   startTimeZone?: string
   endTimeZone?: string
   planType?: PlanType
+  travelMode?: TravelMode
   place?: GeoPlace
   placeTo?: GeoPlace
   confirmation?: string
@@ -95,6 +96,7 @@ export interface TripItemInput {
   startTimeZone?: string
   endTimeZone?: string
   planType?: PlanType
+  travelMode?: TravelMode
   place?: GeoPlace
   placeTo?: GeoPlace
   confirmation?: string

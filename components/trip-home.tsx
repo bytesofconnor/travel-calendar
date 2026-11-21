@@ -4,6 +4,8 @@ import { useState } from "react"
 
 import type { GapAction, TripGap, TripHomeModel, UpcomingItem } from "@/lib/trip-home/detect"
 import { initial } from "@/lib/trip-kind"
+import { TravelMark } from "@/components/travel-mark"
+import { readTravelMode } from "@/lib/travel-mode"
 import { DayWeather, type DayWeatherState } from "@/components/weather-chip"
 
 export type TripHomeMember = {
@@ -30,11 +32,10 @@ type TripHomeProps = {
   className?: string
 }
 
-const KIND_LABEL: Record<UpcomingItem["kind"], string> = {
-  flight: "Flight",
-  stay: "Stay",
-  place: "Place",
-  transport: "Ride",
+function UpcomingMark({ item }: { item: UpcomingItem }) {
+  const mode = readTravelMode(item.mark.toLowerCase()) ?? (item.mark === "Ride" ? "ride" : undefined)
+  if (!mode) return <>{item.mark}</>
+  return <TravelMark mode={mode} label={item.mark} />
 }
 
 export function TripHome({
@@ -73,7 +74,7 @@ export function TripHome({
               onClick={() => onOpenItem(next.id)}
             >
               <span className="trip-home__copy">
-                <span className="trip-home__kind">{KIND_LABEL[next.kind]}</span>
+                <span className="trip-home__kind"><UpcomingMark item={next} /></span>
                 <span className="trip-home__name">{next.title}</span>
                 <span className="trip-home__when">{next.whenLabel}</span>
               </span>
@@ -88,7 +89,7 @@ export function TripHome({
                   <li key={item.id}>
                     <button type="button" className="trip-home__row" onClick={() => onOpenItem(item.id)}>
                       <span className="trip-home__copy">
-                        <span className="trip-home__kind">{KIND_LABEL[item.kind]}</span>
+                        <span className="trip-home__kind"><UpcomingMark item={item} /></span>
                         <span className="trip-home__name">{item.title}</span>
                       </span>
                       <span className="trip-home__countdown">{item.countdown}</span>

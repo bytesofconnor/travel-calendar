@@ -5,7 +5,7 @@ async function addPlan(
   kind: "Stay" | "Flight" | "Place",
   fields: { title: string; start?: string; end?: string; where?: string; from?: string; to?: string },
 ) {
-  await page.getByRole("button", { name: `Add ${kind}` }).click()
+  await page.getByRole("button", { name: kind === "Flight" ? "Add Travel" : `Add ${kind}` }).click()
   const dialog = page.getByRole("dialog")
   if (kind === "Stay") {
     await dialog.getByLabel("Where are you staying?").fill(fields.where ?? "")

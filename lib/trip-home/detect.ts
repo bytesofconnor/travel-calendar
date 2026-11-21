@@ -1,6 +1,7 @@
 import { airportTimeZone, isIanaTimeZone } from "../calendar/airports.ts"
 import { homeRole } from "../plan-form.ts"
-import type { PlanType } from "../plan-types.ts"
+import type { PlanType, TravelMode } from "../plan-types.ts"
+import { readTravelMode, travelLabel, guessTravelMode } from "../travel-mode.ts"
 
 export type HomePlan = {
   id: string
@@ -15,6 +16,7 @@ export type HomePlan = {
   endTimeZone?: string
   notes?: string
   planType?: PlanType
+  travelMode?: TravelMode
 }
 
 export type HomeNow = {
@@ -57,6 +59,7 @@ export type UpcomingItem = {
   id: string
   title: string
   kind: UpcomingKind
+  mark: string
   whenLabel: string
   countdown: string
   startDate: string
@@ -145,6 +148,7 @@ type Span = {
   id: string
   title: string
   role: Role
+  mark: string
   startDate: string
   endDate: string
   location: string
@@ -332,10 +336,22 @@ function classify(plan: HomePlan): Role {
   return homeRole(plan)
 }
 
+function travelMark(mode: TravelMode | undefined, role: Role, title: string): string {
+  if (mode) return travelLabel(mode)
+  if (role === "stay") return "Stay"
+  if (role === "flight") return "Flight"
+  if (role === "transport") {
+    const guessed = guessTravelMode(title)
+    return guessed === "flight" ? "Ride" : travelLabel(guessed)
+  }
+  return "Place"
+}
+
 function toSpan(plan: HomePlan, fallbackZone: string): Span | null {
   if (!plan.id.trim() || !isIsoDate(plan.startDate) || !isIsoDate(plan.endDate)) return null
   const endDate = plan.endDate < plan.startDate ? plan.startDate : plan.endDate
   const role = classify({ ...plan, endDate })
+  const mode = readTravelMode(plan.travelMode)
   const origin = plan.location.trim()
   const destination = plan.locationTo?.trim() || origin
   const startZone = zoneFor(plan.startTimeZone, origin, fallbackZone)
@@ -358,6 +374,7 @@ function toSpan(plan: HomePlan, fallbackZone: string): Span | null {
     id: plan.id,
     title: plan.title.trim() || "Plan",
     role,
+    mark: travelMark(mode, role, plan.title),
     startDate: plan.startDate,
     endDate,
     location: origin,
@@ -785,6 +802,7 @@ export function buildTripHome(input: {
       id: span.id,
       title: span.title,
       kind: span.role,
+      mark: span.mark,
       whenLabel: whenLabel(span),
       countdown: countdownFor(span.startInstant, now, fallbackZone),
       startDate: span.departCivil,

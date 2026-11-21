@@ -7,6 +7,7 @@ import {
   defaultPlanDate,
   draftErrors,
   draftTitle,
+  fieldsFromNew,
   flightWhen,
   guessPlanType,
   headingFor,
@@ -29,6 +30,7 @@ function draft(overrides: Partial<PlanDraft> = {}): PlanDraft {
     from: "",
     to: "",
     flightCode: "",
+    mode: "flight",
     startDate: day,
     endDate: "2027-06-18",
     startTime: "",
@@ -258,6 +260,62 @@ test("a new plan uses the tapped day, or the trip, never today when the trip is 
     }),
     "2026-11-18",
   )
+})
+
+test("travel modes title themselves and a ground mode is a ride", () => {
+  assert.equal(autoTitle("flight", { mode: "train", from: "Hanoi", to: "Lao Cai" }), "Train Hanoi → Lao Cai")
+  assert.equal(autoTitle("flight", { mode: "taxi", to: "hotel", carrier: "Grab" }), "Grab to hotel")
+  assert.equal(autoTitle("flight", { mode: "walk", to: "Old Quarter" }), "Walk to Old Quarter")
+  assert.equal(autoTitle("flight", { from: "DC", to: "Hanoi" }), "Fly DC to Hanoi")
+  const train = buildPlan(
+    draft({ type: "flight", mode: "train", from: "Hanoi", to: "Lao Cai", endDate: day }),
+    day,
+  )
+  assert.equal(train?.travelMode, "train")
+  assert.equal(train?.planType, "flight")
+  assert.equal(
+    homeRole({
+      title: "Hanoi to Lao Cai",
+      planType: "flight",
+      travelMode: "train",
+      location: "Hanoi",
+      locationTo: "Lao Cai",
+      startDate: day,
+      endDate: day,
+    }),
+    "transport",
+  )
+  assert.equal(
+    homeRole({
+      title: "Fly HAN to SGN",
+      planType: "flight",
+      location: "HAN",
+      locationTo: "SGN",
+      startDate: day,
+      endDate: day,
+    }),
+    "flight",
+  )
+  const ride = fieldsFromNew(
+    "flight",
+    { title: "Ride from LIS", location: "LIS", locationTo: "Lisbon", startDate: day, endDate: day },
+    day,
+  )
+  assert.equal(ride.mode, "flight")
+  assert.equal(ride.customTitle, "Ride from LIS")
+  assert.equal(ride.from, "LIS")
+  assert.equal(ride.to, "Lisbon")
+  const grab = fieldsFromNew("flight", { title: "Grab to hotel", startDate: day }, day)
+  assert.equal(grab.mode, "taxi")
+  assert.equal(grab.to, "hotel")
+  assert.equal(grab.flightCode, "Grab")
+  assert.equal(grab.titleEdited, false)
+  assert.equal(draftTitle(grab), "Grab to hotel")
+  const legacy = fieldsFromNew("flight", { title: "TAP to Lisbon", location: "SFO", locationTo: "LIS", startDate: day, endDate: day }, day)
+  assert.equal(legacy.mode, "flight")
+  const walk = draft({ type: "flight", mode: "taxi", from: "Noi Bai", to: "hotel", startDate: day, endDate: "" })
+  assert.equal(draftErrors(walk).endDate, undefined)
+  assert.equal(buildPlan(walk, day)?.endDate, day)
 })
 
 test("headings and trip hints stay short", () => {

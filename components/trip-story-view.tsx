@@ -8,9 +8,11 @@ import {
   groupItemsByStartDate,
   inferPlanKind,
   itemMetaLine,
-  kindLabel,
+  shownLabel,
+  shownMode,
   type PlanKind,
 } from "@/lib/trip-kind"
+import { TravelMark } from "@/components/travel-mark"
 import { KindChip } from "@/components/capture-dock"
 import { LiveWhisper } from "@/components/live-whisper"
 import { DayWeather, type DayWeatherState } from "@/components/weather-chip"
@@ -54,12 +56,14 @@ function PlanCard({
   onClick: () => void
 }) {
   const meta = itemMetaLine(item, kind)
+  const label = shownLabel(item)
+  const mode = shownMode(item)
   const who = whoLine(item.attendeeIds, members)
   const faces = visibleFaceLabel(item.attendeeIds, members)
-  const visible = [kindLabel(kind), item.authorName, item.confirmLine, item.title, meta, faces]
+  const visible = [label, item.authorName, item.confirmLine, item.title, meta, faces]
     .filter((part) => part && part.trim())
     .join(" ")
-  const detail = `${kindLabel(kind)}: ${item.title}${meta ? `. ${meta}` : ""}${who ? `. ${who}` : ""}${item.confirmLine ? `. ${item.confirmLine}` : ""}`
+  const detail = `${label}: ${item.title}${meta ? `. ${meta}` : ""}${who ? `. ${who}` : ""}${item.confirmLine ? `. ${item.confirmLine}` : ""}`
   return (
     <button
       type="button"
@@ -75,7 +79,10 @@ function PlanCard({
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
           {/* Zero-width spaces keep adjacent text as separate words in the accessible name. */}
-          <span className="plan-card__kind">{kindLabel(kind)}{"\u200B"}</span>
+          <span className="plan-card__kind">
+            {mode ? <TravelMark mode={mode} label={label} /> : label}
+            {"\u200B"}
+          </span>
           {item.authorName ? (
             <span className="ml-auto truncate text-[11px] text-muted-foreground">
               {item.authorName}{"\u200B"}

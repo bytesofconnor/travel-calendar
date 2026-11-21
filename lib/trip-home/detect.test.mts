@@ -68,6 +68,23 @@ test("an overnight SFO to LIS flight spends the departure night in the air", () 
   assert.equal(arrival?.action.locationTo, "Lisbon")
 })
 
+test("a train with no ride in the title still covers the airport", () => {
+  const train: HomePlan = {
+    id: "ride_sfo",
+    title: "Hanoi to Lao Cai",
+    planType: "flight",
+    travelMode: "train",
+    startDate: "2027-04-02",
+    endDate: "2027-04-02",
+    location: "San Francisco",
+    locationTo: "SFO",
+  }
+  const home = ids([overnight, train, stay], { startDate: "2027-04-02", endDate: "2027-04-08" })
+  assert.equal(home.gaps.some((gap) => gap.id === "departure:flight_out"), false)
+  assert.equal(home.upcoming.find((item) => item.id === "ride_sfo")?.mark, "Train")
+  assert.equal(home.upcoming.find((item) => item.id === "ride_sfo")?.kind, "transport")
+})
+
 test("rides, an aligned stay, and both flights leave nothing missing", () => {
   const back: HomePlan = {
     id: "flight_back",

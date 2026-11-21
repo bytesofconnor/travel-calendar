@@ -310,6 +310,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
           location: item.location,
           locationTo: item.locationTo,
           planType: item.planType,
+          travelMode: item.travelMode,
           place: item.place,
           placeTo: item.placeTo,
           confirmation: item.confirmation,
@@ -392,6 +393,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         endTimeZone: item.endTimeZone,
         notes: item.notes,
         planType: item.planType,
+        travelMode: item.travelMode,
       })),
       now: homeNow,
     })
@@ -726,6 +728,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         location: input.location,
         locationTo: input.locationTo,
         planType: input.planType,
+        ...(input.travelMode ? { travelMode: input.travelMode } : {}),
         place: storedPlace(input.place),
         placeTo: storedPlace(input.placeTo),
         confirmation: input.confirmation ?? "",

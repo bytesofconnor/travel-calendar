@@ -130,6 +130,43 @@ const items: TripItem[] = [
 
 const editItem = items[2]
 
+const travelItems: TripItem[] = [
+  {
+    id: "mode_train",
+    tripId: TRIP_ID,
+    title: "Train Hanoi → Lao Cai",
+    planType: "flight",
+    travelMode: "train",
+    flightCode: "SE1",
+    startDate: "2026-11-18",
+    endDate: "2026-11-19",
+    location: "Hanoi",
+    locationTo: "Lao Cai",
+    createdBy: USER_ID,
+    createdAt: "2026-11-02T12:00:00.000Z",
+    updatedAt: "2026-11-02T12:00:00.000Z",
+    authorName: "Connor",
+    confirmLine: "Connor proposed · Alex confirmed",
+  },
+  {
+    id: "mode_grab",
+    tripId: TRIP_ID,
+    title: "Grab to hotel",
+    planType: "flight",
+    travelMode: "taxi",
+    flightCode: "Grab",
+    startDate: "2026-11-18",
+    endDate: "2026-11-18",
+    location: "Noi Bai",
+    locationTo: "Old Quarter hotel",
+    createdBy: USER_ID,
+    createdAt: "2026-11-02T13:00:00.000Z",
+    updatedAt: "2026-11-02T13:00:00.000Z",
+    authorName: "Connor",
+    confirmLine: "Connor proposed",
+  },
+]
+
 const coveredItems: TripItem[] = [
   {
     id: "item_place_only",
@@ -628,7 +665,7 @@ export function ReviewGallery({
             <TripStoryView
               className="trip-list__story"
               mode={story}
-              items={homeItems}
+              items={screen === "travel" ? travelItems : homeItems}
               today="2026-11-18"
               tripStart={tripStartDate}
               tripEnd={tripEndDate}

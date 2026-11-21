@@ -1,12 +1,20 @@
 import { airportTimeZone, zoneClockName } from "./calendar/airports.ts"
 import type { TripItemInput } from "./kanban-store.ts"
-import type { GeoPlace, PlanType } from "./plan-types.ts"
+import type { GeoPlace, PlanType, TravelMode } from "./plan-types.ts"
+import {
+  carrierFrom,
+  groundRoute,
+  guessTravelMode,
+  modeKeepsArriveDay,
+  readTravelMode,
+  travelTitle,
+} from "./travel-mode.ts"
 
 export type { GeoPlace, PlanType } from "./plan-types.ts"
 
 export type HomeRole = "flight" | "stay" | "transport" | "place"
 
-const BARE = /^(stay|stays|flight|flights|place|places|note|notes|plan|idea)$/i
+const BARE = /^(stay|stays|flight|flights|travel|place|places|note|notes|plan|idea|train|bus|shuttle|taxi|walk)$/i
 const FLIGHT_WORD = /\b(fly|flight|flying|airline)\b/i
 const GROUND_WORD =
   /\b(taxi|uber|lyft|cab|shuttle|transfer|train|metro|subway|rental|pickup|pick-up|drop-off|dropoff|car service|bus|ride|rides|drive|driving)\b/i
@@ -15,6 +23,7 @@ const FLY_ROUTE = /^(?:fly|flight)\s+(.+?)\s+to\s+(.+)$/i
 
 export type PlanSource = {
   planType?: PlanType
+  travelMode?: TravelMode
   title: string
   notes?: string
   location: string
@@ -70,7 +79,10 @@ export function resolvePlanType(item: PlanSource): PlanType {
 export function homeRole(item: PlanSource): HomeRole {
   if (item.planType === "stay") return "stay"
   if (item.planType === "place" || item.planType === "note") return "place"
-  if (item.planType === "flight") {
+  const mode = readTravelMode(item.travelMode)
+  if (mode && mode !== "flight") return "transport"
+  if (mode === "flight" || item.planType === "flight") {
+    if (mode === "flight") return "flight"
     return isGroundTransit(item.title, item.notes) && !isFlightTitle(item.title) ? "transport" : "flight"
   }
   if (isFlightTitle(item.title)) return "flight"
@@ -116,15 +128,16 @@ export function stayPlaceholder(hint: string): string {
   return "Hotel, neighborhood, or address"
 }
 
-export function autoTitle(type: PlanType, fields: { where?: string; from?: string; to?: string; name?: string }): string {
+export function autoTitle(
+  type: PlanType,
+  fields: { where?: string; from?: string; to?: string; name?: string; mode?: TravelMode; carrier?: string },
+): string {
   if (type === "stay") {
     const where = fields.where?.trim() ?? ""
     return where ? `Stay · ${where}` : ""
   }
   if (type === "flight") {
-    const from = fields.from?.trim() ?? ""
-    const to = fields.to?.trim() ?? ""
-    return from && to ? `Fly ${from} to ${to}` : ""
+    return travelTitle(fields.mode ?? "flight", fields.from ?? "", fields.to ?? "", fields.carrier ?? "")
   }
   if (type === "place") return fields.name?.trim() ?? ""
   return fields.name?.trim() ?? ""
@@ -142,6 +155,7 @@ export type PlanDraft = {
   to: string
   toPlace?: GeoPlace | null
   flightCode: string
+  mode: TravelMode
   startDate: string
   endDate: string
   startTime: string
@@ -157,7 +171,13 @@ export type PlanDraft = {
 
 export function draftTitle(draft: PlanDraft): string {
   if (draft.type === "place" || draft.type === "note") return draft.name.trim()
-  const auto = autoTitle(draft.type, { where: draft.where, from: draft.from, to: draft.to })
+  const auto = autoTitle(draft.type, {
+    where: draft.where,
+    from: draft.from,
+    to: draft.to,
+    mode: draft.mode,
+    carrier: draft.flightCode,
+  })
   const typed = draft.customTitle.trim()
   if (draft.titleEdited && typed && !isBareTitle(typed)) return typed
   return auto
@@ -175,8 +195,8 @@ export function draftErrors(draft: PlanDraft): Record<string, string> {
   } else if (draft.type === "flight") {
     if (!draft.from.trim()) errors.from = "Add where you leave from."
     if (!draft.to.trim()) errors.to = "Add where you're going."
-    if (!draft.startDate) errors.startDate = "Add a departure date."
-    if (!draft.endDate) errors.endDate = "Add an arrival date."
+    if (!draft.startDate) errors.startDate = modeKeepsArriveDay(draft.mode) ? "Add a departure date." : "Add a date."
+    if (modeKeepsArriveDay(draft.mode) && !draft.endDate) errors.endDate = "Add an arrival date."
     if (draft.startDate && draft.endDate && draft.endDate < draft.startDate) {
       errors.endDate = "Arrival is before departure."
     }
@@ -313,9 +333,10 @@ export function buildPlan(draft: PlanDraft, fallbackDate: string): TripItemInput
     const arrive = draft.endTime.trim()
     return {
       planType: "flight",
+      travelMode: draft.mode,
       title: draftTitle(draft),
       notes: notes || undefined,
-      flightCode: draft.flightCode.trim() || undefined,
+      flightCode: draft.mode === "walk" ? undefined : draft.flightCode.trim() || undefined,
       startDate: draft.startDate,
       endDate: end,
       location: from,
@@ -362,6 +383,7 @@ function emptyDraft(type: PlanType, date: string): PlanDraft {
     from: "",
     to: "",
     flightCode: "",
+    mode: "flight",
     startDate: date,
     endDate: date,
     startTime: "",
@@ -386,14 +408,16 @@ export function fieldsFromItem(item: PlanSource & {
   confirmation?: string
   flightCode?: string
   address?: string
+  travelMode?: TravelMode
   link?: { label: string; url: string }
 }): PlanDraft {
   const type = resolvePlanType(item)
+  const mode = type === "flight" ? (readTravelMode(item.travelMode) ?? "flight") : "flight"
   const route = type === "flight" && !item.locationTo?.trim() ? parseRoute(item.title) : null
   const from = item.locationTo?.trim() ? item.location : (route?.from ?? "")
   const to = item.locationTo?.trim() || route?.to || ""
   const where = type === "flight" ? "" : item.location
-  const auto = autoTitle(type, { where, from, to, name: item.title })
+  const auto = autoTitle(type, { where, from, to, name: item.title, mode, carrier: item.flightCode })
   const titleEdited = (type === "stay" || type === "flight") && Boolean(item.title.trim()) && !isBareTitle(item.title) && item.title.trim() !== auto
   const address = item.address?.trim() || (type === "stay" && item.link?.url ? item.link.url : "")
   const link = type === "stay" && address === item.link?.url ? undefined : item.link
@@ -409,6 +433,7 @@ export function fieldsFromItem(item: PlanSource & {
     to,
     toPlace: item.placeTo ?? null,
     flightCode: item.flightCode ?? "",
+    mode,
     startDate: item.startDate,
     endDate: item.endDate,
     startTime: item.startTime ?? "",
@@ -434,19 +459,26 @@ export function seedPlanType(input: Partial<TripItemInput> | null | undefined): 
 
 export function fieldsFromNew(type: PlanType, input: Partial<TripItemInput> | null, date: string): PlanDraft {
   const text = input?.title?.trim() ?? ""
-  const route = type === "flight" && !input?.locationTo?.trim() ? parseRoute(isBareTitle(text) ? "" : text) : null
+  const spoken = isBareTitle(text) ? "" : text
+  const route = type === "flight" && !input?.locationTo?.trim() ? parseRoute(spoken) : null
+  const local = type === "flight" && !route && !input?.locationTo?.trim() ? groundRoute(spoken) : null
   const note = text.replace(/^(note|remember|reminder)\b[:\s-]*/i, "").trim()
   const where = input?.location?.trim() || (type === "stay" && text && !isBareTitle(text) ? text : "")
-  const from = input?.location?.trim() || route?.from || ""
-  const to = input?.locationTo?.trim() || route?.to || ""
+  const from = input?.location?.trim() || route?.from || local?.from || ""
+  const to = input?.locationTo?.trim() || route?.to || local?.to || ""
+  const mode = type === "flight" ? (readTravelMode(input?.travelMode) ?? guessTravelMode(spoken)) : "flight"
+  const carrier = input?.flightCode?.trim() || (mode === "taxi" || mode === "shuttle" ? carrierFrom(spoken) : "")
   const autoStay = autoTitle("stay", { where })
-  const autoFlight = autoTitle("flight", { from, to })
+  const autoFlight = autoTitle("flight", { from, to, mode, carrier })
   const stayEdited = type === "stay" && Boolean(input?.location?.trim()) && Boolean(text) && !isBareTitle(text) && text !== autoStay
-  const flightEdited = type === "flight" && Boolean(text) && !isBareTitle(text) && !(route && !input?.locationTo?.trim()) && text !== autoFlight
+  const flightEdited =
+    type === "flight" && Boolean(text) && !isBareTitle(text) && !(route || local) && text !== autoFlight
   return {
     ...emptyDraft(type, input?.startDate || date),
     customTitle: stayEdited || flightEdited ? text : "",
     titleEdited: stayEdited || flightEdited,
+    mode,
+    flightCode: carrier,
     name: type === "note" ? note : type === "place" && !isBareTitle(text) ? text : "",
     where,
     from,
@@ -466,15 +498,15 @@ export function fieldsFromNew(type: PlanType, input: Partial<TripItemInput> | nu
   }
 }
 
-export function headingFor(type: PlanType, editing: boolean): string {
-  const noun = type === "stay" ? "stay" : type === "flight" ? "flight" : type === "place" ? "place" : "note"
+export function headingFor(type: PlanType, editing: boolean, mode: TravelMode = "flight"): string {
+  const noun = type === "stay" ? "stay" : type === "flight" ? mode : type === "place" ? "place" : "note"
   return editing ? `Edit ${noun}` : `Add a ${noun}`
 }
 
-export function saveLabel(type: PlanType, editing: boolean): string {
+export function saveLabel(type: PlanType, editing: boolean, mode: TravelMode = "flight"): string {
   if (editing) return "Save"
   if (type === "stay") return "Add stay"
-  if (type === "flight") return "Add flight"
+  if (type === "flight") return `Add ${mode}`
   if (type === "place") return "Add place"
   return "Add note"
 }

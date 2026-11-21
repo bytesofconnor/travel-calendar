@@ -2,7 +2,7 @@ import { defineSchema, defineTable } from "convex/server"
 import { authTables } from "@convex-dev/auth/server"
 import { v } from "convex/values"
 
-import { geoPlaceValidator, planTypeValidator } from "./lib/place"
+import { geoPlaceValidator, planTypeValidator, travelModeValidator } from "./lib/place"
 import { themePackValidator } from "./lib/themePack"
 
 export default defineSchema({
@@ -48,6 +48,7 @@ export default defineSchema({
     location: v.string(),
     locationTo: v.optional(v.string()),
     planType: v.optional(planTypeValidator),
+    travelMode: v.optional(travelModeValidator),
     place: v.optional(geoPlaceValidator),
     placeTo: v.optional(geoPlaceValidator),
     confirmation: v.optional(v.string()),
