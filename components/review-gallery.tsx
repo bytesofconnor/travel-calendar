@@ -21,6 +21,7 @@ import { TripStoryView } from "@/components/trip-story-view"
 import { TripsSheet } from "@/components/trips-sheet"
 import { useTripThemePack } from "@/components/use-trip-theme-pack"
 import { AddToCalendarSheet } from "@/components/add-to-calendar-sheet"
+import { SaveErrorBanner } from "@/components/save-error-banner"
 import { Button } from "@/components/ui/button"
 import { StoryChrome } from "@/components/story-chrome"
 import { travelerLabel } from "@/lib/travelers"
@@ -374,6 +375,7 @@ function TripFrame({
 }) {
   const [menuOpen, setMenuOpen] = useState(screen === "theme")
   const [calendarOpen, setCalendarOpen] = useState(screen === "calendar")
+  const [saveFailed, setSaveFailed] = useState(screen === "save-error")
   const [calendarToken, setCalendarToken] = useState(REVIEW_CALENDAR_TOKEN)
 
   return (
@@ -429,6 +431,11 @@ function TripFrame({
                   />
       }
       composer={<CaptureDock hint={captureHint} onCapture={onCapture ?? (() => {})} />}
+      banners={
+        saveFailed ? (
+          <SaveErrorBanner onRetry={() => setSaveFailed(false)} />
+        ) : null
+      }
     >
             {screen === "confirm" ? (
               <ConfirmQueue

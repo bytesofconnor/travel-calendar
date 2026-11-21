@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
+import { publicError } from "@/lib/client-error"
 import { COUNTRIES, type Location, type TripItem, type TripItemInput, type TripPackingItem } from "@/lib/kanban-store"
 import { cn } from "@/lib/utils"
 
@@ -1003,7 +1004,7 @@ export function TripCopilot({
         },
       ])
     } catch (error) {
-      setAiError(error instanceof Error ? error.message : "Couldn’t answer that yet.")
+      setAiError(publicError(error, "Couldn’t answer that yet."))
     } finally {
       setIsAskingAi(false)
     }

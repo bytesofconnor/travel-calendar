@@ -9,6 +9,7 @@ import { PageInset, PageShell } from "@/components/page-shell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { publicError } from "@/lib/client-error"
 
 interface PaywallScreenProps {
   userId: string
@@ -42,8 +43,7 @@ export function PaywallScreen({ userId, paymentLink, onAccessGranted }: PaywallS
       await grantByCode({ code: code.trim() })
       onAccessGranted()
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Invalid code."
-      setCodeError(message.replace(/^.*ConvexError:\s*/i, "") || "Invalid code.")
+      setCodeError(publicError(error, "Invalid code."))
     } finally {
       setIsRedeeming(false)
     }

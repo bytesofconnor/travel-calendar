@@ -96,8 +96,7 @@ jobs:
             fi
             files='[]'
             if [ -n "$merge_sha" ]; then
-              git fetch --no-tags origin "$merge_sha"
-              files=$(git diff-tree --no-commit-id --name-only -r "$merge_sha" | jq -Rsc 'split("\n") | map(select(length > 0))')
+              files=$(bash scripts/merge-changed-files.sh "$merge_sha" | jq -Rsc 'split("\n") | map(select(length > 0))')
             fi
 
             verdict=$(

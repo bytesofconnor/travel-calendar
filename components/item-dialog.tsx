@@ -149,7 +149,7 @@ export function ItemDialog({
       )
       onOpenChange(false)
     } catch {
-      setErrors({ form: "Couldn't save this plan." })
+      setErrors({ form: "Couldn't save that plan. Try again." })
     }
   }
 
