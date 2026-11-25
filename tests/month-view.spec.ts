@@ -134,6 +134,8 @@ test("month view stays readable at large text and 200% zoom", async ({ page }, t
   expect(agendaText.whiteSpace).not.toBe("nowrap")
   expect(agendaText.text).toBe("Alfama apartment")
   expect(agendaText.right).toBeLessThanOrEqual(320)
+  const agendaSize = await agendaTitle.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))
+  expect(agendaSize).toBeGreaterThanOrEqual(14)
   expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
 
   await page.setViewportSize({ width: 390, height: 844 })
@@ -162,9 +164,60 @@ test("month view keeps contrast in light, dark, and each theme pack", async ({ p
     if (theme.scheme === "dark") {
       await expect(page.locator("html")).toHaveClass(/dark/, { timeout: 5000 })
     }
+    const sample = await page.evaluate(() => {
+      function rgb(color: string) {
+        const canvas = document.createElement("canvas")
+        const context = canvas.getContext("2d")
+        if (!context) return [0, 0, 0]
+        context.fillStyle = "#000"
+        context.fillStyle = color
+        context.fillRect(0, 0, 1, 1)
+        return [...context.getImageData(0, 0, 1, 1).data].slice(0, 3)
+      }
+      function luminance(channels: number[]) {
+        const channel = (value: number) => {
+          const scaled = value / 255
+          return scaled <= 0.04045 ? scaled / 12.92 : ((scaled + 0.055) / 1.055) ** 2.4
+        }
+        return 0.2126 * channel(channels[0]) + 0.7152 * channel(channels[1]) + 0.0722 * channel(channels[2])
+      }
+      function contrast(foreground: string, background: string) {
+        const lighter = Math.max(luminance(rgb(foreground)), luminance(rgb(background)))
+        const darker = Math.min(luminance(rgb(foreground)), luminance(rgb(background)))
+        return (lighter + 0.05) / (darker + 0.05)
+      }
+      const fill = document.querySelector('.month-bg[data-trip="true"]')
+      const date = document.querySelector(".month-day__date")
+      const chip = document.querySelector(".month-chip")
+      const title = document.querySelector(".month-chip__title")
+      if (!(fill instanceof HTMLElement) || !(date instanceof HTMLElement) || !(chip instanceof HTMLElement) || !(title instanceof HTMLElement)) {
+        return null
+      }
+      const fillStyle = getComputedStyle(fill)
+      const dateStyle = getComputedStyle(date)
+      const chipStyle = getComputedStyle(chip)
+      const titleStyle = getComputedStyle(title)
+      return {
+        dateOnFill: contrast(dateStyle.color, fillStyle.backgroundColor),
+        chip: contrast(chipStyle.color, chipStyle.backgroundColor),
+        fillLuminance: luminance(rgb(fillStyle.backgroundColor)),
+        titleSize: Number.parseFloat(titleStyle.fontSize),
+        titleSpace: titleStyle.whiteSpace,
+        chipWrap: chipStyle.flexWrap,
+      }
+    })
+    expect(sample, theme.path).not.toBeNull()
+    expect(sample!.dateOnFill, theme.path).toBeGreaterThanOrEqual(4.5)
+    expect(sample!.chip, theme.path).toBeGreaterThanOrEqual(4.5)
+    expect(sample!.titleSize, theme.path).toBeGreaterThanOrEqual(14)
+    expect(sample!.titleSpace, theme.path).toBe("nowrap")
+    expect(sample!.chipWrap, theme.path).toBe("nowrap")
+    if (theme.scheme === "light") {
+      expect(sample!.fillLuminance, theme.path).toBeGreaterThanOrEqual(0.8)
+    }
     await page.getByRole("gridcell", { name: /Wednesday November 18/ }).click()
     const results = await new AxeBuilder({ page }).include("[data-month-view]").analyze()
-    expect(results.violations).toEqual([])
+    expect(results.violations, theme.path).toEqual([])
   }
 })
 
@@ -259,6 +312,79 @@ test("text spacing does not overflow the month", async ({ page }, testInfo) => {
   await openMonth(page)
   await expect(page.getByRole("heading", { name: "November 2026" })).toBeVisible()
   expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
+})
+
+test("tapping a day on a phone reveals its plans and moves focus", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "Phone day reveal runs once on Chromium")
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openMonth(page)
+  await page.getByRole("gridcell", { name: /Wednesday November 18/ }).click()
+  const panel = page.locator(".month-detail")
+  await expect(panel).toBeFocused()
+  const revealed = await page.evaluate(() => {
+    const detail = document.querySelector(".month-detail")
+    const scroller = document.querySelector("[data-trip-scroll]")
+    const toolbar = document.querySelector("[data-trip-toolbar]")
+    const card = detail?.querySelector(".plan-card")
+    const add = detail?.querySelector(".month-add")
+    if (
+      !(detail instanceof HTMLElement) ||
+      !(scroller instanceof HTMLElement) ||
+      !(card instanceof HTMLElement) ||
+      !(add instanceof HTMLElement)
+    ) {
+      return null
+    }
+    const stickyToolbar =
+      toolbar instanceof HTMLElement && getComputedStyle(toolbar).position === "sticky"
+    const visibleTop = stickyToolbar
+      ? toolbar.getBoundingClientRect().bottom
+      : scroller.getBoundingClientRect().top
+    const visibleBottom = scroller.getBoundingClientRect().bottom
+    const cardRect = card.getBoundingClientRect()
+    const addRect = add.getBoundingClientRect()
+    const overlap = Math.max(0, Math.min(cardRect.bottom, addRect.bottom) - Math.max(cardRect.top, addRect.top))
+    return { cardTop: cardRect.top, visibleTop, visibleBottom, overlap }
+  })
+  expect(revealed).not.toBeNull()
+  expect(revealed!.cardTop).toBeGreaterThanOrEqual(revealed!.visibleTop - 1)
+  expect(revealed!.cardTop).toBeLessThan(revealed!.visibleBottom)
+  expect(revealed!.overlap).toBeLessThan(1)
+
+  await page.setViewportSize({ width: 390, height: 700 })
+  await page.goto("/review?screen=timing", { waitUntil: "domcontentloaded" })
+  await waitUntilInteractive(page)
+  await page.getByRole("button", { name: "Month", exact: true }).click()
+  await page.getByRole("gridcell", { name: /Saturday June 12/ }).click()
+  const dayPanel = page.locator(".month-detail")
+  await expect(dayPanel).toBeFocused()
+  const airbnb = dayPanel.getByRole("button", { name: /Airbnb/ })
+  await expect(airbnb).toBeVisible()
+  const covered = await airbnb.evaluate((card) => {
+    const add = card.closest(".month-detail")?.querySelector(".month-add")
+    const scroller = document.querySelector("[data-trip-scroll]")
+    if (!(add instanceof HTMLElement) || !(scroller instanceof HTMLElement)) return { overlap: 99, inView: false }
+    const cardRect = card.getBoundingClientRect()
+    const addRect = add.getBoundingClientRect()
+    const overlap = Math.max(0, Math.min(cardRect.bottom, addRect.bottom) - Math.max(cardRect.top, addRect.top))
+    const view = scroller.getBoundingClientRect()
+    return { overlap, inView: cardRect.top < view.bottom && cardRect.bottom > view.top }
+  })
+  expect(covered.inView).toBe(true)
+  expect(covered.overlap).toBeLessThan(1)
+})
+
+test("phone month count badges are large enough to read", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "Badge size runs once on Chromium")
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openMonth(page)
+  const badge = await page.locator(".month-badge").first().evaluate((element) => {
+    const style = getComputedStyle(element)
+    const box = element.getBoundingClientRect()
+    return { size: Number.parseFloat(style.fontSize), height: box.height }
+  })
+  expect(badge.size).toBeGreaterThanOrEqual(14)
+  expect(badge.height).toBeGreaterThanOrEqual(28)
 })
 
 test("month view does not animate when motion is reduced", async ({ page }) => {

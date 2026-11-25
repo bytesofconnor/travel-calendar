@@ -48,6 +48,8 @@ test("list and month keep the same header and toolbar", async ({ page }, testInf
     const toolbarMonth = await box(page, "[data-trip-toolbar]")
     expect(coverMonth, `cover at ${width}`).toEqual(cover)
     expect(toolbarMonth, `toolbar at ${width}`).toEqual(toolbar)
+    const gutter = await page.locator("[data-trip-scroll]").evaluate((element) => getComputedStyle(element).scrollbarGutter)
+    expect(gutter, `scrollbar gutter at ${width}`).toContain("stable")
     await expect(page.locator(".trip-cover__title")).toHaveText("Lisbon with you")
     expect(await overflow(page), `overflow at ${width}`).toBeLessThanOrEqual(1)
   }
@@ -169,6 +171,32 @@ test("trip shell keeps contrast in light, dark, and each theme pack", async ({ p
     }
     expect(results.violations, theme.path).toEqual([])
   }
+})
+
+test("your trips is a centered modal on a desktop window", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "firefox", "axe-core crashes Firefox 159")
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto("/review?screen=trips", { waitUntil: "domcontentloaded" })
+  await ready(page)
+  const dialog = page.getByRole("dialog", { name: "Your trips" })
+  await expect(dialog).toBeVisible()
+  const box = await dialog.boundingBox()
+  expect(box).not.toBeNull()
+  expect(box!.width).toBeLessThanOrEqual(480)
+  expect(box!.width).toBeGreaterThan(280)
+  expect(Math.abs(box!.x + box!.width / 2 - 720)).toBeLessThan(16)
+  expect(box!.y).toBeGreaterThan(40)
+  expect(box!.y + box!.height).toBeLessThan(880)
+  const results = await new AxeBuilder({ page }).include("[data-slot='sheet-content']").analyze()
+  expect(results.violations).toEqual([])
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/review?screen=trips", { waitUntil: "domcontentloaded" })
+  await ready(page)
+  const phone = await page.getByRole("dialog", { name: "Your trips" }).boundingBox()
+  expect(phone).not.toBeNull()
+  expect(phone!.width).toBeGreaterThan(360)
+  expect(phone!.x).toBeLessThan(20)
 })
 
 test("switching views does not animate when motion is reduced", async ({ page }) => {
