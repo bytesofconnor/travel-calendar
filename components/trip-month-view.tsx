@@ -431,8 +431,10 @@ export function TripMonthView({
                         >
                           <span className="plan-card__rail" aria-hidden="true" />
                           <span className="min-w-0 flex-1">
-                            <span className="plan-card__kind"><KindMark item={item} />{word}</span>
-                            <span className="plan-card__title">{item.title}{word}</span>
+                            <span className="plan-card__kind"><KindMark item={item} /></span>
+                            {word}
+                            <span className="plan-card__title">{item.title}</span>
+                            {word}
                             <PlanWhen item={item} day={selected} dayItems={selectedItems} />
                           </span>
                         </button>
@@ -523,8 +525,10 @@ function MonthAgenda({
                               aria-label={planAccessibleName(label, item.title, described)}
                               onClick={() => onEditItem(item)}
                             >
-                              <span className="month-agenda__kind"><KindMark item={item} />{word}</span>
-                              <span className="month-agenda__title">{item.title}{word}</span>
+                              <span className="month-agenda__kind"><KindMark item={item} /></span>
+                              {word}
+                              <span className="month-agenda__title">{item.title}</span>
+                              {word}
                               <PlanWhen item={item} day={day.iso} dayItems={dayItems} />
                             </button>
                           </li>
