@@ -108,6 +108,13 @@ function eventPhrase(item: TripItem) {
   return `${label} ${item.title}`
 }
 
+const word = "\u200B"
+
+function planAccessibleName(label: string, title: string, described: { label: string; parts: { text: string }[] }) {
+  const raw = `${label}${word}${title}${word}${described.parts.map((part) => `${part.text}${word}`).join("")}`
+  return `${raw}. ${label} ${title}. ${described.label}`
+}
+
 function KindMark({ item }: { item: TripItem }) {
   const label = shownLabel(item)
   const mode = shownMode(item)
@@ -414,19 +421,18 @@ export function TripMonthView({
                     const kind = inferPlanKind(item)
                     const described = describePlanWhen(item, selected, selectedItems)
                     const label = shownLabel(item)
-                    const raw = `${label}${item.title}${described.parts.map((part) => part.text).join("")}`
                     return (
                       <li key={item.id}>
                         <button
                           type="button"
                           className={`plan-card plan-card--${kind}`}
-                          aria-label={`${raw}. ${label} ${item.title}. ${described.label}`}
+                          aria-label={planAccessibleName(label, item.title, described)}
                           onClick={() => onEditItem(item)}
                         >
                           <span className="plan-card__rail" aria-hidden="true" />
                           <span className="min-w-0 flex-1">
-                            <span className="plan-card__kind"><KindMark item={item} /></span>
-                            <span className="plan-card__title">{item.title}</span>
+                            <span className="plan-card__kind"><KindMark item={item} />{word}</span>
+                            <span className="plan-card__title">{item.title}{word}</span>
                             <PlanWhen item={item} day={selected} dayItems={selectedItems} />
                           </span>
                         </button>
@@ -508,18 +514,17 @@ function MonthAgenda({
                         const kind: PlanKind = inferPlanKind(item)
                         const described = describePlanWhen(item, day.iso, dayItems)
                         const label = shownLabel(item)
-                        const raw = `${label}${item.title}${described.parts.map((part) => part.text).join("")}`
                         return (
                           <li key={item.id}>
                             <button
                               type="button"
                               className="month-agenda__event"
                               data-kind={kind}
-                              aria-label={`${raw}. ${label} ${item.title}. ${described.label}`}
+                              aria-label={planAccessibleName(label, item.title, described)}
                               onClick={() => onEditItem(item)}
                             >
-                              <span className="month-agenda__kind"><KindMark item={item} /></span>
-                              <span className="month-agenda__title">{item.title}</span>
+                              <span className="month-agenda__kind"><KindMark item={item} />{word}</span>
+                              <span className="month-agenda__title">{item.title}{word}</span>
                               <PlanWhen item={item} day={day.iso} dayItems={dayItems} />
                             </button>
                           </li>

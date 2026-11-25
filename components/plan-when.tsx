@@ -18,7 +18,7 @@ export function PlanWhen({
         <span key={`${part.icon ?? "text"}-${part.text}`} className="plan-when__tag">
           {part.icon === "sunrise" ? <Sunrise className="plan-when__icon" aria-hidden="true" /> : null}
           {part.icon === "moon" ? <Moon className="plan-when__icon" aria-hidden="true" /> : null}
-          <span>{part.text}</span>
+          <span>{part.text}{"\u200B"}</span>
         </span>
       ))}
     </span>
