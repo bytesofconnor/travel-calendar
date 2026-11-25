@@ -33,6 +33,7 @@ export function TripsSheet({
       onOpenChange={onOpenChange}
       title="Your trips"
       meta="Switch trips anytime — home is still the one you’re in."
+      contentClassName="trips-modal"
     >
       <div className="flex h-full flex-col">
         <ul className="min-h-0 flex-1 list-none space-y-2 overflow-y-auto overscroll-contain px-4 py-4" aria-label="Trips">

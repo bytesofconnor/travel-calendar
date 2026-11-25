@@ -72,7 +72,7 @@ function PlanCard({
     item.authorName ? `${item.authorName}${word}` : "",
     item.confirmLine ? `${item.confirmLine}${word}` : "",
     `${item.title}${word}`,
-    described.parts.map((part) => part.text).join(""),
+    described.parts.map((part) => `${part.text}${word}`).join(""),
     meta ? `${meta}${word}` : "",
   ].join("")
   const detail = `${label}: ${item.title}${meta ? `. ${meta}` : ""}. ${described.label}${who ? `. ${who}` : ""}${item.confirmLine ? `. ${item.confirmLine}` : ""}`
