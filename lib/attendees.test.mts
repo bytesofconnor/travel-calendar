@@ -51,7 +51,17 @@ test("the who's in summary names who is out", () => {
     { userId: "alex", displayName: "Alex" },
   ]
   assert.equal(attendanceSummary(members, undefined), "Everyone")
-  assert.equal(attendanceSummary(members, ["connor", "alex"]), "2 of 4, Mom and Dad out")
+  assert.equal(attendanceSummary(members, ["connor", "alex"]), "2 of 4 · not Mom or Dad")
+  assert.equal(
+    attendanceSummary(
+      [
+        ...members,
+        { userId: "brenda", displayName: "Brenda" },
+      ],
+      ["mom", "dad", "connor", "alex"],
+    ),
+    "4 of 5 · not Brenda",
+  )
 })
 
 test("the same subset saves to the same ids", () => {

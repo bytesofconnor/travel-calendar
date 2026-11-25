@@ -32,11 +32,12 @@ test("header labels fit 1, 2, 3, and 5 travelers", async ({ page }) => {
     const stack = await openTrip(page, item.party)
     await expect(stack).toHaveAccessibleName(item.name)
     await expect(stack).toContainText(item.label)
-    await expect(stack.locator("[data-traveler-face]")).toHaveCount(item.faces)
+    const faces = page.locator("[data-travelers] [data-traveler-face]")
+    await expect(faces).toHaveCount(item.faces)
     if (item.extra) {
-      await expect(stack.locator("[data-traveler-extra]")).toHaveText(item.extra)
+      await expect(page.locator("[data-travelers] [data-traveler-extra]")).toHaveText(item.extra)
     } else {
-      await expect(stack.locator("[data-traveler-extra]")).toHaveCount(0)
+      await expect(page.locator("[data-travelers] [data-traveler-extra]")).toHaveCount(0)
     }
     await expect(page.getByText(item.label).first()).toBeVisible()
   }
@@ -88,10 +89,10 @@ test("add says everyone, or the people who are in", async ({ page }) => {
   const dialog = page.getByRole("dialog")
   await expect(dialog.getByRole("heading", { name: "Add a place" })).toBeVisible()
   await expect(dialog.getByText("Everyone", { exact: true })).toBeVisible()
-  await dialog.getByRole("button", { name: "Mom, included" }).click()
-  await dialog.getByRole("button", { name: "Dad, included" }).click()
+  await dialog.getByRole("button", { name: "Mom, included, toggle" }).click()
+  await dialog.getByRole("button", { name: "Dad, included, toggle" }).click()
   await expect(dialog.getByRole("heading", { name: "Add a place" })).toBeVisible()
-  await expect(dialog.getByText("2 of 4, Mom and Dad out", { exact: true })).toBeVisible()
+  await expect(dialog.getByText("2 of 4 · not Mom or Dad", { exact: true })).toBeVisible()
 })
 
 test("traveler stack and invite keep contrast across themes", async ({ page }, testInfo) => {

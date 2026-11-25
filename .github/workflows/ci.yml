@@ -87,7 +87,7 @@ jobs:
         run: node --import ./scripts/register-ts.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test convex/itemsCreate.test.mts lib/client-error.test.mts
 
       - name: Test agent trip writes
-        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test shared/confirmCopy.test.mts convex/lib/proposalTransition.test.mts convex/lib/tripSearch.test.mts lib/tripConsistency.test.mts lib/calendar/feed.test.mts convex/lib/agentProposalBody.test.mts convex/lib/agentTripBody.test.mts convex/lib/gapClaimBody.test.mts convex/paywallOff.test.mts lib/trip-home/detect.test.mts lib/attendees.test.mts lib/travelers.test.mts lib/couple-copy.test.mts lib/plan-form.test.mts lib/weather.test.mts lib/geo-search.test.mts lib/month-layout.test.mts mcp/travel-calendar/server.test.mts mcp/travel-calendar/toolInputs.test.mts mcp/travel-calendar/agentBundleHarness.test.mts
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test shared/confirmCopy.test.mts convex/lib/proposalTransition.test.mts convex/lib/tripSearch.test.mts lib/tripConsistency.test.mts lib/calendar/feed.test.mts convex/lib/agentProposalBody.test.mts convex/lib/agentTripBody.test.mts convex/lib/gapClaimBody.test.mts convex/paywallOff.test.mts lib/trip-home/detect.test.mts lib/attendees.test.mts lib/travelers.test.mts lib/couple-copy.test.mts lib/plan-form.test.mts lib/weather.test.mts lib/geo-search.test.mts lib/month-layout.test.mts lib/plan-when.test.mts mcp/travel-calendar/server.test.mts mcp/travel-calendar/toolInputs.test.mts mcp/travel-calendar/agentBundleHarness.test.mts
 
       - name: Lint
         run: pnpm lint

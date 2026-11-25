@@ -39,8 +39,8 @@ test("travel modes change the fields and write the title", async ({ page }) => {
   await expect(dialog.getByRole("heading", { name: "Add a train" })).toBeVisible()
   await expect(dialog.getByLabel("From")).toHaveAttribute("placeholder", "Station or city")
   await expect(dialog.getByLabel("Carrier or number")).toBeVisible()
-  await dialog.getByLabel("From").fill("Hanoi")
-  await dialog.getByLabel("To").fill("Lao Cai")
+  await dialog.getByLabel("From", { exact: true }).fill("Hanoi")
+  await dialog.getByLabel("To", { exact: true }).fill("Lao Cai")
   await expect(dialog.getByLabel("Title")).toHaveAttribute("placeholder", "Train Hanoi → Lao Cai")
   await expect(dialog.getByRole("button", { name: "Add train" })).toBeVisible()
 
@@ -55,15 +55,15 @@ test("travel modes change the fields and write the title", async ({ page }) => {
 
   await dialog.getByRole("radio", { name: "Taxi/Rideshare" }).click()
   await expect(dialog.getByRole("heading", { name: "Add a taxi" })).toBeVisible()
-  await dialog.getByLabel("From").fill("Noi Bai")
-  await dialog.getByLabel("To").fill("hotel")
+  await dialog.getByLabel("From", { exact: true }).fill("Noi Bai")
+  await dialog.getByLabel("To", { exact: true }).fill("hotel")
   await dialog.getByLabel("Carrier").fill("Grab")
   await expect(dialog.getByLabel("Title")).toHaveAttribute("placeholder", "Grab to hotel")
   await expect(dialog.getByLabel("Arrive", { exact: true })).toHaveCount(0)
 
   await dialog.getByRole("radio", { name: "Walk" }).click()
   await expect(dialog.getByLabel("Carrier")).toHaveCount(0)
-  await dialog.getByLabel("To").fill("Old Quarter")
+  await dialog.getByLabel("To", { exact: true }).fill("Old Quarter")
   await expect(dialog.getByLabel("Title")).toHaveAttribute("placeholder", "Walk to Old Quarter")
   await expect(dialog.getByRole("button", { name: "Add walk" })).toBeEnabled()
 })
@@ -80,8 +80,8 @@ test("an existing flight still opens as a flight", async ({ page }) => {
 
 test("a train and a Grab ride show an icon and a word on the list", async ({ page }) => {
   await page.goto("/review?screen=travel", { waitUntil: "domcontentloaded" })
-  const train = page.getByRole("button", { name: /Train: Train Hanoi/ })
-  const grab = page.getByRole("button", { name: /Taxi: Grab to hotel/ })
+  const train = page.getByRole("button", { name: /Train: Train Hanoi/ }).first()
+  const grab = page.getByRole("button", { name: /Taxi: Grab to hotel/ }).first()
   await expect(train).toBeVisible()
   await expect(grab).toBeVisible()
   await expect(train.locator(".plan-card__kind svg")).toBeVisible()
@@ -139,8 +139,8 @@ test("mode picker and list screenshots at phone and desktop", async ({ page }, t
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
     const dialog = await openTravel(page)
     await dialog.getByRole("radio", { name: "Train" }).click()
-    await dialog.getByLabel("From").fill("Hanoi")
-    await dialog.getByLabel("To").fill("Lao Cai")
+    await dialog.getByLabel("From", { exact: true }).fill("Hanoi")
+    await dialog.getByLabel("To", { exact: true }).fill("Lao Cai")
     await dialog.getByRole("radiogroup", { name: "Travel mode" }).evaluate((el) => {
       const scroller = el.closest(".overflow-y-auto")
       if (scroller instanceof HTMLElement) scroller.scrollTop = 0
@@ -154,7 +154,7 @@ test("mode picker and list screenshots at phone and desktop", async ({ page }, t
       fullPage: true,
     })
     await page.goto("/review?screen=travel", { waitUntil: "domcontentloaded" })
-    const card = page.getByRole("button", { name: /Train: Train Hanoi/ })
+    const card = page.getByRole("button", { name: /Train: Train Hanoi/ }).first()
     await expect(card).toBeVisible()
     await card.scrollIntoViewIfNeeded()
     await page.screenshot({

@@ -56,7 +56,7 @@ test("a day opens its plans and an empty day can add that date", async ({ page }
   await expect(tripDay).toHaveAttribute("aria-current", "date")
   await tripDay.click()
   await expect(page.getByRole("heading", { name: "Wednesday, November 18" })).toBeVisible()
-  await page.getByRole("button", { name: "Flight TAP to Lisbon", exact: true }).click()
+  await page.getByRole("button", { name: /Flight TAP to Lisbon/ }).click()
   const edit = page.getByRole("dialog")
   await expect(edit).toBeVisible()
   await expect(edit.locator("#plan-title")).toHaveValue("TAP to Lisbon")

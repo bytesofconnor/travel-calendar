@@ -1,67 +1,132 @@
 "use client"
 
+import { useEffect, useId, useRef, useState } from "react"
+
 import { initial } from "@/lib/trip-kind"
-import { travelerAccessibleName, travelerFaces, travelerLabel, type TravelerName } from "@/lib/travelers"
+import { firstName, orderTravelers, travelerAccessibleName, travelerFaces, travelerLabel, type TravelerName } from "@/lib/travelers"
 
 export function TravelerStack({
   travelers,
   currentUserId,
   onOpen,
+  selectedUserId,
+  onSelectPerson,
   className = "",
 }: {
   travelers: readonly TravelerName[]
   currentUserId?: string
   onOpen?: () => void
+  selectedUserId?: string | null
+  onSelectPerson?: (userId: string) => void
   className?: string
 }) {
   const label = travelerLabel(travelers, currentUserId)
   const name = travelerAccessibleName(travelers, currentUserId)
+  const ordered = orderTravelers(travelers, currentUserId)
   const { shown, extra } = travelerFaces(travelers, currentUserId)
-  const faces = (
-    <>
-      <span className="sr-only">{name}.</span>
-      <span className="flex shrink-0 items-center" aria-hidden="true">
-        {shown.map((person, index) => {
-          const you = person.userId === currentUserId
-          return (
-            <span
-              key={person.userId}
-              data-traveler-face=""
-              className={`relative inline-flex size-[32px] items-center justify-center rounded-full border-2 text-[12px] font-bold leading-none ${
-                you ? "border-foreground bg-foreground text-background" : "border-foreground bg-background text-foreground"
-              }`}
-              style={{ marginLeft: index === 0 ? 0 : -8, zIndex: index + 1 }}
-            >
-              {initial(person.displayName)}
-            </span>
-          )
-        })}
-        {extra > 0 ? (
-          <span
-            data-traveler-extra=""
-            className="relative inline-flex h-[32px] min-w-[32px] items-center justify-center rounded-full border-2 border-foreground bg-background px-1 text-[12px] font-bold leading-none text-foreground"
-            style={{ marginLeft: -8, zIndex: shown.length + 1 }}
-          >
-            +{extra}
-          </span>
-        ) : null}
-      </span>
-      <span className="min-w-0 text-left text-sm font-semibold leading-tight text-foreground">{label}</span>
-    </>
-  )
-  const classes = `inline-flex min-h-[44px] max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-full py-1 pr-3 pl-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${className}`
+  const overflow = ordered.slice(shown.length)
+  const [extraOpen, setExtraOpen] = useState(false)
+  const extraRef = useRef<HTMLDivElement>(null)
+  const extraId = useId()
+  const filtering = Boolean(onSelectPerson)
 
-  if (onOpen) {
+  useEffect(() => {
+    if (!extraOpen) return
+    function onPointer(event: PointerEvent) {
+      if (!extraRef.current?.contains(event.target as Node)) setExtraOpen(false)
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setExtraOpen(false)
+    }
+    document.addEventListener("pointerdown", onPointer)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("pointerdown", onPointer)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [extraOpen])
+
+  function faceButton(person: TravelerName, extraFace = false) {
+    const pressed = selectedUserId === person.userId
+    const you = person.userId === currentUserId
+    const given = firstName(person.displayName)
     return (
-      <button type="button" className={classes} data-travelers="" onClick={onOpen}>
-        {faces}
+      <button
+        key={person.userId}
+        type="button"
+        data-traveler-face={extraFace ? undefined : ""}
+        aria-pressed={pressed}
+        aria-label={`${given}, ${pressed ? "showing their plans" : "show their plans"}`}
+        onClick={() => {
+          onSelectPerson?.(person.userId)
+          setExtraOpen(false)
+        }}
+        className={`traveler-face ${you ? "traveler-face--you" : "traveler-face--other"} ${pressed ? "traveler-face--pressed" : ""}`}
+      >
+        {initial(person.displayName)}
+        {pressed ? <span className="traveler-face__dot" aria-hidden="true" /> : null}
       </button>
     )
   }
 
+  const overflowPressed = overflow.some((person) => person.userId === selectedUserId)
+
   return (
-    <div className={classes} role="group" data-travelers="">
-      {faces}
+    <div
+      className={`inline-flex min-h-11 max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-full py-1 pr-1 pl-1 ${className}`}
+      role="group"
+      aria-label={name}
+      data-travelers=""
+    >
+      <span className="flex shrink-0 items-center">
+        {shown.map((person, index) => (
+          <span key={person.userId} className="relative" style={{ marginLeft: index === 0 ? 0 : -6, zIndex: index + 1 }}>
+            {filtering ? faceButton(person) : (
+              <span
+                data-traveler-face=""
+                className={`traveler-face ${person.userId === currentUserId ? "traveler-face--you" : "traveler-face--other"}`}
+              >
+                {initial(person.displayName)}
+              </span>
+            )}
+          </span>
+        ))}
+        {extra > 0 ? (
+          <span ref={extraRef} className="relative" style={{ marginLeft: -6, zIndex: shown.length + 1 }}>
+            {filtering ? (
+              <>
+                <button
+                  type="button"
+                  data-traveler-extra=""
+                  className={`traveler-face traveler-face--other ${overflowPressed ? "traveler-face--pressed" : ""}`}
+                  aria-expanded={extraOpen}
+                  aria-controls={extraId}
+                  aria-label={`${extra} more ${extra === 1 ? "traveler" : "travelers"}`}
+                  onClick={() => setExtraOpen((open) => !open)}
+                >
+                  +{extra}
+                </button>
+                {extraOpen ? (
+                  <span id={extraId} role="group" aria-label="More travelers" className="traveler-extra">
+                    {overflow.map((person) => faceButton(person, true))}
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              <span data-traveler-extra="" className="traveler-face traveler-face--other">
+                +{extra}
+              </span>
+            )}
+          </span>
+        ) : null}
+      </span>
+      {onOpen ? (
+        <button type="button" className="traveler-label" onClick={onOpen} aria-label={`${name}. ${label}`}>
+          {label}
+        </button>
+      ) : (
+        <span className="traveler-label">{label}</span>
+      )}
     </div>
   )
 }

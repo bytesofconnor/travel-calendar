@@ -92,20 +92,6 @@ export function itemMetaLine(item: TripItem, kind: PlanKind): string {
   return [item.location, item.notes].filter(Boolean).join(" · ")
 }
 
-export function groupItemsByStartDate(items: TripItem[]): Array<{ date: string; items: TripItem[] }> {
-  const map = new Map<string, TripItem[]>()
-  for (const item of items) {
-    const list = map.get(item.startDate) ?? []
-    list.push(item)
-    map.set(item.startDate, list)
-  }
-  return [...map.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, dayItems]) => ({
-      date,
-      items: dayItems.sort((a, b) => a.title.localeCompare(b.title)),
-    }))
-}
 
 export function initial(name: string): string {
   return name.trim().charAt(0).toUpperCase() || "?"

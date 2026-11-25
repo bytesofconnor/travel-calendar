@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { EditTripDialog } from "./edit-trip-dialog"
+import { PersonFilter } from "./person-filter"
 import { StoryChrome } from "./story-chrome"
 import {
   DEFAULT_TRIP_END,
@@ -52,7 +53,8 @@ import {
 import { formatTripDateRange } from "@/lib/format-dates"
 import { defaultPlanDate, guessPlanType, tripPlaceHint } from "@/lib/plan-form"
 import type { PlanType } from "@/lib/plan-types"
-import { addedPlanMessage, travelerLabel } from "@/lib/travelers"
+import { filterItems, writeWho } from "@/lib/person-filter"
+import { addedPlanMessage, firstName, travelerLabel } from "@/lib/travelers"
 import { oauthRedirectTo } from "@/lib/oauth-redirect"
 import { parseThemePack } from "@/lib/theme-packs"
 import { StatusBanner } from "@/components/ds"
@@ -86,6 +88,7 @@ interface ConvexTripCalendarAppProps {
   confirmId?: string
   tripId?: string
   planId?: string
+  who?: string
 }
 
 type ConvexTripDoc = {
@@ -176,7 +179,7 @@ function LoadingJourney({ label = "Loading your trip", detail = "Pulling plans, 
   )
 }
 
-export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: ConvexTripCalendarAppProps) {
+export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who }: ConvexTripCalendarAppProps) {
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth()
   const { signIn, signOut } = useAuthActions()
   // Calendar store no longer drives primary workspace chrome (Together Story).
@@ -265,6 +268,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
   }))
   const [claimDraft, setClaimDraft] = useState<Record<string, string | null>>({})
+  const [personId, setPersonId] = useState<string | null>(who ?? null)
 
   const noteDirtyRef = useRef(noteDirty)
   const noteDraftRef = useRef(noteDraft)
@@ -819,7 +823,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         delete next[gapId]
         return next
       })
-      clearSaveRetry(); setErrorMessage(publicError(error, "Couldn't update who has this."))
+      clearSaveRetry(); setErrorMessage(publicError(error, "Couldn't update who's handling this."))
     }
   }
 
@@ -1304,6 +1308,19 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
   const packingChecked = packingItems.filter((item) => item.isChecked).length
   const notesCount = noteDraft.trim() ? 1 : 0
   const captureHint = "Add to the trip…"
+  const activePerson = members.find((member) => member.userId === personId) ?? null
+  const visibleItems = filterItems(
+    items,
+    activePerson?.userId ?? null,
+    members.map((member) => member.userId),
+  )
+  function choosePerson(nextUserId: string) {
+    setPersonId((current) => {
+      const next = current === nextUserId ? null : nextUserId
+      writeWho(next)
+      return next
+    })
+  }
 
   return (
     <>
@@ -1322,6 +1339,8 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
                       travelers={members}
                       currentUserId={userId}
                       onOpenMembers={() => setShareOpen(true)}
+                      selectedUserId={activePerson?.userId ?? null}
+                      onSelectPerson={choosePerson}
                       menu={
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -1493,9 +1512,20 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
         }
       >
         {confirmQueue}
+        {activePerson ? (
+          <PersonFilter
+            name={firstName(activePerson.displayName)}
+            count={visibleItems.length}
+            total={items.length}
+            onClear={() => {
+              setPersonId(null)
+              writeWho(null)
+            }}
+          />
+        ) : null}
         {storyMode === "month" ? (
           <TripMonthView
-            items={items}
+            items={visibleItems}
             tripStart={trip.startDate}
             tripEnd={trip.endDate}
             today={today}
@@ -1526,7 +1556,8 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId }: C
             <TripStoryView
               className="trip-list__story"
               mode="trip"
-              items={items}
+              items={visibleItems}
+              filterName={activePerson ? firstName(activePerson.displayName) : undefined}
               today={today}
               tripStart={trip.startDate}
               tripEnd={trip.endDate}

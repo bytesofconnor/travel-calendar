@@ -403,8 +403,10 @@ test("days with no plans are empty, and nights without a stay are open", () => {
   assert.ok(home.gaps.some((gap) => gap.id === "empty:2027-04-02"))
   assert.ok(home.gaps.some((gap) => gap.id === "empty:2027-04-04"))
   assert.equal(home.gaps.some((gap) => gap.id === "empty:2027-04-03"), false)
-  assert.ok(home.gaps.some((gap) => gap.id === "night:2027-04-02"))
-  assert.ok(home.gaps.some((gap) => gap.id === "night:2027-04-03"))
+  const nights = home.gaps.filter((gap) => gap.kind === "uncovered-night")
+  assert.equal(nights.length, 1)
+  assert.equal(nights[0]?.id, "nights:2027-04-02:2027-04-03")
+  assert.equal(nights[0]?.title, "No stay · Apr 2–3 · 2 nights")
 })
 
 test("a spring-forward departure still counts the night in the air", () => {
@@ -566,4 +568,44 @@ test("city to city flights stay flights, and a ride stays a ride", () => {
   assert.equal(kinds.fly_hanoi, "flight")
   assert.equal(kinds.mn_dc, "flight")
   assert.equal(kinds.ride_sfo, "transport")
+})
+
+test("consecutive open nights in Hanoi are one range card", () => {
+  const home = buildTripHome({
+    trip: { startDate: "2027-06-11", endDate: "2027-06-23" },
+    plans: [
+      {
+        id: "in",
+        title: "To Hanoi",
+        startDate: "2027-06-11",
+        endDate: "2027-06-11",
+        location: "SFO",
+        locationTo: "HAN",
+      },
+      {
+        id: "stay",
+        title: "Old Quarter",
+        startDate: "2027-06-11",
+        endDate: "2027-06-19",
+        location: "Hanoi",
+        planType: "stay",
+      },
+      {
+        id: "out",
+        title: "To Saigon",
+        startDate: "2027-06-23",
+        endDate: "2027-06-23",
+        location: "HAN",
+        locationTo: "SGN",
+      },
+    ],
+    now: { instant: "2027-06-01T00:00:00.000Z", timeZone: "Asia/Ho_Chi_Minh" },
+  })
+  const nights = home.gaps.filter((gap) => gap.kind === "uncovered-night")
+  assert.equal(nights.length, 1)
+  assert.equal(nights[0]?.id, "nights:2027-06-19:2027-06-22")
+  assert.equal(nights[0]?.title, "No stay in Hanoi · Jun 19–22 · 4 nights")
+  assert.equal(nights[0]?.action.startDate, "2027-06-19")
+  assert.equal(nights[0]?.action.endDate, "2027-06-23")
+  assert.equal(nights[0]?.action.location, "Hanoi")
 })
