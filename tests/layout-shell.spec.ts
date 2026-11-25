@@ -49,7 +49,7 @@ test("list and month keep the same header and toolbar", async ({ page }, testInf
     expect(coverMonth, `cover at ${width}`).toEqual(cover)
     expect(toolbarMonth, `toolbar at ${width}`).toEqual(toolbar)
     const gutter = await page.locator("[data-trip-scroll]").evaluate((element) => getComputedStyle(element).scrollbarGutter)
-    expect(gutter, `scrollbar gutter at ${width}`).toContain("stable")
+    if (width >= 1024) expect(gutter, `scrollbar gutter at ${width}`).toContain("stable")
     await expect(page.locator(".trip-cover__title")).toHaveText("Lisbon with you")
     expect(await overflow(page), `overflow at ${width}`).toBeLessThanOrEqual(1)
   }

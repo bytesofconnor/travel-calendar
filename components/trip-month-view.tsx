@@ -38,6 +38,25 @@ interface TripMonthViewProps {
   className?: string
 }
 
+function revealDayPanel(panel: HTMLElement) {
+  const scroller = panel.closest("[data-trip-scroll]")
+  if (!(scroller instanceof HTMLElement)) {
+    panel.scrollIntoView({ block: "start" })
+    return
+  }
+  const toolbar = scroller.querySelector("[data-trip-toolbar]")
+  const sticky =
+    toolbar instanceof HTMLElement && getComputedStyle(toolbar).position === "sticky"
+      ? toolbar.getBoundingClientRect().height
+      : 0
+  const scrollerRect = scroller.getBoundingClientRect()
+  const panelRect = panel.getBoundingClientRect()
+  const visibleTop = scrollerRect.top + sticky + 12
+  const visibleBottom = scrollerRect.bottom - 12
+  if (panelRect.top >= visibleTop - 1 && panelRect.bottom <= visibleBottom + 1) return
+  scroller.scrollTo({ top: scroller.scrollTop + panelRect.top - visibleTop, behavior: "auto" })
+}
+
 function monthKey(isoDate: string) {
   return /^\d{4}-\d{2}/.test(isoDate) ? isoDate.slice(0, 7) : ""
 }
@@ -144,7 +163,7 @@ export function TripMonthView({
   const [selected, setSelected] = useState<string | null>(null)
   const moveFocus = useRef(false)
   const focusRef = useRef<HTMLButtonElement | null>(null)
-  const addRef = useRef<HTMLButtonElement | null>(null)
+  const detailRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (!moveFocus.current) return
@@ -153,8 +172,10 @@ export function TripMonthView({
   }, [focusIndex, month])
 
   useEffect(() => {
-    if (!selected) return
-    addRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" })
+    const panel = detailRef.current
+    if (!selected || !panel) return
+    revealDayPanel(panel)
+    panel.focus({ preventScroll: true })
   }, [selected])
 
   function showMonth(nextMonth: string, nextIndex: number, focus: boolean) {
@@ -373,15 +394,22 @@ export function TripMonthView({
           </div>
 
           {selected && selectedParts ? (
-            <div className="month-detail">
-              <h3 className="month-detail__title">
-                {selectedParts.weekday}, {selectedParts.month} {selectedParts.day}
-              </h3>
-              {weather ? (
-                <DayWeather date={selected} readings={weather.readings} units={weather.units} />
-              ) : null}
-              {selectedItems.length > 0 ? (
-                <ul className="month-detail__list">
+            <div
+              ref={detailRef}
+              className="month-detail"
+              tabIndex={-1}
+              role="region"
+              aria-labelledby="month-detail-title"
+            >
+              <div className="month-detail__body">
+                <h3 className="month-detail__title" id="month-detail-title">
+                  {selectedParts.weekday}, {selectedParts.month} {selectedParts.day}
+                </h3>
+                {weather ? (
+                  <DayWeather date={selected} readings={weather.readings} units={weather.units} />
+                ) : null}
+                {selectedItems.length > 0 ? (
+                  <ul className="month-detail__list">
                   {selectedItems.map((item) => {
                     const kind = inferPlanKind(item)
                     const described = describePlanWhen(item, selected, selectedItems)
@@ -405,11 +433,12 @@ export function TripMonthView({
                       </li>
                     )
                   })}
-                </ul>
-              ) : (
-                <p className="month-detail__empty">Nothing on this day yet.</p>
-              )}
-              <button ref={addRef} type="button" className="month-add" onClick={() => onAddItem(selected)}>
+                  </ul>
+                ) : (
+                  <p className="month-detail__empty">Nothing on this day yet.</p>
+                )}
+              </div>
+              <button type="button" className="month-add" onClick={() => onAddItem(selected)}>
                 Add something
               </button>
             </div>
