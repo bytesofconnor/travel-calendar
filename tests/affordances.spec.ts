@@ -92,6 +92,7 @@ test("the fifth traveler is a filter behind the extra faces", async ({ page }) =
 test("Jun 11 sleeps in DC after the flight, and later days say wake up", async ({ page }) => {
   await page.goto("/review?screen=timing", { waitUntil: "domcontentloaded" })
   await expect(page.getByRole("heading", { name: "DC weekend" })).toBeVisible()
+  await page.getByRole("button", { name: "Full trip", exact: true }).click()
 
   const arrival = chapter(page, "2027-06-11")
   const arrivalCards = arrival.getByRole("listitem").getByRole("button")
@@ -155,6 +156,7 @@ test("stay words stay on the screen at 390 and 1440, including 200% text", async
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
     await page.goto("/review?screen=timing", { waitUntil: "domcontentloaded" })
+    await page.getByRole("button", { name: "Full trip", exact: true }).click()
     await expect(page.getByText("Sleep here tonight").first()).toBeVisible()
     await expect(page.getByText("Wake up here").first()).toBeVisible()
     expect(await overflow(page)).toBeLessThanOrEqual(1)
@@ -162,8 +164,9 @@ test("stay words stay on the screen at 390 and 1440, including 200% text", async
 
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto("/review?screen=timing", { waitUntil: "domcontentloaded" })
+  await page.getByRole("button", { name: "Full trip", exact: true }).click()
   await page.addStyleTag({ content: "html { font-size: 32px !important; }" })
-  await expect(page.getByText("Night 2 of 3")).toBeVisible()
+  await expect(page.locator(".plan-when__tag", { hasText: "Night 2 of 3" })).toBeVisible()
   await expect(page.getByText("Check-out")).toBeVisible()
   expect(await overflow(page)).toBeLessThanOrEqual(1)
 })

@@ -1,11 +1,15 @@
 "use client"
 
+import { Moon } from "lucide-react"
+
 import { AttendeeStack, whoLine, type AttendeeMember } from "@/components/attendee-faces"
 import { PlanWhen } from "@/components/plan-when"
 import { cn } from "@/lib/utils"
 import type { TripItem } from "@/lib/kanban-store"
-import { describePlanWhen, groupItemsByDay, orderDay } from "@/lib/plan-when"
+import { describePlanWhen, groupItemsByDay } from "@/lib/plan-when"
+import { todayBrief, type NextLeg } from "@/lib/trip-glance"
 import {
+  dayIndexInTrip,
   formatChapterDate,
   inferPlanKind,
   itemMetaLine,
@@ -18,7 +22,7 @@ import { KindChip } from "@/components/capture-dock"
 import { LiveWhisper } from "@/components/live-whisper"
 import { DayWeather, type DayWeatherState } from "@/components/weather-chip"
 
-interface TripStoryViewProps {
+export interface TripStoryViewProps {
   mode: "trip" | "today"
   items: TripItem[]
   today: string
@@ -42,6 +46,23 @@ interface TripStoryViewProps {
   weather?: DayWeatherState
   filterName?: string
   className?: string
+  onShowTrip?: () => void
+  onShowToday?: () => void
+  pinnedDate?: string | null
+}
+
+function nextCopy(leg: NextLeg, today: string): string {
+  const route = [leg.from, leg.to].filter(Boolean).join(" → ")
+  const date = leg.date !== today ? ` · ${formatChapterDate(leg.date)}` : ""
+  return [`Next`, leg.title, leg.timeLabel, route].filter(Boolean).join(" · ") + date
+}
+
+function TodaySwitch({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button type="button" className="today-switch" onClick={onClick}>
+      {label}
+    </button>
+  )
 }
 
 function PlanCard({
@@ -153,7 +174,6 @@ export function TripStoryView({
   today,
   tripStart,
   tripEnd,
-  dayNumber = 1,
   currentUserId,
   members = [],
   emphasizeItemId,
@@ -171,31 +191,59 @@ export function TripStoryView({
   weather,
   filterName,
   className,
+  onShowTrip,
+  onShowToday,
+  pinnedDate,
 }: TripStoryViewProps) {
   const chapters = groupItemsByDay(items)
-  const todayItems = orderDay(
-    items.filter((item) => item.startDate <= today && item.endDate >= today),
-    today,
-  )
+  const brief = todayBrief(items, today, tripStart, tripEnd)
+  const todayItems = brief.plans
   const tomorrowHint = chapters.find((chapter) => chapter.date > today)
 
   if (mode === "today") {
-    const place =
-      todayItems.find((item) => inferPlanKind(item) === "stay")?.location ||
-      todayItems[0]?.location ||
-      "Today"
+    const place = brief.sleep?.city || todayItems[0]?.location || "Today"
 
     return (
-      <div className={cn("flex min-h-full flex-col", className)}>
+      <div className={cn("flex min-h-full flex-col", className)} data-today-screen="">
         <header className="pb-3 pt-5">
-          <p className="story-kicker text-[var(--live)]">
-            {formatChapterDate(today)} · Day {dayNumber}
-          </p>
+          <div className="today-toolbar">
+            <p className="story-kicker">
+              {formatChapterDate(today)} · Day {dayIndexInTrip(today, tripStart)}
+            </p>
+            {onShowTrip ? <TodaySwitch label="Full trip" onClick={onShowTrip} /> : null}
+          </div>
           <h2 className="story-chapter__place mt-2">{place}</h2>
           {weather ? <DayWeather date={today} readings={weather.readings} units={weather.units} /> : null}
+          <div className="today-facts">
+            {brief.sleep ? (
+              <p className="today-facts__line">
+                <span className="plan-when__tag">
+                  <Moon className="plan-when__icon" aria-hidden="true" />
+                  <span>
+                    Sleep here tonight
+                    {brief.sleep.city ? ` · ${brief.sleep.city}` : ""}
+                    {` · ${brief.sleep.title}`}
+                  </span>
+                </span>
+              </p>
+            ) : (
+              <p className="today-facts__line">
+                <span className="today-missing">No stay booked tonight</span>
+              </p>
+            )}
+            {brief.nextLeg ? (
+              <p className="today-facts__line">
+                <span className="plan-when__tag">
+                  <span>{nextCopy(brief.nextLeg, today)}</span>
+                </span>
+              </p>
+            ) : null}
+          </div>
           <p className="story-lede mt-2.5">
             {todayItems.length === 0
-              ? "Nothing planned yet — add what’s happening."
+              ? filterName
+                ? `No plans for ${filterName} today.`
+                : "Nothing planned yet — add what’s happening."
               : "Here’s what’s on for today."}
           </p>
         </header>
@@ -221,7 +269,7 @@ export function TripStoryView({
           })}
         </div>
 
-        {tomorrowHint ? (
+        {tomorrowHint && !brief.nextLeg ? (
           <p className="pb-4 text-[0.8125rem] text-muted-foreground">
             Tomorrow · {tomorrowHint.items[0]?.title ?? formatChapterDate(tomorrowHint.date)}
           </p>
@@ -243,15 +291,19 @@ export function TripStoryView({
 
   if (items.length === 0 && filterName) {
     return (
-      <p className={cn("story-lede py-6", className)} role="status">
-        No plans for {filterName}.
-      </p>
+      <div className={cn("flex flex-col gap-3 py-6", className)}>
+        {onShowToday ? <TodaySwitch label="Today" onClick={onShowToday} /> : null}
+        <p className="story-lede" role="status">
+          No plans for {filterName}.
+        </p>
+      </div>
     )
   }
 
   if (items.length === 0) {
     return (
       <div className={cn("flex min-h-full flex-col pb-6 pt-5", className)}>
+        {onShowToday ? <TodaySwitch label="Today" onClick={onShowToday} /> : null}
         <header>
           <p className="create-join__eyebrow create-join__eyebrow--ink">
             <span className="create-join__eyebrow-dot" aria-hidden="true" />
@@ -310,15 +362,22 @@ export function TripStoryView({
     )
   }
 
+  const shown = [...chapters]
+  if (pinnedDate && !shown.some((chapter) => chapter.date === pinnedDate)) {
+    shown.push({ date: pinnedDate, items: [] })
+    shown.sort((left, right) => left.date.localeCompare(right.date))
+  }
+
   return (
     <div className={cn("flex min-h-full flex-col", className)}>
       <div className="pt-2">
+        {onShowToday ? <TodaySwitch label="Today" onClick={onShowToday} /> : null}
         <LiveWhisper items={items} currentUserId={currentUserId} />
       </div>
 
-      {chapters.map((chapter) => {
+      {shown.map((chapter) => {
         const stay = chapter.items.find((item) => inferPlanKind(item) === "stay")
-        const place = stay?.location || chapter.items[0]?.location || "—"
+        const place = chapter.items.length === 0 ? "Nothing planned" : stay?.location || chapter.items[0]?.location || "—"
         const note = stay && stay.startDate === chapter.date ? stay.notes?.trim() || undefined : undefined
         return (
           <section
@@ -330,7 +389,7 @@ export function TripStoryView({
               <p id={`chapter-date-${chapter.date}`} className="story-chapter__date">
                 {formatChapterDate(chapter.date)}
               </p>
-              <h2 id={`chapter-${chapter.date}`} className="story-chapter__place mt-1.5">
+              <h2 id={`chapter-${chapter.date}`} tabIndex={-1} className="story-chapter__place mt-1.5">
                 {place}
               </h2>
               {weather ? (

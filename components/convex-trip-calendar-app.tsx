@@ -78,7 +78,7 @@ import { TripNotesView } from "./trip-notes-view"
 import { TripPackingView } from "./trip-packing-view"
 import { TripHome } from "./trip-home"
 import { TripMonthView } from "./trip-month-view"
-import { TripStoryView } from "./trip-story-view"
+import { TripListBody } from "./trip-list-body"
 import { TripsSheet } from "./trips-sheet"
 
 const LAST_TRIP_KEY = "travel-calendar:last-trip-id"
@@ -1534,51 +1534,50 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
             weather={weather}
           />
         ) : (
-          <div className="trip-list">
-            {homeModel ? (
-              <TripHome
-                className="trip-list__rail"
-                model={homeModel}
-                members={members}
-                claims={homeClaims}
-                currentUserId={userId}
-                onClaim={(gapId, claimed) => {
-                  void handleClaim(gapId, claimed)
-                }}
-                onAction={openGap}
-                onOpenItem={(id) => {
-                  const item = items.find((entry) => entry.id === id)
-                  if (item) openEditItem(item)
-                }}
-                weather={weather}
-              />
-            ) : null}
-            <TripStoryView
-              className="trip-list__story"
-              mode="trip"
-              items={visibleItems}
-              filterName={activePerson ? firstName(activePerson.displayName) : undefined}
-              today={today}
-              tripStart={trip.startDate}
-              tripEnd={trip.endDate}
-              dayNumber={dayIndexInTrip(today, trip.startDate)}
-              currentUserId={userId}
-              members={members}
-              emphasizeItemId={emphasizeItemId}
-              packingChecked={packingChecked}
-              packingTotal={packingItems.length}
-              notesCount={notesCount}
-              onEditItem={openEditItem}
-              onStartFlight={() => openCapture("flight")}
-              onStartStay={() => openCapture("stay")}
-              onStartPlace={() => openCapture("place")}
-              onInvite={() => setShareOpen(true)}
-              onOpenPacking={() => setPeek("packing")}
-              onOpenNotes={() => setPeek("notes")}
-              onOpenAsk={() => setDesktopAiOpen(true)}
-              weather={weather}
-            />
-          </div>
+          <TripListBody
+            className="trip-list__story"
+            home={
+              homeModel ? (
+                <TripHome
+                  className="trip-list__rail"
+                  model={homeModel}
+                  members={members}
+                  claims={homeClaims}
+                  currentUserId={userId}
+                  onClaim={(gapId, claimed) => {
+                    void handleClaim(gapId, claimed)
+                  }}
+                  onAction={openGap}
+                  onOpenItem={(id) => {
+                    const item = items.find((entry) => entry.id === id)
+                    if (item) openEditItem(item)
+                  }}
+                  weather={weather}
+                />
+              ) : null
+            }
+            items={visibleItems}
+            filterName={activePerson ? firstName(activePerson.displayName) : undefined}
+            today={today}
+            tripStart={trip.startDate}
+            tripEnd={trip.endDate}
+            dayNumber={dayIndexInTrip(today, trip.startDate)}
+            currentUserId={userId}
+            members={members}
+            emphasizeItemId={emphasizeItemId}
+            packingChecked={packingChecked}
+            packingTotal={packingItems.length}
+            notesCount={notesCount}
+            onEditItem={openEditItem}
+            onStartFlight={() => openCapture("flight")}
+            onStartStay={() => openCapture("stay")}
+            onStartPlace={() => openCapture("place")}
+            onInvite={() => setShareOpen(true)}
+            onOpenPacking={() => setPeek("packing")}
+            onOpenNotes={() => setPeek("notes")}
+            onOpenAsk={() => setDesktopAiOpen(true)}
+            weather={weather}
+          />
         )}
       </TripWorkspace>
 

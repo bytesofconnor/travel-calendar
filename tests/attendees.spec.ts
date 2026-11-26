@@ -37,6 +37,7 @@ test("a member can include or exclude faces on a plan", async ({ page }) => {
   await expect(dialog.getByRole("button", { name: "Connor, not included, toggle" }).locator(".who-face__mark--out")).toBeVisible()
   await dialog.getByRole("button", { name: "Save", exact: true }).click()
   await expect(dialog).toBeHidden()
+  await page.getByRole("button", { name: "Full trip", exact: true }).click()
 
   const card = page.getByRole("button", { name: /Place: Time Out Market/ })
   await expect(card.locator("span.h-6.w-6")).toHaveCount(2)
@@ -54,6 +55,7 @@ test("a new plan starts as Everyone", async ({ page }) => {
 
 test("the trip calendar shows faces only when someone is left out", async ({ page }) => {
   await page.goto("/review?screen=trip", { waitUntil: "domcontentloaded" })
+  await page.getByRole("button", { name: "Full trip", exact: true }).click()
   const dinner = page.getByRole("button", { name: /Place: Time Out Market/ })
   await expect(dinner).toHaveAttribute("aria-label", /Connor and Alex/)
   const stay = page.getByRole("button", { name: /Stay: Alfama apartment/ }).first()

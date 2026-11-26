@@ -17,7 +17,7 @@ import { ShareTripDialog } from "@/components/share-trip-dialog"
 import { ThemePackPickerMenuItems } from "@/components/theme-pack-menu"
 import { TripHome } from "@/components/trip-home"
 import { TripMonthView } from "@/components/trip-month-view"
-import { TripStoryView } from "@/components/trip-story-view"
+import { TripListBody } from "@/components/trip-list-body"
 import { TripsSheet } from "@/components/trips-sheet"
 import { useTripThemePack } from "@/components/use-trip-theme-pack"
 import { AddToCalendarSheet } from "@/components/add-to-calendar-sheet"
@@ -573,11 +573,13 @@ export function ReviewGallery({
   theme,
   party = null,
   who = null,
+  today: todayProp = null,
 }: {
   screen: string
   theme: string | null
   party?: number | null
   who?: string | null
+  today?: string | null
 }) {
   const themePack = parseThemePack(theme)
   useTripThemePack(themePack)
@@ -661,8 +663,9 @@ export function ReviewGallery({
     )
   }
 
-  const story = screen === "today" ? "today" : "trip"
-  const captureHint = story === "today" && view === "list" ? "What’s happening today?" : "Add to the trip…"
+  const fixtureToday = vietnam ? "2027-06-18" : timing ? "2027-06-11" : "2026-11-18"
+  const today = todayProp && /^\d{4}-\d{2}-\d{2}$/.test(todayProp) ? todayProp : fixtureToday
+  const captureHint = screen === "today" && view === "list" ? "What’s happening today?" : "Add to the trip…"
 
   function openPlan(item: TripItem | null, date?: string) {
     if (item) {
@@ -750,60 +753,59 @@ export function ReviewGallery({
             items={visibleItems}
             tripStart={tripStartDate}
             tripEnd={tripEndDate}
-            today={vietnam ? "2027-06-18" : timing ? "2027-06-11" : "2026-11-18"}
+            today={today}
             onEditItem={(item) => openPlan(item)}
             onAddItem={(date) => openPlan(null, date)}
             weather={weather}
           />
         ) : (
-          <div className="trip-list">
-            {showHome ? (
-              <TripHome
-                className="trip-list__rail"
-                model={home}
-                members={roster}
-                claims={claims}
-                currentUserId={USER_ID}
-                onClaim={(gapId, claimed) => {
-                  setClaims((current) => {
-                    const rest = current.filter((claim) => claim.gapId !== gapId)
-                    if (!claimed) return rest
-                    return [...rest, { gapId, userId: USER_ID, displayName: "Connor" }]
-                  })
-                }}
-                onAction={openAction}
-                onOpenItem={(id) => {
-                  const item = homePlans.find((entry) => entry.id === id)
-                  if (item) openPlan(item)
-                }}
-                weather={weather}
-              />
-            ) : null}
-            <TripStoryView
-              className="trip-list__story"
-              mode={story}
-              items={visibleItems}
-              filterName={activePerson ? firstName(activePerson.displayName) : undefined}
-              today={timing ? "2027-06-11" : vietnam ? "2027-06-18" : "2026-11-18"}
-              tripStart={tripStartDate}
-              tripEnd={tripEndDate}
-              dayNumber={1}
-              currentUserId={USER_ID}
-              members={roster}
-              packingChecked={2}
-              packingTotal={6}
-              notesCount={1}
-              onEditItem={(item) => openPlan(item)}
-              onStartFlight={() => {}}
-              onStartStay={() => {}}
-              onStartPlace={() => {}}
-              onInvite={() => setShareOpen(true)}
-              onOpenPacking={() => {}}
-              onOpenNotes={() => {}}
-              onOpenAsk={() => {}}
-              weather={weather}
-            />
-          </div>
+          <TripListBody
+            className="trip-list__story"
+            home={
+              showHome ? (
+                <TripHome
+                  className="trip-list__rail"
+                  model={home}
+                  members={roster}
+                  claims={claims}
+                  currentUserId={USER_ID}
+                  onClaim={(gapId, claimed) => {
+                    setClaims((current) => {
+                      const rest = current.filter((claim) => claim.gapId !== gapId)
+                      if (!claimed) return rest
+                      return [...rest, { gapId, userId: USER_ID, displayName: "Connor" }]
+                    })
+                  }}
+                  onAction={openAction}
+                  onOpenItem={(id) => {
+                    const item = homePlans.find((entry) => entry.id === id)
+                    if (item) openPlan(item)
+                  }}
+                  weather={weather}
+                />
+              ) : null
+            }
+            items={visibleItems}
+            filterName={activePerson ? firstName(activePerson.displayName) : undefined}
+            today={today}
+            tripStart={tripStartDate}
+            tripEnd={tripEndDate}
+            dayNumber={1}
+            currentUserId={USER_ID}
+            members={roster}
+            packingChecked={2}
+            packingTotal={6}
+            notesCount={1}
+            onEditItem={(item) => openPlan(item)}
+            onStartFlight={() => {}}
+            onStartStay={() => {}}
+            onStartPlace={() => {}}
+            onInvite={() => setShareOpen(true)}
+            onOpenPacking={() => {}}
+            onOpenNotes={() => {}}
+            onOpenAsk={() => {}}
+            weather={weather}
+          />
         )}
       </TripFrame>
       <TripsSheet
