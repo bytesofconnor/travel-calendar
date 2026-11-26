@@ -2158,7 +2158,12 @@
     background: color-mix(in oklab, var(--background) 88%, transparent);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
+    /* The home indicator and gesture bar fit in 5rem. iOS sometimes reports a
+       stuck safe-area inset the size of the keyboard or the viewport. This
+       dock does not shrink, so that padding would erase the story and leave
+       the chips over a blank screen. */
     padding: 0.75rem 0 calc(0.9rem + var(--safe-bottom));
+    padding: 0.75rem 0 calc(0.9rem + min(var(--safe-bottom), 5rem));
   }
 
   .capture-dock__field {
@@ -2293,6 +2298,7 @@
   @media (max-width: 375px) {
     .capture-dock {
       padding: 0.4rem 0 calc(0.45rem + var(--safe-bottom));
+      padding: 0.4rem 0 calc(0.45rem + min(var(--safe-bottom), 5rem));
     }
 
     .capture-dock__field {
