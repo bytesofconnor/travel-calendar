@@ -22,11 +22,23 @@ async function openFlight(page: Page) {
 }
 
 async function scrollField(field: Locator) {
-  await field.evaluate((el) => {
+  await field.evaluate(async (el) => {
     const scroller = el.closest(".overflow-y-auto")
     if (!(scroller instanceof HTMLElement)) return
-    const top = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top
-    scroller.scrollTop += top - 12
+    const align = () => {
+      const top = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top
+      scroller.scrollTop += top - 12
+    }
+    let last = -1
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const next = scroller.scrollHeight
+      if (next === last && attempt > 1) break
+      last = next
+      await new Promise((resolve) => window.setTimeout(resolve, 50))
+    }
+    align()
+    await new Promise((resolve) => window.setTimeout(resolve, 80))
+    align()
   })
 }
 
@@ -47,6 +59,7 @@ test("the place menu overlays the field and ranks DC, Vietnam, and HAN", async (
   await page.emulateMedia({ reducedMotion: "reduce" })
   const dialog = await openFlight(page)
   const to = dialog.getByRole("combobox", { name: "To" })
+  await dialog.getByRole("button", { name: "Details" }).click()
   const notes = dialog.getByLabel("Notes")
   await scrollField(to)
   const before = await notes.boundingBox()

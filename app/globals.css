@@ -820,10 +820,27 @@
     }
   }
 
+  /* Phone: nights stay in the list body, then the day, then What's next.
+     The pane rules above are equally specific, so this block has to come later.
+     The desktop grid keeps the rail beside the list and the nights across both. */
+  @media (max-width: 63.99rem) {
+    .trip-list[data-pane] .trip-list__nights {
+      order: 0;
+    }
+
+    .trip-list[data-pane] .trip-list__story {
+      order: 1;
+    }
+
+    .trip-list[data-pane] .trip-list__rail {
+      order: 2;
+    }
+  }
+
   @media (min-width: 64rem) {
     .trip-list:has(.trip-list__rail) {
       display: grid;
-      grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
+      grid-template-columns: minmax(0, min(24rem, 42%)) minmax(0, 1fr);
       grid-template-areas: "rail story";
       align-items: start;
       column-gap: var(--layout-space-lg);
@@ -837,6 +854,11 @@
 
     .trip-list__nights {
       grid-area: nights;
+    }
+
+    .trip-list__rail,
+    .trip-list__story {
+      min-width: 0;
     }
 
     .trip-list__rail {
@@ -924,6 +946,161 @@
       justify-content: center;
       overflow-y: auto;
       padding-block: 3.5rem 3rem;
+    }
+  }
+
+  .create-join.login-landing {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  .login-landing__pitch {
+    display: flex;
+    width: 100%;
+    max-width: 40rem;
+    margin-inline: auto;
+    flex-direction: column;
+    padding-top: max(1.35rem, var(--safe-top));
+    padding-bottom: 0.5rem;
+    padding-inline: max(var(--layout-gutter), var(--safe-left))
+      max(var(--layout-gutter), var(--safe-right));
+  }
+
+  .login-landing__brand {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--foreground);
+  }
+
+  .login-landing__title {
+    margin-top: 0.75rem;
+    max-width: 11ch;
+    font-family: var(--font-display);
+    font-size: clamp(2.6rem, 12vw, 3.6rem);
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    line-height: 0.94;
+    color: var(--foreground);
+    text-wrap: balance;
+  }
+
+  .login-landing__sub {
+    margin-top: 0.85rem;
+    max-width: 36rem;
+    font-size: 1.125rem;
+    font-weight: 550;
+    line-height: 1.35;
+    color: var(--foreground);
+  }
+
+  .login-landing__actions {
+    margin-top: 1.15rem;
+  }
+
+  .landing-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    margin: 0.75rem max(var(--layout-gutter), var(--safe-right)) max(1.25rem, var(--safe-bottom))
+      max(var(--layout-gutter), var(--safe-left));
+    border: 1px solid var(--foreground);
+    background: var(--card);
+    padding: 0.9rem 0.95rem 1.05rem;
+    color: var(--foreground);
+  }
+
+  .landing-preview__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .landing-preview__trip {
+    min-width: 0;
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    color: var(--foreground);
+  }
+
+  .landing-preview__dates {
+    flex-shrink: 0;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--foreground);
+  }
+
+  .landing-preview__people {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .landing-preview__people .traveler-face + .traveler-face {
+    margin-left: -0.55rem;
+  }
+
+  .landing-preview__who {
+    margin-left: 0.7rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--foreground);
+  }
+
+  .landing-preview .plan-card {
+    min-height: 0;
+    pointer-events: none;
+  }
+
+  .landing-preview .plan-card__meta,
+  .landing-preview .story-chapter__date {
+    color: var(--foreground);
+  }
+
+  @media (min-width: 1024px) {
+    .create-join.login-landing {
+      display: grid;
+      grid-template-columns: minmax(24rem, 0.92fr) minmax(24rem, 1.08fr);
+      height: 100dvh;
+      min-height: 100dvh;
+      overflow: hidden;
+    }
+
+    .login-landing__pitch {
+      justify-content: center;
+      max-width: none;
+      margin: 0;
+      overflow-y: auto;
+      padding: 3rem 2.5rem 3rem max(2.75rem, var(--safe-left));
+    }
+
+    .login-landing__title {
+      max-width: 10ch;
+      font-size: clamp(3.4rem, 4.6vw, 5rem);
+    }
+
+    .login-landing__sub {
+      font-size: 1.25rem;
+    }
+
+    .landing-preview {
+      align-self: center;
+      width: auto;
+      height: auto;
+      max-height: calc(100dvh - 2.5rem);
+      margin: 1.25rem max(1.25rem, var(--safe-right)) 1.25rem 0;
+      overflow: auto;
+      padding: 1.35rem 1.35rem 1.5rem;
+      gap: 0.85rem;
     }
   }
 
@@ -1086,6 +1263,28 @@
 
   .trip-cover--compact .trip-cover__meta {
     font-size: 0.75rem;
+  }
+
+  @media (max-width: 767px) {
+    .trip-cover__brand {
+      display: none;
+    }
+
+    .trip-cover--compact .trip-cover__content {
+      gap: 0.1rem;
+      padding-top: max(0.4rem, var(--safe-top));
+      padding-bottom: 0.35rem;
+    }
+
+    .trip-cover--compact .trip-cover__title {
+      font-size: 1.2rem;
+      line-height: 1.15;
+    }
+
+    .trip-cover--compact .trip-cover__meta {
+      font-size: 0.75rem;
+      line-height: 1.3;
+    }
   }
 
   .trip-home {
@@ -1645,6 +1844,15 @@
   .story-chrome__travelers {
     flex: 1 0 100%;
     min-width: 0;
+  }
+
+  @media (max-width: 767px) {
+    .story-chrome__travelers .traveler-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
 
   @media (min-width: 768px) {

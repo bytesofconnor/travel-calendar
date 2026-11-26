@@ -125,15 +125,17 @@ export function AttendeeToggles({
   const summary = attendanceSummary(members, attendeeIds)
 
   return (
-    <div role="group" aria-labelledby="plan-who-label" aria-describedby="plan-who-hint" data-who="in" className="space-y-2">
-      <p id="plan-who-label" className="text-sm font-semibold text-foreground">
-        Who&apos;s in
-      </p>
+    <div role="group" aria-labelledby="plan-who-label" aria-describedby="plan-who-hint" data-who="in" className="space-y-1.5">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+        <p id="plan-who-label" className="text-sm font-semibold text-foreground">
+          Who&apos;s in
+        </p>
+        <p id="plan-who-status" aria-live="polite" className="text-sm font-semibold text-foreground">
+          {summary}
+        </p>
+      </div>
       <p id="plan-who-hint" className="text-sm font-medium text-foreground">
         Tap a face to leave someone out
-      </p>
-      <p id="plan-who-status" aria-live="polite" className="text-sm font-semibold text-foreground">
-        {summary}
       </p>
       <div className="flex flex-wrap gap-2">
         {members.map((member) => {
