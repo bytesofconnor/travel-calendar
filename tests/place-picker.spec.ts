@@ -29,8 +29,15 @@ async function scrollField(field: Locator) {
       const top = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top
       scroller.scrollTop += top - 12
     }
+    let last = -1
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const next = scroller.scrollHeight
+      if (next === last && attempt > 1) break
+      last = next
+      await new Promise((resolve) => window.setTimeout(resolve, 50))
+    }
     align()
-    await new Promise((resolve) => window.setTimeout(resolve, 200))
+    await new Promise((resolve) => window.setTimeout(resolve, 80))
     align()
   })
 }
