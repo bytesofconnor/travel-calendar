@@ -24,6 +24,7 @@ async function openTravel(page: Page) {
 
 test("travel modes change the fields and write the title", async ({ page }) => {
   const dialog = await openTravel(page)
+  await dialog.getByRole("button", { name: "Details" }).click()
   await expect(dialog.getByRole("heading", { name: "Add a flight" })).toBeVisible()
   await expect(dialog.getByRole("radio", { name: "Flight" })).toHaveAttribute("aria-checked", "true")
   await expect(dialog.getByLabel("Airline or flight number")).toBeVisible()
@@ -75,6 +76,8 @@ test("an existing flight still opens as a flight", async ({ page }) => {
   await expect(dialog.getByRole("heading", { name: "Edit flight" })).toBeVisible()
   await expect(dialog.getByRole("radio", { name: "Flight" })).toHaveAttribute("aria-checked", "true")
   await expect(dialog.getByLabel("From")).toHaveValue("SFO")
+  const details = dialog.getByRole("button", { name: /details/i })
+  if ((await details.getAttribute("aria-expanded")) !== "true") await details.click()
   await expect(dialog.getByLabel("Airline or flight number")).toBeVisible()
 })
 

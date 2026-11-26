@@ -4,9 +4,8 @@ import { useEffect, useState } from "react"
 import { ChevronDown, KeyRound, Loader2, Mail, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { LandingMastMedia } from "@/components/landing-mast-media"
+import { LandingPreview } from "@/components/landing-preview"
 import { PageShell } from "@/components/page-shell"
-import { SpectrumHairline } from "@/components/trip-cover"
 
 function GoogleIcon() {
   return (
@@ -74,27 +73,14 @@ export function LoginScreen({
   }, [hasPendingCode, emailAuthEnabled])
 
   return (
-    <PageShell className="together-story create-join">
-      <div className="create-join__mast">
-        <LandingMastMedia />
-        <div className="create-join__mast-bar">
-          <span className="create-join__brand">Travel Calendar</span>
-        </div>
-        <div className="create-join__mast-copy">
-          <p className="create-join__eyebrow">
-            <span className="create-join__eyebrow-dot" aria-hidden="true" />
-            Together
-          </p>
-          <h1 className="create-join__title">Plan the trip together</h1>
-          <p className="create-join__sub">
-            One shared story for flights, stays, and the days between — always in sync with everyone
-            on the trip.
-          </p>
-        </div>
-        <SpectrumHairline />
-      </div>
-
-      <div className="create-join__body">
+    <PageShell className="together-story create-join login-landing">
+      <div className="login-landing__pitch">
+        <p className="login-landing__brand">Travel Calendar</p>
+        <h1 className="login-landing__title">Plan the trip together</h1>
+        <p className="login-landing__sub">
+          One shared calendar for everyone on the trip. Flights, stays, and the days between stay in sync.
+        </p>
+        <div className="login-landing__actions">
         <button
           type="button"
           className="create-join__submit"
@@ -129,7 +115,7 @@ export function LoginScreen({
           <button
             type="button"
             onClick={() => setShowEmailAuth(true)}
-            className="mt-3 inline-flex min-h-11 items-center justify-center gap-1.5 text-[0.875rem] font-semibold text-muted-foreground hover:text-foreground"
+            className="mt-3 inline-flex min-h-11 items-center justify-center gap-1.5 text-[0.875rem] font-semibold text-foreground"
           >
             Continue with email
             <ChevronDown className="h-4 w-4" aria-hidden="true" />
@@ -253,7 +239,7 @@ export function LoginScreen({
           </p>
         ) : null}
 
-        <p className="mt-8 text-[0.8125rem] leading-5 text-muted-foreground">
+        <p className="mt-5 text-sm font-medium leading-5 text-foreground">
           After you sign in, you create or join one trip. That trip is home.
         </p>
 
@@ -269,7 +255,9 @@ export function LoginScreen({
         ) : (
           <div className="mt-auto" aria-hidden="true" />
         )}
+        </div>
       </div>
+      <LandingPreview />
     </PageShell>
   )
 }

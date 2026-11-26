@@ -62,7 +62,7 @@ export function StoryChrome({
           aria-label="Invite"
         >
           <UserPlus className="hidden size-4 max-[430px]:block" aria-hidden="true" />
-          <span className="max-[374px]:sr-only">Invite</span>
+          <span className="max-[430px]:sr-only">Invite</span>
         </button>
         {menu}
       </div>

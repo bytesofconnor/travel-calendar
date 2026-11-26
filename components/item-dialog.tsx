@@ -81,6 +81,7 @@ export function ItemDialog({
   const [draft, setDraft] = useState<PlanDraft>(() => fieldsFromNew("place", null, fallbackDate))
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [showLink, setShowLink] = useState(false)
+  const [showDetails, setShowDetails] = useState(false)
   const [showZones, setShowZones] = useState(false)
   const [attendeeIds, setAttendeeIds] = useState<string[] | undefined>(undefined)
   const errorSummary = useId()
@@ -104,6 +105,7 @@ export function ItemDialog({
     setDraft(next)
     setErrors({})
     setShowLink(Boolean(next.linkUrl))
+    setShowDetails(Boolean(next.notes || next.address || next.confirmation || next.linkUrl))
     setShowZones(false)
     setAttendeeIds(editItem?.attendeeIds ?? initialInput?.attendeeIds)
   }, [editItem, fallbackDate, initialInput, initialType, open])
@@ -132,7 +134,8 @@ export function ItemDialog({
     setErrors(found)
     const first = Object.keys(found)[0]
     if (first) {
-      document.getElementById(controlId(first))?.focus()
+      if (found.address || found.linkUrl) setShowDetails(true)
+      window.requestAnimationFrame(() => document.getElementById(controlId(first))?.focus())
       return
     }
     const input = buildPlan(draft, fallbackDate)
@@ -170,15 +173,13 @@ export function ItemDialog({
       >
         <PlacePopoverProvider>
         <form onSubmit={(event) => void onSubmit(event)} className="flex min-h-0 flex-1 flex-col">
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
+          <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-4 py-3">
             <DialogHeader className="border-b border-border px-0 pb-3 pr-10 text-left">
               <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
                 {headingFor(draft.type, editing, draft.mode)}
               </DialogTitle>
               {editing && editItem?.authorName ? (
                 <p className="text-sm text-foreground">Added by {editItem.authorName}</p>
-              ) : currentUserName ? (
-                <p className="text-sm text-foreground">Visible to everyone on this trip</p>
               ) : null}
             </DialogHeader>
             <div
@@ -189,7 +190,7 @@ export function ItemDialog({
               {Object.values(errors).join(" ")}
             </div>
 
-            <div role="radiogroup" aria-label="Plan type" className="grid grid-cols-2 gap-2 min-[30rem]:grid-cols-4">
+            <div role="radiogroup" aria-label="Plan type" className="flex flex-wrap gap-1.5">
               {TYPES.map((type) => {
                 const selected = draft.type === type.id
                 return (
@@ -202,7 +203,7 @@ export function ItemDialog({
                     tabIndex={selected ? 0 : -1}
                     onClick={() => patch({ type: type.id })}
                     onKeyDown={onTypeKey}
-                    className={`min-h-11 rounded-md border border-foreground px-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    className={`min-h-11 min-w-[4.5rem] flex-1 rounded-md border border-foreground px-2 text-sm font-semibold leading-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                       selected ? "bg-foreground text-background" : "bg-background text-foreground"
                     }`}
                   >
@@ -251,7 +252,7 @@ export function ItemDialog({
 
             {draft.type === "flight" ? (
               <>
-                <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2">
+                <div className="grid min-w-0 grid-cols-1 gap-2 min-[380px]:grid-cols-2">
                   <PlaceField
                     id="plan-location"
                     label="From"
@@ -299,15 +300,6 @@ export function ItemDialog({
                 </div>
                 <FieldError id="plan-location-error" message={errors.from} />
                 <FieldError id="plan-location-to-error" message={errors.to} />
-                {draft.mode === "walk" ? null : (
-                  <TextField
-                    id="plan-flight-code"
-                    label={draft.mode === "flight" ? "Airline or flight number" : draft.mode === "train" || draft.mode === "bus" ? "Carrier or number" : "Carrier"}
-                    value={draft.flightCode}
-                    placeholder={draft.mode === "flight" ? "VN 123" : draft.mode === "taxi" || draft.mode === "shuttle" ? "Grab" : "Optional"}
-                    onChange={(flightCode) => patch({ flightCode })}
-                  />
-                )}
                 <TitleField
                   value={draft.customTitle}
                   placeholder={titlePreview || (draft.mode === "flight" ? "Fly from one place to another" : "Title fills in from the places")}
@@ -387,7 +379,7 @@ export function ItemDialog({
                   onStart={(startDate) => patch({ startDate, endDate: !draft.endDate || startDate > draft.endDate ? startDate : draft.endDate })}
                   onEnd={(endDate) => patch({ endDate })}
                 />
-                <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2">
+                <div className="grid min-w-0 grid-cols-1 gap-2 min-[380px]:grid-cols-2">
                   <TextField id="plan-depart" label="Depart time" type="time" value={draft.startTime} onChange={(startTime) => patch({ startTime })} />
                   <TextField id="plan-arrive" label="Arrive time" type="time" value={draft.endTime} onChange={(endTime) => patch({ endTime })} />
                 </div>
@@ -415,7 +407,7 @@ export function ItemDialog({
                   onChange={(startDate) => patch({ startDate, endDate: startDate })}
                 />
                 <FieldError id="plan-start-error" message={errors.startDate} />
-                <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2">
+                <div className="grid min-w-0 grid-cols-1 gap-2 min-[380px]:grid-cols-2">
                   <TextField id="plan-depart" label="Time" type="time" value={draft.startTime} onChange={(startTime) => patch({ startTime })} />
                   <TextField id="plan-arrive" label="End time" type="time" value={draft.endTime} onChange={(endTime) => patch({ endTime })} />
                 </div>
@@ -423,7 +415,7 @@ export function ItemDialog({
             ) : null}
 
             {draft.type === "place" ? (
-              <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2">
+              <div className="grid min-w-0 grid-cols-1 gap-2 min-[380px]:grid-cols-2">
                 <TextField
                   id="plan-start"
                   label="Date"
@@ -458,68 +450,94 @@ export function ItemDialog({
             <AttendeeToggles members={members} attendeeIds={attendeeIds} onChange={setAttendeeIds} />
 
             {draft.type !== "note" ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="plan-notes">Notes</Label>
-                <Textarea
-                  id="plan-notes"
-                  value={draft.notes}
-                  placeholder="Optional details"
-                  onChange={(event) => patch({ notes: event.target.value })}
-                  className="min-h-24 resize-none border-border bg-background text-base"
-                />
-              </div>
+              <p className="text-xs font-medium text-foreground">Cities by Open-Meteo. Addresses © OpenStreetMap via Photon.</p>
             ) : null}
 
-            {draft.type === "stay" ? (
-              <>
-                <TextField
-                  id="plan-address"
-                  label="Address or link"
-                  value={draft.address}
-                  placeholder="Street address or booking link"
-                  invalid={Boolean(errors.address)}
-                  describedBy={described("address", "plan-address")}
-                  onChange={(address) => patch({ address })}
-                />
-                <FieldError id="plan-address-error" message={errors.address} />
-                <TextField
-                  id="plan-confirmation"
-                  label="Confirmation number"
-                  value={draft.confirmation}
-                  placeholder="Optional"
-                  onChange={(confirmation) => patch({ confirmation })}
-                />
-              </>
-            ) : null}
-
-            {draft.type !== "stay" && draft.type !== "note" ? (
-              showLink || draft.linkUrl ? (
-                <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2">
-                  <TextField id="plan-link-label" label="Link label" value={draft.linkLabel} placeholder="Map" onChange={(linkLabel) => patch({ linkLabel })} />
-                  <TextField
-                    id="plan-link-url"
-                    label="URL"
-                    value={draft.linkUrl}
-                    placeholder="https://"
-                    invalid={Boolean(errors.linkUrl)}
-                    describedBy={described("linkUrl", "plan-link-url")}
-                    onChange={(linkUrl) => patch({ linkUrl })}
-                  />
-                  <FieldError id="plan-link-url-error" message={errors.linkUrl} />
-                </div>
-              ) : (
+            {draft.type !== "note" ? (
+              <div className="space-y-2">
                 <button
                   type="button"
-                  onClick={() => setShowLink(true)}
-                  className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-expanded={showDetails}
+                  aria-controls="plan-details"
+                  onClick={() => setShowDetails((open) => !open)}
+                  className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <LinkIcon className="h-4 w-4" aria-hidden="true" />
-                  Add a link
+                  {showDetails ? "Hide details" : "Details"}
                 </button>
-              )
-            ) : null}
-            {draft.type !== "note" ? (
-              <p className="text-xs text-foreground">Cities by Open-Meteo. Addresses © OpenStreetMap via Photon.</p>
+                {showDetails ? (
+                  <div id="plan-details" className="space-y-3">
+                    {!editing && currentUserName ? (
+                      <p className="text-sm text-foreground">Visible to everyone on this trip</p>
+                    ) : null}
+                    {draft.type === "flight" && draft.mode !== "walk" ? (
+                      <TextField
+                        id="plan-flight-code"
+                        label={draft.mode === "flight" ? "Airline or flight number" : draft.mode === "train" || draft.mode === "bus" ? "Carrier or number" : "Carrier"}
+                        value={draft.flightCode}
+                        placeholder={draft.mode === "flight" ? "VN 123" : draft.mode === "taxi" || draft.mode === "shuttle" ? "Grab" : "Optional"}
+                        onChange={(flightCode) => patch({ flightCode })}
+                      />
+                    ) : null}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="plan-notes">Notes</Label>
+                      <Textarea
+                        id="plan-notes"
+                        value={draft.notes}
+                        placeholder="Optional details"
+                        onChange={(event) => patch({ notes: event.target.value })}
+                        className="min-h-24 resize-none border-border bg-background text-base"
+                      />
+                    </div>
+                    {draft.type === "stay" ? (
+                      <>
+                        <TextField
+                          id="plan-address"
+                          label="Address or link"
+                          value={draft.address}
+                          placeholder="Street address or booking link"
+                          invalid={Boolean(errors.address)}
+                          describedBy={described("address", "plan-address")}
+                          onChange={(address) => patch({ address })}
+                        />
+                        <FieldError id="plan-address-error" message={errors.address} />
+                        <TextField
+                          id="plan-confirmation"
+                          label="Confirmation number"
+                          value={draft.confirmation}
+                          placeholder="Optional"
+                          onChange={(confirmation) => patch({ confirmation })}
+                        />
+                      </>
+                    ) : null}
+                    {draft.type !== "stay" ? (
+                      showLink || draft.linkUrl ? (
+                        <div className="grid min-w-0 grid-cols-1 gap-2 min-[380px]:grid-cols-2">
+                          <TextField id="plan-link-label" label="Link label" value={draft.linkLabel} placeholder="Map" onChange={(linkLabel) => patch({ linkLabel })} />
+                          <TextField
+                            id="plan-link-url"
+                            label="URL"
+                            value={draft.linkUrl}
+                            placeholder="https://"
+                            invalid={Boolean(errors.linkUrl)}
+                            describedBy={described("linkUrl", "plan-link-url")}
+                            onChange={(linkUrl) => patch({ linkUrl })}
+                          />
+                          <FieldError id="plan-link-url-error" message={errors.linkUrl} />
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowLink(true)}
+                          className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <LinkIcon className="h-4 w-4" aria-hidden="true" />
+                          Add a link
+                        </button>
+                      )
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
             ) : null}
           </div>
 
@@ -659,7 +677,7 @@ function DatePair({
   onEnd: (value: string) => void
 }) {
   return (
-    <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2">
+    <div className="grid min-w-0 grid-cols-1 gap-2 min-[380px]:grid-cols-2">
       <TextField
         id="plan-start"
         label={startLabel}
@@ -793,7 +811,7 @@ function ModePicker({ mode, onChange }: { mode: TravelMode; onChange: (mode: Tra
   }
 
   return (
-    <div role="radiogroup" aria-label="Travel mode" className="grid grid-cols-2 gap-2 min-[30rem]:grid-cols-3">
+    <div role="radiogroup" aria-label="Travel mode" className="flex flex-wrap gap-1.5">
       {TRAVEL_MODES.map((entry) => {
         const selected = mode === entry.id
         const Icon = travelIcon(entry.id)
@@ -804,15 +822,16 @@ function ModePicker({ mode, onChange }: { mode: TravelMode; onChange: (mode: Tra
             type="button"
             role="radio"
             aria-checked={selected}
+            aria-label={entry.picker}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(entry.id)}
             onKeyDown={onKey}
-            className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-foreground px-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+            className={`inline-flex min-h-11 min-w-[5.25rem] flex-1 basis-[30%] items-center justify-center gap-1.5 rounded-md border border-foreground px-1.5 text-center text-sm font-semibold leading-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               selected ? "bg-foreground text-background" : "bg-background text-foreground"
             }`}
           >
             <Icon className="size-4 shrink-0" aria-hidden="true" />
-            <span>{entry.picker}</span>
+            <span>{entry.id === "taxi" ? "Taxi" : entry.picker}</span>
           </button>
         )
       })}
@@ -872,7 +891,7 @@ function SmoothFields({ watch, children }: { watch: string; children: ReactNode 
           : { flexShrink: 0 }
       }
     >
-      <div ref={innerRef} className="flex flex-col gap-4 py-1">
+      <div ref={innerRef} className="flex flex-col gap-2 py-0.5">
         {children}
       </div>
     </div>
