@@ -14,7 +14,10 @@ updates:
     # These majors fail CI on the grouped bump in pull request 28.
     # typescript 7.x: typescript-eslint rejects TS 7.0, so pnpm lint exits 2.
     # https://github.com/typescript-eslint/typescript-eslint/issues/10940
-    # @convex-dev/eslint-plugin 5.x errors on process.env and on indexes.
+    # @convex-dev/eslint-plugin 5.x and 6.x error on process.env and on indexes.
+    # Queries still use by_trip for _creationTime order. process.env stays in
+    # auth.config.ts, Resend OTP, the Stripe webhook, and the paywall.
+    # https://github.com/bytesofconnor/travel-calendar/pull/57
     # react-day-picker 10.x drops calendar classNames.table.
     # recharts 3.x changes Tooltip payload types.
     # react-resizable-panels 4.x removes PanelGroup and PanelResizeHandle.
@@ -28,7 +31,7 @@ updates:
       - dependency-name: "typescript"
         versions: ["7.x"]
       - dependency-name: "@convex-dev/eslint-plugin"
-        versions: ["5.x"]
+        versions: ["5.x", "6.x"]
       - dependency-name: "react-day-picker"
         versions: ["10.x"]
       - dependency-name: "recharts"
