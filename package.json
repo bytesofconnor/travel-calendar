@@ -82,7 +82,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.1",
-    "@convex-dev/eslint-plugin": "^6.0.0",
+    "@convex-dev/eslint-plugin": "^4.0.0",
     "@playwright/test": "1.65.1",
     "@tailwindcss/postcss": "^4.3.5",
     "@types/node": "^26.6.7",
