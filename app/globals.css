@@ -1866,64 +1866,97 @@
     padding-block: 0.45rem;
   }
 
-  .story-chrome__travelers {
+  .story-chrome__people {
+    display: flex;
     flex: 1 0 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.15rem 0.35rem;
+    min-width: 0;
+  }
+
+  .story-chrome__travelers {
+    position: relative;
+    flex: 0 1 auto;
     min-width: 0;
   }
 
   .story-chrome__tools {
-    flex: 1 0 100%;
     display: flex;
+    flex: 0 0 auto;
     align-items: center;
+    justify-content: flex-end;
+    gap: 0.15rem;
+    margin-left: auto;
     min-width: 0;
   }
 
-  .trip-ideas-link {
+  .trip-tool-link {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
-    padding: 0 0.15rem;
+    padding: 0 0.35rem;
     border: 0;
     background: transparent;
     color: var(--foreground);
     font-size: 0.9375rem;
     font-weight: 700;
     letter-spacing: -0.01em;
+    line-height: 1;
     text-decoration: underline;
     text-underline-offset: 4px;
+    white-space: nowrap;
   }
 
-  .trip-ideas-link:focus-visible {
+  .trip-tool-link:focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--together);
   }
 
   @media (max-width: 767px) {
-    .story-chrome__travelers .traveler-label {
+    .story-chrome__people .traveler-label {
+      position: absolute;
+      inset: 0;
       min-width: 0;
+      min-height: 44px;
+      margin: 0;
+      padding: 0;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      color: transparent;
+      background: transparent;
     }
   }
 
   @media (min-width: 768px) {
-    .story-chrome__travelers {
+    .story-chrome__people {
       order: 3;
-      flex: 0 1 auto;
+      flex: 1 1 auto;
+      flex-wrap: nowrap;
+    }
+
+    .story-chrome__travelers {
       max-width: min(100%, 22rem);
     }
 
     .story-chrome__cluster {
       order: 4;
     }
-
-    .story-chrome__tools {
-      order: 5;
-    }
   }
 
   @media (max-width: 430px) {
+    .story-chrome__people {
+      gap: 0 0.15rem;
+    }
+
+    .story-chrome__tools {
+      gap: 0;
+    }
+
+    .trip-tool-link {
+      padding-inline: 0.2rem;
+      font-size: 0.8125rem;
+    }
+
     .story-chrome {
       gap: 0.25rem;
       padding-block: 0.35rem;

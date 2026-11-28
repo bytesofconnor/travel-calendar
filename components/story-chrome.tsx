@@ -58,15 +58,17 @@ export function StoryChrome({
         </button>
         {menu}
       </div>
-      <TravelerStack
-        travelers={travelers}
-        currentUserId={currentUserId}
-        onOpen={onOpenMembers}
-        selectedUserId={selectedUserId}
-        onSelectPerson={onSelectPerson}
-        className="story-chrome__travelers"
-      />
-      {tools ? <div className="story-chrome__tools">{tools}</div> : null}
+      <div className="story-chrome__people">
+        <TravelerStack
+          travelers={travelers}
+          currentUserId={currentUserId}
+          onOpen={onOpenMembers}
+          selectedUserId={selectedUserId}
+          onSelectPerson={onSelectPerson}
+          className="story-chrome__travelers"
+        />
+        {tools ? <div className="story-chrome__tools">{tools}</div> : null}
+      </div>
     </div>
   )
 }

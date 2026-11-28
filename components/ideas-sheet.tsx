@@ -43,7 +43,7 @@ export const IdeasLink = forwardRef<HTMLButtonElement, { count: number; onClick:
     <button
       ref={ref}
       type="button"
-      className="trip-ideas-link"
+      className="trip-tool-link"
       aria-label={`Ideas, ${count} open`}
       onClick={onClick}
     >

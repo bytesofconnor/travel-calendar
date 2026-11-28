@@ -49,7 +49,7 @@ test("a phone shows the day under a short shared header", async ({ page }, testI
       nightsInHeader: document.querySelector("[data-trip-toolbar] .trip-nights, [data-trip-mast] .trip-nights") != null,
     }
   })
-  expect(stack.header).toBeLessThan(250)
+  expect(stack.header).toBeLessThan(200)
   expect(stack.nightsInHeader).toBe(false)
   expect(stack.nightsTop).toBeGreaterThan(stack.headerBottom - 2)
   expect(stack.todayTop).toBeGreaterThan(stack.nightsTop)
