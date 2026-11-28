@@ -913,6 +913,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
       ),
       ...(idea.linkUrl ? { link: { label: "Link", url: idea.linkUrl } } : {}),
     })
+    skipIdeasFocus.current = true
     setIdeasOpen(false)
     setItemDialogOpen(true)
   }
@@ -1235,7 +1236,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
                       onOpenMembers={() => setShareOpen(true)}
                       selectedUserId={activePerson?.userId ?? null}
                       onSelectPerson={choosePerson}
-                      tools={<IdeasLink count={ideaList.length} onClick={() => setIdeasOpen(true)} />}
+                      tools={<IdeasLink ref={ideasLinkRef} count={ideaList.length} onClick={() => setIdeasOpen(true)} />}
                       menu={
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -1401,6 +1402,8 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
         onAdd={(text, linkUrl) => void handleAddIdea(text, linkUrl)}
         onToggle={(idea) => void handleToggleIdea(idea)}
         onPlace={handlePlaceIdea}
+        returnFocusRef={ideasLinkRef}
+        skipReturnFocusRef={skipIdeasFocus}
       />
 
       <TripsSheet
