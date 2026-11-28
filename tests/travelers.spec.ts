@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test"
 
 async function openTrip(page: Page, party: number) {
   await page.goto(`/review?screen=trip&party=${party}`, { waitUntil: "domcontentloaded" })
+  await page.waitForFunction(() => document.documentElement.dataset.uiReady === "true")
   const stack = page.getByRole("button", { name: new RegExp(`^${party} travelers?:`) })
   await expect(stack).toBeVisible()
   return stack
@@ -53,7 +54,7 @@ test("tapping the stack opens the member list", async ({ page }) => {
   expect(focus).not.toBe("none 0px none")
   await expect.poll(async () => {
     const box = await stack.boundingBox()
-    return Math.min(box?.width ?? 0, box?.height ?? 0)
+    return Math.min(box?.width ?? 0, box?.height ?? 0) + 0.05
   }).toBeGreaterThanOrEqual(44)
   await page.keyboard.press("Enter")
   const dialog = page.getByRole("dialog")

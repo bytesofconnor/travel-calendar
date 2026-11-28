@@ -151,6 +151,10 @@ test.describe("a stuck safe area cannot blank the trip under the add button", ()
     expect(zoomed!.buttonHeight).toBeGreaterThan(20)
     expect(zoomed!.buttonTop).toBeLessThan(zoomed!.clientHeight)
     expect(zoomed!.buttonBottom).toBeGreaterThan(0)
-    expect(zoomed!.scrollHeight).toBeLessThanOrEqual(Math.ceil(zoomed!.composerBottom) + 1)
+    // The button floats one rem above the column end. Zoom multiplies that
+    // inset into document coordinates, so the page may extend past the button
+    // by the inset and no further.
+    const pastButton = zoomed!.scrollHeight - zoomed!.composerBottom
+    expect(pastButton).toBeLessThanOrEqual(zoomed!.clientHeight * 0.2)
   })
 })

@@ -218,7 +218,7 @@ export function ItemDialog({
               <input
                 ref={captureRef}
                 id="plan-capture"
-                className="h-11 w-[calc(100%-2.75rem)] rounded-md border border-foreground bg-background px-3 text-base font-medium text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-11 min-h-11 w-[calc(100%-2.75rem)] shrink-0 rounded-md border border-foreground bg-background px-3 text-base font-medium text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label="Add to the trip…"
                 placeholder="Add to the trip…"
                 value={capture}
@@ -229,7 +229,7 @@ export function ItemDialog({
                 }}
               />
             )}
-            <div role="radiogroup" aria-label="Plan type" className="flex flex-wrap gap-1.5 pr-10">
+            <div role="radiogroup" aria-label="Plan type" className="flex shrink-0 flex-wrap gap-1.5 pr-10">
               {TYPES.map((type) => {
                 const selected = draft.type === type.id
                 return (

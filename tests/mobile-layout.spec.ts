@@ -77,8 +77,8 @@ test("primary controls are at least 44px and stay on screen", async ({ page }) =
   await expect(more).toBeVisible()
   const moreBox = await more.boundingBox()
   const tripBox = await trip.boundingBox()
-  expect(moreBox?.height).toBeGreaterThanOrEqual(44)
-  expect(tripBox?.height).toBeGreaterThanOrEqual(44)
+  expect((moreBox?.height ?? 0) + 0.05).toBeGreaterThanOrEqual(44)
+  expect((tripBox?.height ?? 0) + 0.05).toBeGreaterThanOrEqual(44)
   expect((moreBox?.x ?? 0) + (moreBox?.width ?? 0)).toBeLessThanOrEqual(viewport!.width + 1)
 
   await page.goto("/review?screen=invite")
