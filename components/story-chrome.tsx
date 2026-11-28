@@ -17,6 +17,7 @@ export function StoryChrome({
   selectedUserId,
   onSelectPerson,
   menu,
+  tools,
 }: {
   mode: "list" | "month"
   onModeChange: (mode: "list" | "month") => void
@@ -27,6 +28,7 @@ export function StoryChrome({
   selectedUserId?: string | null
   onSelectPerson?: (userId: string) => void
   menu: ReactNode
+  tools?: ReactNode
 }) {
   useEffect(() => {
     document.documentElement.dataset.uiReady = "true"
@@ -64,6 +66,7 @@ export function StoryChrome({
         onSelectPerson={onSelectPerson}
         className="story-chrome__travelers"
       />
+      {tools ? <div className="story-chrome__tools">{tools}</div> : null}
     </div>
   )
 }

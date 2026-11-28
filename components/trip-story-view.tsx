@@ -34,15 +34,12 @@ export interface TripStoryViewProps {
   emphasizeItemId?: string | null
   packingChecked: number
   packingTotal: number
-  notesCount: number
   onEditItem: (item: TripItem) => void
   onStartFlight: () => void
   onStartStay: () => void
   onStartPlace: () => void
   onInvite: () => void
   onOpenPacking: () => void
-  onOpenNotes: () => void
-  onOpenAsk: () => void
   weather?: DayWeatherState
   filterName?: string
   className?: string
@@ -139,17 +136,11 @@ function PlanCard({
 function SecondaryPeeks({
   packingChecked,
   packingTotal,
-  notesCount,
   onOpenPacking,
-  onOpenNotes,
-  onOpenAsk,
 }: {
   packingChecked: number
   packingTotal: number
-  notesCount: number
   onOpenPacking: () => void
-  onOpenNotes: () => void
-  onOpenAsk: () => void
 }) {
   return (
     <nav className="story-secondary" aria-label="Trip tools">
@@ -158,12 +149,6 @@ function SecondaryPeeks({
         label={`Packing ${packingChecked}/${Math.max(packingTotal, 0)}`}
         onClick={onOpenPacking}
       />
-      <KindChip
-        kind="note"
-        label={notesCount > 0 ? `${notesCount} notes` : "Notes"}
-        onClick={onOpenNotes}
-      />
-      <KindChip kind="ask" label="Ask" onClick={onOpenAsk} />
     </nav>
   )
 }
@@ -179,15 +164,12 @@ export function TripStoryView({
   emphasizeItemId,
   packingChecked,
   packingTotal,
-  notesCount,
   onEditItem,
   onStartFlight,
   onStartStay,
   onStartPlace: _onStartPlace,
   onInvite,
   onOpenPacking,
-  onOpenNotes,
-  onOpenAsk,
   weather,
   filterName,
   className,
@@ -279,10 +261,7 @@ export function TripStoryView({
           <SecondaryPeeks
             packingChecked={packingChecked}
             packingTotal={packingTotal}
-            notesCount={notesCount}
             onOpenPacking={onOpenPacking}
-            onOpenNotes={onOpenNotes}
-            onOpenAsk={onOpenAsk}
           />
         </div>
       </div>
@@ -352,10 +331,7 @@ export function TripStoryView({
           <SecondaryPeeks
             packingChecked={packingChecked}
             packingTotal={packingTotal}
-            notesCount={notesCount}
             onOpenPacking={onOpenPacking}
-            onOpenNotes={onOpenNotes}
-            onOpenAsk={onOpenAsk}
           />
         </div>
       </div>
@@ -423,10 +399,7 @@ export function TripStoryView({
         <SecondaryPeeks
           packingChecked={packingChecked}
           packingTotal={packingTotal}
-          notesCount={notesCount}
           onOpenPacking={onOpenPacking}
-          onOpenNotes={onOpenNotes}
-          onOpenAsk={onOpenAsk}
         />
       </div>
 

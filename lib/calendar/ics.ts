@@ -187,14 +187,19 @@ export function icsFilename(tripName: string): string {
   return `${slug || "trip"}.ics`
 }
 
+export function plansOnFeed(source: TripCalendarSource): CalendarPlan[] {
+  const copied = new Set(source.ideaSourceIds ?? [])
+  return plansFromSource(source).filter((plan) => plan.kind !== "note" || !copied.has(plan.id))
+}
+
 export function feedPublishedAt(source: TripCalendarSource): number {
-  const plans = plansFromSource(source)
+  const plans = plansOnFeed(source)
   const latest = Math.max(source.tripUpdatedAt, ...plans.map((plan) => plan.updatedAt), 0)
   return latest || Date.UTC(2026, 0, 1)
 }
 
 export function buildCalendar(source: TripCalendarSource, origin = CANONICAL_ORIGIN): string {
-  const plans = plansFromSource(source)
+  const plans = plansOnFeed(source)
   const stamp = formatUtc(feedPublishedAt(source))
   const name = source.tripName.trim() || "Trip"
   const lines = [

@@ -75,6 +75,21 @@ export default defineSchema({
     updatedAt: v.optional(v.number()),
   }).index("by_trip", ["tripId"]),
 
+  tripIdeas: defineTable({
+    tripId: v.id("trips"),
+    text: v.string(),
+    linkUrl: v.optional(v.string()),
+    suggestedBy: v.id("users"),
+    goUserIds: v.array(v.id("users")),
+    status: v.union(v.literal("open"), v.literal("placed")),
+    suggestedDate: v.optional(v.string()),
+    placedItemId: v.optional(v.id("tripItems")),
+    sourceItemId: v.optional(v.id("tripItems")),
+    createdAt: v.number(),
+  })
+    .index("by_trip", ["tripId"])
+    .index("by_source", ["sourceItemId"]),
+
   calendarFeeds: defineTable({
     tripId: v.id("trips"),
     userId: v.id("users"),

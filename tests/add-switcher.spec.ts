@@ -21,7 +21,7 @@ test("the add button opens Add with the input focused and escape returns", async
   await expect(dialog.getByRole("radio", { name: "Stay" })).toBeVisible()
   await expect(dialog.getByRole("radio", { name: "Travel" })).toBeVisible()
   await expect(dialog.getByRole("radio", { name: "Activity" })).toBeVisible()
-  await expect(dialog.getByRole("radio", { name: "Note" })).toBeVisible()
+  await expect(dialog.getByRole("radio", { name: "Note" })).toHaveCount(0)
   await page.keyboard.press("Escape")
   await expect(dialog).toBeHidden()
   await expect(opener).toBeFocused()

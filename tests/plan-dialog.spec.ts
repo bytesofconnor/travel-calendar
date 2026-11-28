@@ -100,8 +100,9 @@ test("each type shows its own fields and the flight toggle is gone", async ({ pa
   await expect(dialog.getByLabel("To", { exact: true })).toBeVisible()
   await expect(dialog.getByLabel("Where are you staying?")).toHaveCount(0)
 
-  await dialog.getByRole("radio", { name: "Note" }).click()
-  await expect(dialog.getByLabel("Note")).toBeVisible()
+  await dialog.getByRole("radio", { name: "Activity" }).click()
+  await expect(dialog.getByLabel("What are you doing?")).toBeVisible()
+  await expect(dialog.getByRole("radio", { name: "Note" })).toHaveCount(0)
   await expect(dialog.getByLabel("From")).toHaveCount(0)
   await expect(dialog.getByLabel("Check-in")).toHaveCount(0)
 })

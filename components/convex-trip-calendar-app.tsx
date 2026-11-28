@@ -12,7 +12,6 @@ import {
   LogOut,
   Pencil,
   Plane,
-  X,
 } from "lucide-react"
 
 import { api } from "@/convex/_generated/api"
@@ -35,13 +34,11 @@ import {
   DEFAULT_TRIP_NAME,
   DEFAULT_TRIP_START,
   withAuthorNames,
-  withNoteAuthorName,
   withPackingAuthorNames,
   type Trip,
   type TripItem,
   type TripItemInput,
   type TripMember,
-  type TripNote,
   type TripPackingItem,
 } from "@/lib/kanban-store"
 import { buildTripHome, type GapAction } from "@/lib/trip-home/detect"
@@ -50,6 +47,7 @@ import {
   tripDayCount,
 } from "@/lib/trip-kind"
 import { formatTripDateRange } from "@/lib/format-dates"
+import { goIdsForDay, openIdeas, plansWithoutNotes, type IdeaRecord } from "@/lib/ideas"
 import { defaultPlanDate, guessPlanType, tripPlaceHint } from "@/lib/plan-form"
 import type { PlanType } from "@/lib/plan-types"
 import { filterItems, writeWho } from "@/lib/person-filter"
@@ -72,8 +70,7 @@ import { LoginScreen } from "./login-screen"
 import { PaywallScreen } from "./paywall-screen"
 import { PeekSheet } from "./peek-sheet"
 import { ShareTripDialog } from "./share-trip-dialog"
-import { TripCopilot } from "./trip-copilot"
-import { TripNotesView } from "./trip-notes-view"
+import { IdeasLink, IdeasSheet } from "./ideas-sheet"
 import { TripPackingView } from "./trip-packing-view"
 import { TripHome } from "./trip-home"
 import { TripMonthView } from "./trip-month-view"
@@ -210,11 +207,13 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
   const removeItem = useMutation(api.items.remove)
   const confirmProposal = useMutation(api.proposals.confirm)
   const rejectProposal = useMutation(api.proposals.reject)
-  const saveNote = useMutation(api.notes.save)
+  const addIdea = useMutation(api.ideas.add)
+  const toggleIdea = useMutation(api.ideas.toggleGo)
+  const ensureIdea = useMutation(api.ideas.ensureFromNote)
+  const placeIdea = useMutation(api.ideas.putOnDay)
   const ensureCalendar = useMutation(api.calendarFeeds.ensure)
   const resetCalendar = useMutation(api.calendarFeeds.reset)
   const addPacking = useMutation(api.packing.add)
-  const addManyPacking = useMutation(api.packing.addMany)
   const togglePacking = useMutation(api.packing.toggle)
   const renamePacking = useMutation(api.packing.rename)
   const removePacking = useMutation(api.packing.remove)
@@ -223,12 +222,6 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
   const [tripName, setTripName] = useState(DEFAULT_TRIP_NAME)
   const [tripStart, setTripStart] = useState(DEFAULT_TRIP_START)
   const [tripEnd, setTripEnd] = useState(DEFAULT_TRIP_END)
-  const [noteDraft, setNoteDraft] = useState("")
-  const [noteDirty, setNoteDirty] = useState(false)
-  const [isSavingNote, setIsSavingNote] = useState(false)
-  const [isOrganizingNote, setIsOrganizingNote] = useState(false)
-  const [organizeUndoContent, setOrganizeUndoContent] = useState<string | null>(null)
-  const [organizeUndoExpiresAt, setOrganizeUndoExpiresAt] = useState<number | null>(null)
   const [email, setEmail] = useState("")
   const [verificationCode, setVerificationCode] = useState("")
   const [displayName, setDisplayName] = useState("")
@@ -244,7 +237,10 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
   const [hasPendingCode, setHasPendingCode] = useState(false)
   const [isMutating, setIsMutating] = useState(false)
   const [shareMessage, setShareMessage] = useState("")
-  const [desktopAiOpen, setDesktopAiOpen] = useState(false)
+  const [ideasOpen, setIdeasOpen] = useState(false)
+  const [placingIdea, setPlacingIdea] = useState<IdeaRecord | null>(null)
+  const ideasLinkRef = useRef<HTMLButtonElement>(null)
+  const skipIdeasFocus = useRef(false)
   const [isEditingTripDetails, setIsEditingTripDetails] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [calendarOpen, setCalendarOpen] = useState(false)
@@ -253,7 +249,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
   const [isRefreshingCover, setIsRefreshingCover] = useState(false)
   const [storyMode, setStoryMode] = useState<"list" | "month">("list")
   const [storyModeReady, setStoryModeReady] = useState(false)
-  const [peek, setPeek] = useState<"notes" | "packing" | null>(null)
+  const [peek, setPeek] = useState<"packing" | null>(null)
   const [tripsOpen, setTripsOpen] = useState(false)
   const [itemDialogOpen, setItemDialogOpen] = useState(false)
   const [editItem, setEditItem] = useState<TripItem | null>(null)
@@ -268,11 +264,6 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
   }))
   const [claimDraft, setClaimDraft] = useState<Record<string, string | null>>({})
   const [personId, setPersonId] = useState<string | null>(who ?? null)
-
-  const noteDirtyRef = useRef(noteDirty)
-  const noteDraftRef = useRef(noteDraft)
-  const organizeUndoTimeoutRef = useRef<number | null>(null)
-  const syncedNoteTripIdRef = useRef<string | null>(null)
 
   const allTrips = useMemo(() => (tripsQuery ?? []).map(mapTrip), [tripsQuery])
   const paywalled = Boolean(access && access.required && !access.granted)
@@ -339,19 +330,39 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
     )
   }, [bundle, members])
 
-  const note: TripNote | null = useMemo(() => {
-    if (!bundle?.note) return null
-    return withNoteAuthorName(
-      {
-        tripId: bundle.note.tripId,
-        content: bundle.note.content,
-        updatedBy: bundle.note.updatedBy ?? null,
-        createdAt: toIso(bundle.note._creationTime),
-        updatedAt: toIso(bundle.note._creationTime),
-      },
-      members,
-    )
-  }, [bundle?.note, members])
+  const storedIdeas: IdeaRecord[] = useMemo(() => {
+    if (!bundle) return []
+    return bundle.ideas.map((idea) => ({
+      id: idea._id,
+      text: idea.text,
+      ...(idea.linkUrl ? { linkUrl: idea.linkUrl } : {}),
+      suggestedBy: idea.suggestedBy,
+      goUserIds: idea.goUserIds,
+      status: idea.status,
+      ...(idea.suggestedDate ? { suggestedDate: idea.suggestedDate } : {}),
+      ...(idea.sourceItemId ? { sourceItemId: idea.sourceItemId } : {}),
+    }))
+  }, [bundle])
+
+  const ideaList = useMemo(
+    () =>
+      openIdeas(
+        storedIdeas,
+        items
+          .filter((item) => item.planType === "note")
+          .map((item) => ({
+            id: item.id,
+            title: item.title,
+            linkUrl: item.link?.url,
+            createdBy: item.createdBy,
+            startDate: item.startDate,
+            planType: item.planType,
+          })),
+      ),
+    [items, storedIdeas],
+  )
+
+  const datedItems = useMemo(() => plansWithoutNotes(items), [items])
 
   const packingItems: TripPackingItem[] = useMemo(() => {
     if (!bundle) return []
@@ -387,7 +398,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
     if (!trip) return null
     return buildTripHome({
       trip: { startDate: trip.startDate, endDate: trip.endDate },
-      plans: items.map((item) => ({
+      plans: datedItems.map((item) => ({
         id: item.id,
         title: item.title,
         startDate: item.startDate,
@@ -404,8 +415,8 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
       })),
       now: homeNow,
     })
-  }, [homeNow, items, trip])
-  const weather = useDayWeather(items, {
+  }, [datedItems, homeNow, trip])
+  const weather = useDayWeather(datedItems, {
     start: trip?.startDate ?? today,
     end: trip?.endDate ?? today,
   })
@@ -432,22 +443,6 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
     }
     return [...byGap.values()]
   }, [bundle?.gapClaims, claimDraft, members])
-
-  useEffect(() => {
-    noteDirtyRef.current = noteDirty
-  }, [noteDirty])
-
-  useEffect(() => {
-    noteDraftRef.current = noteDraft
-  }, [noteDraft])
-
-  useEffect(() => {
-    return () => {
-      if (organizeUndoTimeoutRef.current) {
-        window.clearTimeout(organizeUndoTimeoutRef.current)
-      }
-    }
-  }, [])
 
   useEffect(() => {
     if (me && !displayName.trim()) {
@@ -533,65 +528,6 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
       setDisplayName(currentMember.displayName)
     }
   }, [currentMember?.displayName])
-
-  // Sync note draft from reactive bundle when not dirty / on trip change
-  useEffect(() => {
-    if (!trip) {
-      syncedNoteTripIdRef.current = null
-      return
-    }
-
-    const tripChanged = syncedNoteTripIdRef.current !== trip.id
-    if (tripChanged) {
-      syncedNoteTripIdRef.current = trip.id
-      setNoteDraft(note?.content ?? "")
-      setNoteDirty(false)
-      noteDraftRef.current = note?.content ?? ""
-      noteDirtyRef.current = false
-      return
-    }
-
-    if (!noteDirtyRef.current) {
-      setNoteDraft(note?.content ?? "")
-      noteDraftRef.current = note?.content ?? ""
-    }
-  }, [note?.content, trip])
-
-  // Autosave notes
-  useEffect(() => {
-    if (!trip || !userId || !noteDirty) return
-
-    const timeout = window.setTimeout(async () => {
-      try {
-        await persistNoteDraft(noteDraftRef.current)
-      } catch {
-        return
-      }
-    }, 700)
-
-    return () => window.clearTimeout(timeout)
-  }, [noteDirty, noteDraft, trip, userId])
-
-  async function persistNoteDraft(contentToSave: string) {
-    if (!trip || !userId) {
-      throw new Error("Unable to save brainstorm notes right now.")
-    }
-
-    setIsSavingNote(true)
-    setErrorMessage("")
-    try {
-      await saveNote({ tripId: trip.id as Id<"trips">, content: contentToSave })
-      if (noteDraftRef.current === contentToSave) {
-        setNoteDirty(false)
-        noteDirtyRef.current = false
-      }
-    } catch (error) {
-      clearSaveRetry(); setErrorMessage(publicError(error, "Unable to save notes."))
-      throw error
-    } finally {
-      setIsSavingNote(false)
-    }
-  }
 
   async function handleContinueWithGoogle() {
     setIsSigningInWithGoogle(true)
@@ -757,6 +693,42 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
       if (existingItem) {
         await updateItem({ itemId: existingItem.id as Id<"tripItems">, ...payload })
         setEmphasizeItemId(existingItem.id)
+      } else if (placingIdea) {
+        let ideaId = placingIdea.id as Id<"tripIdeas">
+        if (placingIdea.derived && placingIdea.sourceItemId) {
+          ideaId = await ensureIdea({
+            tripId: trip.id as Id<"trips">,
+            sourceItemId: placingIdea.sourceItemId as Id<"tripItems">,
+          })
+        }
+        const placed = await placeIdea({
+          ideaId,
+          title: payload.title,
+          notes: payload.notes,
+          linkLabel: payload.linkLabel,
+          linkUrl: payload.linkUrl,
+          startDate: payload.startDate,
+          endDate: payload.endDate,
+          location: payload.location,
+          locationTo: payload.locationTo,
+          planType: payload.planType === "stay" || payload.planType === "flight" ? payload.planType : "place",
+          ...(payload.travelMode ? { travelMode: payload.travelMode } : {}),
+          place: payload.place,
+          placeTo: payload.placeTo,
+          startTime: payload.startTime,
+          endTime: payload.endTime,
+          startTimeZone: payload.startTimeZone,
+          endTimeZone: payload.endTimeZone,
+          confirmation: payload.confirmation,
+          flightCode: payload.flightCode,
+          address: payload.address,
+          ...(payload.attendeeIds !== undefined ? { attendeeIds: payload.attendeeIds } : {}),
+        })
+        setEmphasizeItemId(placed.itemId)
+        setPlacingIdea(null)
+        setIdeasOpen(false)
+        setShareMessage(addedPlanMessage(input.attendeeIds, members))
+        window.setTimeout(() => setShareMessage(""), 2000)
       } else {
         const created = await createItem({ tripId: trip.id as Id<"trips">, ...payload })
         if (typeof created.itemId === "string") {
@@ -785,6 +757,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
   }
 
   function openGap(action: GapAction) {
+    setPlacingIdea(null)
     if (action.itemId) {
       const item = items.find((entry) => entry.id === action.itemId)
       if (item) {
@@ -831,10 +804,11 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
       tapped: date,
       tripStart: trip?.startDate,
       tripEnd: trip?.endDate,
-      plans: items,
+      plans: datedItems,
       today,
     })
     const typed = kind ?? (text?.trim() ? guessPlanType(text) : null)
+    setPlacingIdea(null)
     setEditItem(null)
     setDefaultItemDate(baseDate)
     setInitialType(typed)
@@ -847,6 +821,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
   }
 
   function openEditItem(item: TripItem) {
+    setPlacingIdea(null)
     setEditItem(item)
     setDefaultItemDate(item.startDate)
     setInitialItemInput(null)
@@ -868,114 +843,6 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
     }
   }
 
-  async function handleSaveBrainstormContent(content: string) {
-    const contentToSave = content.trim() ? content : noteDraftRef.current
-    setNoteDraft(contentToSave)
-    noteDraftRef.current = contentToSave
-    setNoteDirty(true)
-    noteDirtyRef.current = true
-    setErrorMessage("")
-    await persistNoteDraft(contentToSave)
-    setShareMessage("Added to brainstorm.")
-    window.setTimeout(() => setShareMessage(""), 2000)
-  }
-
-  function startOrganizeUndoWindow(previousContent: string) {
-    if (organizeUndoTimeoutRef.current) {
-      window.clearTimeout(organizeUndoTimeoutRef.current)
-    }
-    const expiresAt = Date.now() + 10_000
-    setOrganizeUndoContent(previousContent)
-    setOrganizeUndoExpiresAt(expiresAt)
-    organizeUndoTimeoutRef.current = window.setTimeout(() => {
-      setOrganizeUndoContent(null)
-      setOrganizeUndoExpiresAt(null)
-      organizeUndoTimeoutRef.current = null
-    }, 10_000)
-  }
-
-  async function handleOrganizeNotes() {
-    if (!trip || !noteDraftRef.current.trim()) return
-
-    setIsOrganizingNote(true)
-    setErrorMessage("")
-    try {
-      const response = await fetch("/api/brainstorm/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "organize_notes",
-          trip: {
-            name: trip.name,
-            startDate: trip.startDate,
-            endDate: trip.endDate,
-          },
-          noteDraft: noteDraftRef.current,
-          items: items.map((item) => ({
-            title: item.title,
-            startDate: item.startDate,
-            endDate: item.endDate,
-            location: item.location,
-            locationTo: item.locationTo,
-          })),
-          packingItems: packingItems.map((item) => ({
-            label: item.label,
-            isChecked: item.isChecked,
-          })),
-        }),
-      })
-
-      const payload = (await response.json().catch(() => null)) as
-        | { organizedNote?: string; caution?: string | null; error?: string }
-        | null
-
-      const organizedNote = typeof payload?.organizedNote === "string" ? payload.organizedNote.trim() : ""
-      if (!response.ok || !organizedNote) {
-        throw new Error(payload?.error ?? "Couldn’t organize the notes yet.")
-      }
-
-      const previousContent = noteDraftRef.current
-      setNoteDraft(organizedNote)
-      noteDraftRef.current = organizedNote
-      setNoteDirty(true)
-      noteDirtyRef.current = true
-      await persistNoteDraft(organizedNote)
-      startOrganizeUndoWindow(previousContent)
-      setShareMessage(payload?.caution ? `Notes organized. ${payload.caution}` : "Notes organized.")
-      window.setTimeout(() => setShareMessage(""), 2500)
-    } catch (error) {
-      clearSaveRetry(); setErrorMessage(publicError(error, "Couldn’t organize the notes yet."))
-    } finally {
-      setIsOrganizingNote(false)
-    }
-  }
-
-  async function handleUndoOrganizeNotes() {
-    if (!organizeUndoContent) return
-
-    const previousContent = organizeUndoContent
-    if (organizeUndoTimeoutRef.current) {
-      window.clearTimeout(organizeUndoTimeoutRef.current)
-      organizeUndoTimeoutRef.current = null
-    }
-
-    setOrganizeUndoContent(null)
-    setOrganizeUndoExpiresAt(null)
-    setNoteDraft(previousContent)
-    noteDraftRef.current = previousContent
-    setNoteDirty(true)
-    noteDirtyRef.current = true
-    setErrorMessage("")
-
-    try {
-      await persistNoteDraft(previousContent)
-      setShareMessage("Restored previous notes.")
-      window.setTimeout(() => setShareMessage(""), 2000)
-    } catch {
-      return
-    }
-  }
-
   async function handleAddPackingItem(label: string) {
     if (!trip) return
 
@@ -990,29 +857,64 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
     }
   }
 
-  async function handleAddPackingIdeas(labels: string[]) {
+  async function handleAddIdea(text: string, linkUrl?: string) {
     if (!trip) return
-
-    const normalizedExisting = new Set(packingItems.map((item) => item.label.trim().toLowerCase()))
-    const nextLabels = labels
-      .map((label) => label.trim())
-      .filter(Boolean)
-      .filter((label, index, array) => array.findIndex((candidate) => candidate.toLowerCase() === label.toLowerCase()) === index)
-      .filter((label) => !normalizedExisting.has(label.toLowerCase()))
-
-    if (nextLabels.length === 0) return
-
-    setIsMutating(true)
     setErrorMessage("")
     try {
-      await addManyPacking({ tripId: trip.id as Id<"trips">, labels: nextLabels })
-      setShareMessage(`${nextLabels.length} packing idea${nextLabels.length === 1 ? "" : "s"} added.`)
-      window.setTimeout(() => setShareMessage(""), 2000)
+      await addIdea({ tripId: trip.id as Id<"trips">, text, ...(linkUrl ? { linkUrl } : {}) })
     } catch (error) {
-      clearSaveRetry(); setErrorMessage(publicError(error, "Unable to add packing ideas."))
-    } finally {
-      setIsMutating(false)
+      clearSaveRetry()
+      setErrorMessage(publicError(error, "Couldn't add that idea."))
     }
+  }
+
+  async function handleToggleIdea(idea: IdeaRecord) {
+    if (!trip) return
+    setErrorMessage("")
+    try {
+      const ideaId =
+        idea.derived && idea.sourceItemId
+          ? await ensureIdea({
+              tripId: trip.id as Id<"trips">,
+              sourceItemId: idea.sourceItemId as Id<"tripItems">,
+            })
+          : (idea.id as Id<"tripIdeas">)
+      await toggleIdea({ ideaId })
+    } catch (error) {
+      clearSaveRetry()
+      setErrorMessage(publicError(error, "Couldn't update who'd go."))
+    }
+  }
+
+  function handlePlaceIdea(idea: IdeaRecord) {
+    if (!trip || !userId) return
+    const date =
+      idea.suggestedDate ||
+      defaultPlanDate({
+        tripStart: trip.startDate,
+        tripEnd: trip.endDate,
+        plans: datedItems,
+        today,
+      })
+    setPlacingIdea(idea)
+    setEditItem(null)
+    setInitialType("place")
+    setDefaultItemDate(date)
+    setInitialItemInput({
+      title: idea.text,
+      startDate: date,
+      endDate: date,
+      location: "",
+      planType: "place",
+      attendeeIds: goIdsForDay(
+        idea.goUserIds,
+        userId,
+        members.map((member) => member.userId),
+      ),
+      ...(idea.linkUrl ? { link: { label: "Link", url: idea.linkUrl } } : {}),
+    })
+    setIdeasOpen(false)
+    setItemDialogOpen(true)
   }
 
   async function handleTogglePackingItem(item: TripPackingItem, nextChecked: boolean) {
@@ -1152,17 +1054,12 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
     setActiveTripId(null)
     setShowCreateJoin(false)
     setAutoJoinAttempted(false)
-    setNoteDraft("")
-    setNoteDirty(false)
     setErrorMessage("")
     setAuthMessage("")
   }
 
   function handleSwitchTrip(nextTripId: string) {
     setActiveTripId(nextTripId as Id<"trips">)
-    setNoteDirty(false)
-    noteDirtyRef.current = false
-    syncedNoteTripIdRef.current = null
     if (typeof window !== "undefined") {
       window.localStorage.setItem(LAST_TRIP_KEY, nextTripId)
     }
@@ -1305,10 +1202,9 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
     .filter((part): part is string => Boolean(part))
     .join(" · ")
   const packingChecked = packingItems.filter((item) => item.isChecked).length
-  const notesCount = noteDraft.trim() ? 1 : 0
   const activePerson = members.find((member) => member.userId === personId) ?? null
   const visibleItems = filterItems(
-    items,
+    datedItems,
     activePerson?.userId ?? null,
     members.map((member) => member.userId),
   )
@@ -1339,6 +1235,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
                       onOpenMembers={() => setShareOpen(true)}
                       selectedUserId={activePerson?.userId ?? null}
                       onSelectPerson={choosePerson}
+                      tools={<IdeasLink count={ideaList.length} onClick={() => setIdeasOpen(true)} />}
                       menu={
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -1411,91 +1308,13 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
           </>
         }
         composer={<AddTripButton onAdd={() => openCapture()} />}
-        aside={
-          <aside
-            className={`hidden min-h-0 shrink-0 overflow-hidden border-l border-border bg-card transition-[width,opacity] duration-300 ease-out xl:flex ${
-              desktopAiOpen ? "w-[31rem] opacity-100" : "w-0 opacity-0"
-            }`}
-          >
-            <div className="flex min-h-0 w-[31rem] flex-col">
-              <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--kind-ask)]">
-                  Ask · about this trip
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="h-8 w-8 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  onClick={() => setDesktopAiOpen(false)}
-                >
-                  <X className="h-4 w-4" />
-                  <span className="sr-only">Close ask</span>
-                </Button>
-              </div>
-              <div className="min-h-0 flex-1">
-                <TripCopilot
-                  mode="panel"
-                  tripName={trip.name}
-                  tripStart={trip.startDate}
-                  tripEnd={trip.endDate}
-                  noteDraft={noteDraft}
-                  items={items}
-                  packingItems={packingItems}
-                  onDraftChange={(value) => {
-                    setNoteDraft(value)
-                    setNoteDirty(true)
-                  }}
-                  onSaveToBrainstorm={handleSaveBrainstormContent}
-                  onAddPackingIdeas={handleAddPackingIdeas}
-                  onAddCalendarItem={async (input) => {
-                    const saved = await handleSaveItem(input)
-                    if (!saved) throw new Error("Couldn't save that plan. Try again.")
-                  }}
-                  currentUserName={currentMember?.displayName ?? guessDisplayName(me)}
-                  isMutating={isMutating}
-                  docked
-                  panelClassName="rounded-none border-0 bg-transparent p-0 shadow-none backdrop-blur-none"
-                />
-              </div>
-            </div>
-          </aside>
-        }
-        extra={
-        <div className="xl:hidden">
-          <TripCopilot
-            mode="drawer-trigger"
-            tripName={trip.name}
-            tripStart={trip.startDate}
-            tripEnd={trip.endDate}
-            noteDraft={noteDraft}
-            items={items}
-            packingItems={packingItems}
-            onDraftChange={(value) => {
-              setNoteDraft(value)
-              setNoteDirty(true)
-            }}
-            onSaveToBrainstorm={handleSaveBrainstormContent}
-            onAddPackingIdeas={handleAddPackingIdeas}
-            onAddCalendarItem={async (input) => {
-              const saved = await handleSaveItem(input)
-              if (!saved) throw new Error("Couldn't save that plan. Try again.")
-            }}
-            currentUserName={currentMember?.displayName ?? guessDisplayName(me)}
-            isMutating={isMutating}
-            triggerIconOnly
-            triggerClassName="hidden"
-            open={desktopAiOpen}
-            onOpenChange={setDesktopAiOpen}
-          />
-        </div>
-        }
       >
         {confirmQueue}
         {activePerson ? (
           <PersonFilter
             name={firstName(activePerson.displayName)}
             count={visibleItems.length}
-            total={items.length}
+            total={datedItems.length}
             onClear={() => {
               setPersonId(null)
               writeWho(null)
@@ -1546,15 +1365,12 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
             emphasizeItemId={emphasizeItemId}
             packingChecked={packingChecked}
             packingTotal={packingItems.length}
-            notesCount={notesCount}
             onEditItem={openEditItem}
             onStartFlight={() => openCapture("flight")}
             onStartStay={() => openCapture("stay")}
             onStartPlace={() => openCapture("place")}
             onInvite={() => setShareOpen(true)}
             onOpenPacking={() => setPeek("packing")}
-            onOpenNotes={() => setPeek("notes")}
-            onOpenAsk={() => setDesktopAiOpen(true)}
             weather={weather}
           />
         )}
@@ -1576,27 +1392,16 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
         />
       </PeekSheet>
 
-      <PeekSheet
-        open={peek === "notes"}
-        onOpenChange={(open) => setPeek(open ? "notes" : null)}
-        title="Notes"
-        meta="Shared with everyone on this trip"
-      >
-        <TripNotesView
-          note={note}
-          draft={noteDraft}
-          isDirty={noteDirty}
-          isSaving={isSavingNote}
-          isOrganizing={isOrganizingNote}
-          organizeUndoExpiresAt={organizeUndoExpiresAt}
-          onDraftChange={(value) => {
-            setNoteDraft(value)
-            setNoteDirty(true)
-          }}
-          onOrganizeNotes={handleOrganizeNotes}
-          onUndoOrganize={handleUndoOrganizeNotes}
-        />
-      </PeekSheet>
+      <IdeasSheet
+        open={ideasOpen}
+        onOpenChange={setIdeasOpen}
+        ideas={ideaList}
+        members={members}
+        currentUserId={userId ?? ""}
+        onAdd={(text, linkUrl) => void handleAddIdea(text, linkUrl)}
+        onToggle={(idea) => void handleToggleIdea(idea)}
+        onPlace={handlePlaceIdea}
+      />
 
       <TripsSheet
         open={tripsOpen}
@@ -1616,7 +1421,10 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
 
       <ItemDialog
         open={itemDialogOpen}
-        onOpenChange={setItemDialogOpen}
+        onOpenChange={(open) => {
+          setItemDialogOpen(open)
+          if (!open) setPlacingIdea(null)
+        }}
         defaultDate={defaultItemDate}
         editItem={editItem}
         initialInput={initialItemInput}

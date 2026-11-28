@@ -7,7 +7,7 @@ import { requireAccess, userHasAccess } from "./access"
 import { revokeCalendarFeed } from "./calendarFeeds"
 import { checkOwner, getCurrentUserId, getMembership, requireOwner } from "./lib/auth"
 import { parseThemePack, type ThemePackId } from "../lib/theme-packs"
-import { bundleItemValidator, getTripBundleForUser, listTripsForUser, serializeTrip, tripValidator } from "./lib/tripData"
+import { bundleIdeaValidator, bundleItemValidator, getTripBundleForUser, listTripsForUser, serializeTrip, tripValidator } from "./lib/tripData"
 import { parseSearchQuery, searchTrips } from "./lib/tripSearch"
 import { themePackValidator } from "./lib/themePack"
 
@@ -98,6 +98,7 @@ export const getBundle = query({
       trip: tripValidator,
       members: v.array(memberValidator),
       items: v.array(bundleItemValidator),
+      ideas: v.array(bundleIdeaValidator),
       note: v.union(
         v.object({
           _id: v.id("tripNotes"),

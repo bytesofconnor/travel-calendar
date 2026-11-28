@@ -45,4 +45,5 @@ export type TripCalendarSource = {
   tripUpdatedAt: number
   items: SourceItem[]
   note: { content: string; updatedAt: number } | null
+  ideaSourceIds?: string[]
 }

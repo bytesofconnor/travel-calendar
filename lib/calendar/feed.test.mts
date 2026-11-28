@@ -375,4 +375,28 @@ describe("subscribe links", () => {
     assert.match(links.outlook, /^https:\/\/outlook\.office\.com\/calendar\/0\/addfromweb\?url=/)
     assert.match(links.outlook, /name=Lisbon%20with%20you/)
   })
+
+  it("keeps a note plan on the subscribe feed until an idea has copied it", () => {
+    const withNote = source({
+      items: [
+        ...source().items,
+        {
+          id: "item_note",
+          title: "Night market",
+          startDate: "2026-11-20",
+          endDate: "2026-11-20",
+          location: "",
+          planType: "note",
+          revision: 0,
+          updatedAt: WHEN,
+        },
+      ],
+    })
+    assert.match(unfold(buildCalendar(withNote, ORIGIN)), /Night market/)
+    assert.match(unfold(buildCalendar(withNote, ORIGIN)), /Pastéis de Belém/)
+    const copied = buildCalendar({ ...withNote, ideaSourceIds: ["item_note"] }, ORIGIN)
+    assert.equal(unfold(copied).includes("Night market"), false)
+    assert.match(unfold(copied), /Pastéis de Belém/)
+    assert.match(unfold(copied), /Time Out Market/)
+  })
 })

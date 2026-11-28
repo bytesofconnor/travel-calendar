@@ -1871,6 +1871,33 @@
     min-width: 0;
   }
 
+  .story-chrome__tools {
+    flex: 1 0 100%;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .trip-ideas-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 0.15rem;
+    border: 0;
+    background: transparent;
+    color: var(--foreground);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .trip-ideas-link:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--together);
+  }
+
   @media (max-width: 767px) {
     .story-chrome__travelers .traveler-label {
       min-width: 0;
@@ -1889,6 +1916,10 @@
 
     .story-chrome__cluster {
       order: 4;
+    }
+
+    .story-chrome__tools {
+      order: 5;
     }
   }
 

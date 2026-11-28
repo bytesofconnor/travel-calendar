@@ -58,7 +58,7 @@ export function parseRoute(title: string): { from: string; to: string } | null {
 export function guessPlanType(text: string): PlanType {
   const value = text.trim()
   if (!value) return "place"
-  if (/^(note|remember|reminder)\b/i.test(value)) return "note"
+  if (/^(note|remember|reminder)\b/i.test(value)) return "place"
   if (isFlightTitle(value)) return "flight"
   if (/\b(stay|hotel|airbnb|hostel|check-?in|apartment)\b/i.test(value)) return "stay"
   if (parseRoute(value)) return "flight"
