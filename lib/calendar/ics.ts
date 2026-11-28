@@ -67,7 +67,7 @@ function summary(plan: CalendarPlan): string {
     if (from && to) return `Flight: ${from} to ${to}`
     return `Flight: ${plan.title}`
   }
-  const prefix = plan.kind === "stay" ? "Stay" : plan.kind === "note" ? "Note" : "Place"
+  const prefix = plan.kind === "stay" ? "Stay" : plan.kind === "note" ? "Note" : "Activity"
   return `${prefix}: ${plan.title}`
 }
 

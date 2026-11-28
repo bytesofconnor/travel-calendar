@@ -42,7 +42,7 @@ export function LandingPreview() {
       <div className="plan-card plan-card--place">
         <span className="plan-card__rail" />
         <span className="min-w-0 flex-1">
-          <span className="plan-card__kind">Place</span>
+          <span className="plan-card__kind">Activity</span>
           <span className="plan-card__title">Time Out Market</span>
           <span className="plan-card__meta">Lunch</span>
         </span>

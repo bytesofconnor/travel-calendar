@@ -87,11 +87,11 @@ test("invite copy is a group invite", async ({ page }) => {
 test("add says everyone, or the people who are in", async ({ page }) => {
   await page.goto("/review?screen=add", { waitUntil: "domcontentloaded" })
   const dialog = page.getByRole("dialog")
-  await expect(dialog.getByRole("heading", { name: "Add a place" })).toBeVisible()
+  await expect(dialog.getByRole("heading", { name: "Add an activity" })).toBeVisible()
   await expect(dialog.getByText("Everyone", { exact: true })).toBeVisible()
   await dialog.getByRole("button", { name: "Mom, included, toggle" }).click()
   await dialog.getByRole("button", { name: "Dad, included, toggle" }).click()
-  await expect(dialog.getByRole("heading", { name: "Add a place" })).toBeVisible()
+  await expect(dialog.getByRole("heading", { name: "Add an activity" })).toBeVisible()
   await expect(dialog.getByText("2 of 4 · not Mom or Dad", { exact: true })).toBeVisible()
 })
 

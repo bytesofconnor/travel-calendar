@@ -69,7 +69,7 @@ test("a day opens its plans and an empty day can add that date", async ({ page }
   const add = page.getByRole("dialog")
   await expect(add).toBeVisible()
   await expect(add.locator("#plan-start")).toHaveValue("2026-11-02")
-  await expect(add.getByRole("heading", { name: "Add a place" })).toBeVisible()
+  await expect(add.getByRole("heading", { name: "Add an activity" })).toBeVisible()
 })
 
 test("arrow keys move between days", async ({ page }) => {
@@ -293,15 +293,15 @@ test("add something stays above the composer", async ({ page }, testInfo) => {
   const add = page.getByRole("button", { name: "Add something", exact: true })
   await add.evaluate((element) => {
     const scroller = element.closest("[data-trip-scroll]")
-    const dock = document.querySelector(".capture-dock")
-    if (!(scroller instanceof HTMLElement) || !(dock instanceof HTMLElement)) return
-    const delta = element.getBoundingClientRect().bottom - (dock.getBoundingClientRect().top - 8)
+    const button = document.querySelector(".add-trip")
+    if (!(scroller instanceof HTMLElement) || !(button instanceof HTMLElement)) return
+    const delta = element.getBoundingClientRect().bottom - (button.getBoundingClientRect().top - 8)
     if (delta > 0) scroller.scrollTop += delta
   })
   const addBox = await add.boundingBox()
-  const dock = await page.getByRole("region", { name: "Add to trip" }).boundingBox()
+  const fab = await page.getByRole("button", { name: "Add to the trip" }).boundingBox()
   expect(addBox?.y ?? 0).toBeGreaterThanOrEqual(0)
-  expect((addBox?.y ?? 0) + (addBox?.height ?? 0)).toBeLessThanOrEqual((dock?.y ?? 0) + 1)
+  expect((addBox?.y ?? 0) + (addBox?.height ?? 0)).toBeLessThanOrEqual((fab?.y ?? 0) + 1)
   const card = page.locator(".month-detail .plan-card").last()
   const overlap = await card.evaluate((element) => {
     const button = element.closest(".month-detail")?.querySelector(".month-add")

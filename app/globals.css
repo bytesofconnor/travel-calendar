@@ -299,11 +299,23 @@
   }
 
   .page-frame__column {
+    position: relative;
     display: flex;
     min-width: 0;
     min-height: 0;
     flex: 1;
     flex-direction: column;
+  }
+
+  /* End the scrollport above the add button so a plan cannot sit under it.
+     The month grid is a flex child with min-height 0; its own padding is what
+     actually scrolls the day detail clear of that edge. */
+  .page-frame__column--add .story-scroll {
+    margin-bottom: calc(56px + 1rem + 4px + min(var(--safe-bottom), 5rem));
+  }
+
+  .page-frame__column--add .month-view {
+    padding-bottom: calc(56px + 1rem + min(var(--safe-bottom), 5rem));
   }
 
   .page-inset,
@@ -1143,13 +1155,8 @@
   }
 
   @media (min-width: 48rem) {
-    .story-scroll,
-    .capture-dock {
+    .story-scroll {
       scrollbar-gutter: stable;
-    }
-
-    .capture-dock {
-      overflow-y: auto;
     }
   }
 
@@ -1216,20 +1223,34 @@
     color: oklch(0.96 0.01 240 / 0.88);
   }
 
-  .trip-cover__brand--button {
-    align-self: flex-start;
-    min-height: 2.75rem;
+  .trip-cover__switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    max-width: 100%;
+    min-height: 44px;
+    margin: 0;
+    padding: 0.1rem 0.2rem;
+    border: 0;
     border-radius: 0.35rem;
-    padding: 0.35rem 0.2rem;
-    margin: -0.15rem -0.2rem;
     background: transparent;
-    border: none;
+    color: inherit;
+    text-align: left;
     cursor: pointer;
+    touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
 
-  .trip-cover__brand--button:hover {
-    color: oklch(0.99 0.005 240);
+  .trip-cover__switch:focus-visible {
+    outline: 2px solid oklch(0.985 0.004 240);
+    outline-offset: 3px;
+  }
+
+  .trip-cover__chevron {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex-shrink: 0;
+    color: oklch(0.985 0.004 240);
   }
 
   .trip-cover__title {
@@ -1271,9 +1292,13 @@
     }
 
     .trip-cover--compact .trip-cover__content {
-      gap: 0.1rem;
-      padding-top: max(0.4rem, var(--safe-top));
-      padding-bottom: 0.35rem;
+      gap: 0.05rem;
+      padding-top: max(0.2rem, var(--safe-top));
+      padding-bottom: 0.15rem;
+    }
+
+    .trip-cover__switch {
+      margin-block: -4px;
     }
 
     .trip-cover--compact .trip-cover__title {
@@ -2152,64 +2177,38 @@
     background: var(--kind-ask);
   }
 
-  .capture-dock {
-    flex-shrink: 0;
-    border-top: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
-    background: color-mix(in oklab, var(--background) 88%, transparent);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    /* The home indicator and gesture bar fit in 5rem. iOS sometimes reports a
-       stuck safe-area inset the size of the keyboard or the viewport. This
-       dock does not shrink, so that padding would erase the story and leave
-       the chips over a blank screen. */
-    padding: 0.75rem 0 calc(0.9rem + var(--safe-bottom));
-    padding: 0.75rem 0 calc(0.9rem + min(var(--safe-bottom), 5rem));
-  }
-
-  .capture-dock__field {
+  .add-trip {
+    position: absolute;
+    z-index: 35;
+    right: max(1rem, var(--safe-right));
+    /* A stuck safe-area inset can be the size of the keyboard. Cap it at 5rem
+       so the button stays on the trip instead of riding up over the list. */
+    bottom: calc(1rem + min(var(--safe-bottom), 5rem));
     display: flex;
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
     align-items: center;
-    gap: 0.85rem;
-    width: 100%;
-    min-height: 3.5rem;
-    border-radius: 1.35rem;
-    border: 1px solid var(--border);
-    background: var(--card);
-    padding: 0.75rem 0.95rem;
-    text-align: left;
+    justify-content: center;
+    border: 1px solid var(--foreground);
+    border-radius: 999px;
+    background: var(--foreground);
+    color: var(--background);
+    font-size: 2rem;
+    font-weight: 500;
+    line-height: 1;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    box-shadow: none;
-    transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
   }
 
-  .capture-dock__field:hover {
-    border-color: color-mix(in oklab, var(--foreground) 16%, var(--border));
+  .add-trip:hover {
+    background: color-mix(in oklab, var(--foreground) 88%, var(--background));
   }
 
-  .capture-dock__field:focus-visible,
-  .capture-dock__field:focus-within {
+  .add-trip:focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
-  }
-
-  .capture-dock__input {
-    min-width: 0;
-    flex: 1;
-    height: 2.75rem;
-    border: 0;
-    background: transparent;
-    color: var(--foreground);
-    font: inherit;
-    font-weight: 500;
-  }
-
-  .capture-dock__input::placeholder {
-    color: var(--muted-foreground);
-  }
-
-  .capture-dock__input:focus {
-    outline: none;
   }
 
   .weather-row {
@@ -2260,69 +2259,6 @@
   .weather-scale:focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
-  }
-
-  .capture-dock__plus {
-    display: flex;
-    height: 2.25rem;
-    width: 2.25rem;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    background: var(--primary);
-    color: var(--primary-foreground);
-    font-size: 1.25rem;
-    line-height: 1;
-    font-weight: 500;
-  }
-
-  .capture-dock__hint {
-    font-family: var(--font-display);
-    font-style: normal;
-    font-size: 1rem;
-    font-weight: 500;
-    letter-spacing: -0.025em;
-    line-height: 1.25;
-    color: var(--muted-foreground);
-  }
-
-  .capture-dock__chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-    margin-top: 0.55rem;
-    padding: 0 0.1rem;
-  }
-
-  @media (max-width: 375px) {
-    .capture-dock {
-      padding: 0.4rem 0 calc(0.45rem + var(--safe-bottom));
-      padding: 0.4rem 0 calc(0.45rem + min(var(--safe-bottom), 5rem));
-    }
-
-    .capture-dock__field {
-      min-height: 2.75rem;
-      gap: 0.65rem;
-      padding: 0.2rem 0.75rem;
-    }
-
-    .capture-dock__plus {
-      height: 2rem;
-      width: 2rem;
-      font-size: 1.15rem;
-    }
-
-    .capture-dock__chips {
-      flex-wrap: nowrap;
-      gap: 0.35rem;
-      margin-top: 0.35rem;
-    }
-
-    .capture-dock .kind-chip {
-      gap: 0.3rem;
-      padding: 0.2rem 0.55rem;
-    }
   }
 
   .arrive-list {

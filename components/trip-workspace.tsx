@@ -16,7 +16,8 @@ export function TripWorkspace({
   tripName,
   meta,
   coverImageUrl,
-  onBrandClick,
+  onOpenTrips,
+  tripsOpen,
   toolbar,
   banners,
   composer,
@@ -28,7 +29,8 @@ export function TripWorkspace({
   tripName: string
   meta: string
   coverImageUrl?: string
-  onBrandClick?: () => void
+  onOpenTrips?: () => void
+  tripsOpen?: boolean
   toolbar: ReactNode
   banners?: ReactNode
   composer?: ReactNode
@@ -48,7 +50,7 @@ export function TripWorkspace({
   return (
     <PageShell className="together-story page-frame">
       <div className="page-frame__row">
-        <div className="page-frame__column">
+        <div className={composer ? "page-frame__column page-frame__column--add" : "page-frame__column"}>
           <div ref={scrollRef} className="story-scroll" data-trip-scroll>
             <header className="trip-mast" data-trip-mast>
               <TripCover
@@ -57,7 +59,8 @@ export function TripWorkspace({
                 meta={meta}
                 coverImageUrl={coverImageUrl}
                 showHairline={false}
-                onBrandClick={onBrandClick}
+                onOpenTrips={onOpenTrips}
+                tripsOpen={tripsOpen}
               />
             </header>
             <div className="story-chrome-sticky trip-toolbar" data-trip-toolbar>

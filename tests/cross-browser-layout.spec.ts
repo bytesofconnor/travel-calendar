@@ -6,8 +6,8 @@ const coreScreens = [
   { id: "trip-list", path: "/review?screen=trips", ready: "Your trips" },
   { id: "trip", path: "/review?screen=trip", ready: "Lisbon with you" },
   { id: "today", path: "/review?screen=today", ready: "on for today" },
-  { id: "add", path: "/review?screen=add", ready: "Add a place" },
-  { id: "edit", path: "/review?screen=edit", ready: "Edit place" },
+  { id: "add", path: "/review?screen=add", ready: "Add an activity" },
+  { id: "edit", path: "/review?screen=edit", ready: "Edit activity" },
   { id: "edit-trip", path: "/review?screen=edit-trip", ready: "Edit trip details" },
   { id: "invite", path: "/review?screen=invite", ready: "https://www.travelcalendar.space/?join=ab12cd34ef56" },
   { id: "join", path: "/review?screen=join", ready: "Join trip" },
@@ -320,7 +320,7 @@ async function audit(page: Page, safeTop: number, safeBottom: number) {
           }
           scroller.scrollTop = 0
         }
-        for (const control of document.querySelectorAll<HTMLElement>(".capture-dock button, [data-slot=sheet-content] button")) {
+        for (const control of document.querySelectorAll<HTMLElement>(".add-trip, [data-slot=sheet-content] button")) {
           if (!isVisible(control)) continue
           const shown = shownBox(control)
           if (shown.height < 8) continue
@@ -386,10 +386,10 @@ test("core screens hold in this browser", async ({ page }, testInfo) => {
   if (phone) {
     await page.setViewportSize({ width: viewport!.width, height: 360 })
     await page.goto("/review?screen=today", { waitUntil: "domcontentloaded" })
-    const dock = page.getByRole("region", { name: "Add to trip" })
-    await expect(dock).toBeVisible()
-    const dockBox = await dock.boundingBox()
-    expect(dockBox!.y + dockBox!.height).toBeLessThanOrEqual(361)
+    const add = page.getByRole("button", { name: "Add to the trip" })
+    await expect(add).toBeVisible()
+    const addBox = await add.boundingBox()
+    expect(addBox!.y + addBox!.height).toBeLessThanOrEqual(361)
     const keyboard = await audit(page, 0, 0)
     failures.push(...keyboard.map((violation) => `today keyboard: ${violation}`))
 
@@ -399,7 +399,7 @@ test("core screens hold in this browser", async ({ page }, testInfo) => {
     await where.focus()
     await expect(where).toBeInViewport()
     const whereBox = await where.boundingBox()
-    const save = page.getByRole("button", { name: "Add place" })
+    const save = page.getByRole("button", { name: "Add activity" })
     const saveBox = await save.boundingBox()
     expect(whereBox!.y + whereBox!.height).toBeLessThanOrEqual((saveBox?.y ?? 520) + 1)
     const dates = await audit(page, 0, 0)
