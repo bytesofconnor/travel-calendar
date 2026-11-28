@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 
 import { PlanWhen } from "@/components/plan-when"
 import type { TripItem } from "@/lib/kanban-store"
-import { itemsOnDay, stayBarsForWeek, tripEdges, type MonthDayCell } from "@/lib/month-layout"
+import { itemsOnDay, phonePlanLabel, stayBarsForWeek, tripEdges, type MonthDayCell } from "@/lib/month-layout"
 import { describePlanWhen } from "@/lib/plan-when"
 import { inferPlanKind, shownLabel, shownMode, type PlanKind } from "@/lib/trip-kind"
 import { TravelMark } from "@/components/travel-mark"
@@ -153,6 +153,85 @@ function indexForIso(days: MonthDayCell[], iso: string) {
   return match >= 0 ? match : focusIndexFor(days, iso)
 }
 
+function readPx(value: string) {
+  const parsed = Number.parseFloat(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function shownLetters(element: HTMLElement) {
+  const text = element.textContent ?? ""
+  const node = element.firstChild
+  if (!node || node.nodeType !== Node.TEXT_NODE) return 0
+  if (element.scrollWidth <= element.clientWidth + 1) return text.match(/[A-Za-z0-9]/g)?.length ?? 0
+  const style = getComputedStyle(element)
+  const box = element.getBoundingClientRect()
+  const left = box.left + readPx(style.paddingLeft)
+  const right = box.right - readPx(style.paddingRight)
+  const range = document.createRange()
+  let count = 0
+  for (let index = 0; index < text.length; index += 1) {
+    range.setStart(node, index)
+    range.setEnd(node, index + 1)
+    const rect = range.getBoundingClientRect()
+    if (rect.width <= 0) continue
+    const center = rect.left + rect.width / 2
+    if (center < left || center > right) continue
+    if (/[A-Za-z0-9]/.test(text[index] ?? "")) count += 1
+  }
+  return count
+}
+
+function routeFits(element: HTMLElement) {
+  const text = element.textContent ?? ""
+  const arrow = text.indexOf("→")
+  const node = element.firstChild
+  if (arrow < 1 || !node || node.nodeType !== Node.TEXT_NODE) return false
+  const range = document.createRange()
+  range.setStart(node, 0)
+  range.setEnd(node, arrow + 1)
+  return range.getBoundingClientRect().width <= element.clientWidth + 1
+}
+
+function fitPhoneChips(scale: HTMLElement) {
+  const phone = scale.clientWidth <= (readPx(getComputedStyle(scale).fontSize) || 16) * 32 + 0.5
+  const columns = [...scale.querySelectorAll<HTMLElement>(".month-day__chips")]
+  if (!phone) {
+    columns.forEach((column) => {
+      column.removeAttribute("data-fit")
+      column.querySelectorAll<HTMLElement>(".month-chip").forEach((chip) => chip.removeAttribute("data-fit"))
+    })
+    return
+  }
+  columns.forEach((column) => {
+    column.dataset.fit = "label"
+    column.querySelectorAll<HTMLElement>(".month-chip").forEach((chip) => {
+      chip.dataset.fit = "label"
+    })
+  })
+  scale.getBoundingClientRect()
+  columns.forEach((column) => {
+    const shorts = [...column.querySelectorAll<HTMLElement>(".month-chip__short")].filter(
+      (node) => getComputedStyle(node).display !== "none" && node.getBoundingClientRect().width > 0,
+    )
+    if (shorts.length === 0 || column.clientWidth < 8) {
+      column.removeAttribute("data-fit")
+      return
+    }
+    let fragment = false
+    shorts.forEach((short) => {
+      const chip = short.closest(".month-chip")
+      if (!(chip instanceof HTMLElement)) return
+      const overflow = short.scrollWidth > short.clientWidth + 1
+      if (overflow && routeFits(short)) {
+        chip.dataset.fit = "route"
+        return
+      }
+      if (overflow && shownLetters(short) <= 2) fragment = true
+    })
+    column.dataset.fit = fragment ? "count" : "label"
+  })
+}
+
 export function TripMonthView({
   items,
   tripStart,
@@ -171,6 +250,35 @@ export function TripMonthView({
   const moveFocus = useRef(false)
   const focusRef = useRef<HTMLButtonElement | null>(null)
   const detailRef = useRef<HTMLDivElement | null>(null)
+  const scaleRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const scale = scaleRef.current
+    if (!scale) return
+    let frame = 0
+    let width = -1
+    const apply = () => {
+      frame = 0
+      width = scale.clientWidth
+      fitPhoneChips(scale)
+    }
+    const observer = new ResizeObserver(() => {
+      if (scale.clientWidth === width || frame) return
+      frame = requestAnimationFrame(apply)
+    })
+    observer.observe(scale)
+    apply()
+    const fontsReady = document.fonts?.ready
+    let cancelled = false
+    fontsReady?.then(() => {
+      if (!cancelled && scale.isConnected) apply()
+    }).catch(() => {})
+    return () => {
+      cancelled = true
+      observer.disconnect()
+      if (frame) cancelAnimationFrame(frame)
+    }
+  }, [items, month])
 
   useEffect(() => {
     if (!moveFocus.current) return
@@ -282,7 +390,7 @@ export function TripMonthView({
         </div>
       </div>
 
-      <div className="month-scale">
+      <div className="month-scale" ref={scaleRef}>
         <div className="month-body">
           <div role="grid" aria-labelledby="month-view-title" className="month-grid">
             <div role="row" className="month-dow-row">
@@ -379,6 +487,11 @@ export function TripMonthView({
                     {weekDays.map((day, column) => {
                       const singles = itemsOnDay(items, day.iso).filter((item) => inferPlanKind(item) !== "stay")
                       const extra = Math.max(0, singles.length - 2)
+                      const kinds: PlanKind[] = []
+                      for (const item of singles) {
+                        const kind = inferPlanKind(item)
+                        if (!kinds.includes(kind)) kinds.push(kind)
+                      }
                       return (
                         <span
                           key={`chips-${day.iso}`}
@@ -388,15 +501,27 @@ export function TripMonthView({
                         >
                           {singles.map((item) => {
                             const kind = inferPlanKind(item)
+                            const label = phonePlanLabel(item)
+                            const route = label.includes("→") ? `${label.split("→")[0]}→` : ""
                             return (
                               <span key={item.id} className="month-chip" data-kind={kind}>
                                 <span className="month-chip__dot" />
                                 <span className="month-chip__kind"><KindMark item={item} /></span>
                                 <span className="month-chip__title">{item.title}</span>
+                                <span className="month-chip__short">{label}</span>
+                                {route ? <span className="month-chip__route">{route}</span> : null}
                               </span>
                             )
                           })}
                           {extra > 0 ? <span className="month-more">+{extra}</span> : null}
+                          {singles.length > 0 ? (
+                            <span className="month-squeeze">
+                              {kinds.map((kind) => (
+                                <span key={kind} className="month-squeeze__bar" data-kind={kind} />
+                              ))}
+                              <span className="month-squeeze__count">{singles.length}</span>
+                            </span>
+                          ) : null}
                         </span>
                       )
                     })}

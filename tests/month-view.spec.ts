@@ -5,6 +5,59 @@ async function pageOverflow(page: Page) {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
 }
 
+async function brokenWord(locator: { evaluate: <T>(fn: (element: HTMLElement) => T) => Promise<T> }) {
+  return locator.evaluate((element) => {
+    const style = getComputedStyle(element)
+    if (style.display === "none") return "hidden"
+    if (style.overflowWrap === "anywhere" || style.wordBreak === "break-all" || style.wordBreak === "break-word") {
+      return `style ${style.overflowWrap} ${style.wordBreak}`
+    }
+    const text = element.textContent ?? ""
+    const node = element.firstChild
+    if (!node || node.nodeType !== Node.TEXT_NODE) return "missing"
+    const line = Number.parseFloat(style.lineHeight)
+    if ((style.whiteSpace === "nowrap" || style.whiteSpace === "pre") && line > 0) {
+      return element.getBoundingClientRect().height / line > 1.4 ? "wrapped" : ""
+    }
+    const range = document.createRange()
+    let index = 0
+    for (const word of text.split(/\s+/).filter(Boolean)) {
+      const start = text.indexOf(word, index)
+      if (start < 0) return word
+      range.setStart(node, start)
+      range.setEnd(node, start + word.length)
+      if (range.getClientRects().length > 1) return word
+      index = start + word.length
+    }
+    return ""
+  })
+}
+
+async function visibleLetters(locator: { evaluate: <T>(fn: (element: HTMLElement) => T) => Promise<T> }) {
+  return locator.evaluate((element) => {
+    const text = element.textContent ?? ""
+    const node = element.firstChild
+    if (!node || node.nodeType !== Node.TEXT_NODE) return 0
+    if (element.scrollWidth <= element.clientWidth + 1) return (text.match(/[A-Za-z0-9]/g) ?? []).length
+    const style = getComputedStyle(element)
+    const box = element.getBoundingClientRect()
+    const left = box.left + Number.parseFloat(style.paddingLeft)
+    const right = box.right - Number.parseFloat(style.paddingRight)
+    const range = document.createRange()
+    let count = 0
+    for (let index = 0; index < text.length; index += 1) {
+      range.setStart(node, index)
+      range.setEnd(node, index + 1)
+      const rect = range.getBoundingClientRect()
+      if (rect.width <= 0) continue
+      const center = rect.left + rect.width / 2
+      if (center < left || center > right) continue
+      if (/[A-Za-z0-9]/.test(text[index] ?? "")) count += 1
+    }
+    return count
+  })
+}
+
 async function waitUntilInteractive(page: Page) {
   await page.waitForFunction(() => document.documentElement.dataset.uiReady === "true")
 }
@@ -105,29 +158,49 @@ test("phone month shows plan titles and a stay bar inside the screen", async ({ 
     await expect(day).toHaveAccessibleName(/Activity Tram 28/)
 
     const column = page.locator('.month-day__chips[data-date="2026-11-18"]')
-    await expect(column.locator(".month-chip:visible")).toHaveCount(2)
-    await expect(column.locator(".month-chip__title:visible", { hasText: "TAP to Lisbon" })).toBeVisible()
-    await expect(column.locator(".month-chip__title:visible", { hasText: "Dinner" })).toBeVisible()
-    await expect(column.locator(".month-chip__kind").first()).toBeHidden()
-    await expect(column.locator(".month-chip__dot:visible")).toHaveCount(2)
-    await expect(column.locator(".month-more")).toHaveText("+1")
-    await expect(column.locator(".month-more")).toBeVisible()
-
-    const title = column.locator(".month-chip__title", { hasText: "TAP to Lisbon" })
-    const metrics = await title.evaluate((element) => {
-      const style = getComputedStyle(element)
-      const line = Number.parseFloat(style.lineHeight)
-      return {
-        size: Number.parseFloat(style.fontSize),
-        width: element.getBoundingClientRect().width,
-        lines: element.getBoundingClientRect().height / line,
-        text: element.textContent,
-      }
-    })
-    expect(metrics.size).toBeGreaterThanOrEqual(14)
-    expect(metrics.width).toBeGreaterThan(24)
-    expect(metrics.lines).toBeGreaterThan(1.4)
-    expect(metrics.text).toBe("TAP to Lisbon")
+    await expect(column).toHaveAttribute("data-fit", /^(label|count)$/)
+    const fit = await column.getAttribute("data-fit")
+    if (width === 390) expect(fit).toBe("label")
+    if (fit === "label") {
+      await expect(column.locator(".month-chip:visible")).toHaveCount(2)
+      const flight = column.locator(".month-chip").nth(0).locator(".month-chip__route:visible, .month-chip__short:visible")
+      const dinner = column.locator(".month-chip").nth(1).locator(".month-chip__route:visible, .month-chip__short:visible")
+      await expect(flight).toBeVisible()
+      await expect(flight).toHaveText(/^SFO→/)
+      await expect(dinner).toHaveText("Dinner")
+      await expect(column.locator(".month-chip__title").first()).toBeHidden()
+      await expect(column.locator(".month-chip__kind").first()).toBeHidden()
+      await expect(column.locator(".month-chip__dot:visible")).toHaveCount(0)
+      await expect(column.locator(".month-more")).toHaveText("+1")
+      await expect(column.locator(".month-more")).toBeVisible()
+      await expect(column.locator(".month-squeeze")).toBeHidden()
+      expect(await brokenWord(flight)).toBe("")
+      expect(await brokenWord(dinner)).toBe("")
+      expect(await visibleLetters(flight)).toBeGreaterThan(2)
+      expect(await visibleLetters(dinner)).toBeGreaterThan(2)
+      const metrics = await flight.evaluate((element) => {
+        const style = getComputedStyle(element)
+        const column = element.closest(".month-day__chips")
+        const chip = element.closest(".month-chip")
+        return {
+          size: Number.parseFloat(style.fontSize),
+          space: style.whiteSpace,
+          wrap: style.overflowWrap,
+          word: style.wordBreak,
+          chipBox: chip?.getBoundingClientRect().width ?? 0,
+          columnBox: column?.getBoundingClientRect().width ?? 0,
+        }
+      })
+      expect(metrics.size).toBeGreaterThanOrEqual(14)
+      expect(metrics.space).toBe("nowrap")
+      expect(metrics.wrap).not.toBe("anywhere")
+      expect(metrics.word).not.toBe("break-all")
+      expect(metrics.chipBox).toBeGreaterThan(metrics.columnBox - 6)
+    } else {
+      await expect(column.locator(".month-chip__short")).toBeHidden()
+      await expect(column.locator(".month-squeeze__count")).toHaveText("3")
+      await expect(column.locator(".month-squeeze__bar")).toHaveCount(2)
+    }
 
     const bar = page.locator(".month-bar", { hasText: "Alfama apartment" }).first()
     await expect(bar).toBeVisible()
@@ -195,6 +268,7 @@ test("month view stays readable at large text and 200% zoom", async ({ page }) =
   expect(agendaText.whiteSpace).not.toBe("nowrap")
   expect(agendaText.text).toBe("Alfama apartment")
   expect(agendaText.right).toBeLessThanOrEqual(320)
+  expect(await brokenWord(agendaTitle)).toBe("")
   const agendaSize = await agendaTitle.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))
   expect(agendaSize).toBeGreaterThanOrEqual(14)
   expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
@@ -208,6 +282,7 @@ test("month view stays readable at large text and 200% zoom", async ({ page }) =
   await expect(phoneTitle).toBeVisible()
   const phoneText = await phoneTitle.evaluate((element) => getComputedStyle(element).whiteSpace)
   expect(phoneText).not.toBe("nowrap")
+  expect(await brokenWord(phoneTitle)).toBe("")
   expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
 
   await page.goto("/review?screen=month", { waitUntil: "domcontentloaded" })
@@ -301,6 +376,19 @@ test("month view keeps contrast in light, dark, and each theme pack", async ({ p
         titleSize: Number.parseFloat(titleStyle.fontSize),
         titleSpace: titleStyle.whiteSpace,
         chipWrap: chipStyle.flexWrap,
+        rail: Number.parseFloat(chipStyle.borderLeftWidth) >= 3 ? contrast(chipStyle.borderLeftColor, chipStyle.backgroundColor) : null,
+        shortSpace: (() => {
+          const labels = [...chip.querySelectorAll(".month-chip__short, .month-chip__route")].filter(
+            (node): node is HTMLElement => node instanceof HTMLElement && getComputedStyle(node).display !== "none",
+          )
+          return labels[0] ? getComputedStyle(labels[0]).whiteSpace : null
+        })(),
+        shortWrap: (() => {
+          const labels = [...chip.querySelectorAll(".month-chip__short, .month-chip__route")].filter(
+            (node): node is HTMLElement => node instanceof HTMLElement && getComputedStyle(node).display !== "none",
+          )
+          return labels[0] ? getComputedStyle(labels[0]).overflowWrap : null
+        })(),
       }
     })
     expect(sample, `${theme.path} ${width}`).not.toBeNull()
@@ -308,10 +396,15 @@ test("month view keeps contrast in light, dark, and each theme pack", async ({ p
     expect(sample!.chip, theme.path).toBeGreaterThanOrEqual(4.5)
     expect(sample!.bar, theme.path).toBeGreaterThanOrEqual(4.5)
     if (sample!.dot != null) expect(sample!.dot, theme.path).toBeGreaterThanOrEqual(3)
+    if (sample!.rail != null) expect(sample!.rail, theme.path).toBeGreaterThanOrEqual(3)
     if (sample!.more != null) expect(sample!.more, theme.path).toBeGreaterThanOrEqual(4.5)
     expect(sample!.titleSize, theme.path).toBeGreaterThanOrEqual(14)
     expect(sample!.chipWrap, theme.path).toBe("nowrap")
     if (width === 1280) expect(sample!.titleSpace, theme.path).toBe("nowrap")
+    if (sample!.shortSpace != null) {
+      expect(sample!.shortSpace, theme.path).toBe("nowrap")
+      expect(sample!.shortWrap, theme.path).not.toBe("anywhere")
+    }
       if (theme.scheme === "light") {
         expect(sample!.fillLuminance, theme.path).toBeGreaterThan(0.75)
       }
@@ -386,11 +479,68 @@ test("a multi-day stay is one bar that wraps at the week", async ({ page }) => {
     const first = await bars.nth(0).boundingBox()
     const friday = await page.getByRole("gridcell", { name: /Friday June 11/ }).boundingBox()
     expect(first?.width ?? 0).toBeGreaterThan((friday?.width ?? 0) * 1.5)
-    const flight = page.locator(".month-chip:visible", { hasText: "SFO to HAN" })
+    const flight = page.locator(".month-chip:visible", { hasText: width === 390 ? "SFO→HAN" : "SFO to HAN" })
     await expect(flight).toBeVisible()
-    if (width === 1440) await expect(flight).toContainText("Flight")
+    if (width === 1440) {
+      await expect(flight).toContainText("Flight")
+      await expect(flight).toContainText("SFO to HAN")
+    } else {
+      await expect(page.locator('.month-day__chips[data-date="2027-06-11"]')).toHaveAttribute("data-fit", "label")
+      const short = page.locator('.month-day__chips[data-date="2027-06-11"] .month-chip').first().locator(".month-chip__route:visible, .month-chip__short:visible")
+      await expect(short).toHaveText(/^SFO→/)
+      expect(await brokenWord(short)).toBe("")
+      expect(await visibleLetters(short)).toBeGreaterThan(2)
+      const lantern = page.locator('.month-day__chips[data-date="2027-06-20"] .month-chip__short')
+      await expect(lantern).toHaveText("Lantern")
+      expect(await brokenWord(lantern)).toBe("")
+      expect(await visibleLetters(lantern)).toBeGreaterThan(2)
+      const market = page.locator('.month-day__chips[data-date="2027-06-26"] .month-chip__short')
+      await expect(market).toHaveText("Ben Thanh")
+      expect(await brokenWord(market)).toBe("")
+      expect(await visibleLetters(market)).toBeGreaterThan(2)
+      const train = page.locator('.month-day__chips[data-date="2027-06-12"] .month-chip__short')
+      await expect(train).toHaveText("Train")
+      expect(await brokenWord(train)).toBe("")
+      expect(await visibleLetters(train)).toBeGreaterThan(2)
+      await expect(page.locator(".month-chip__dot:visible")).toHaveCount(0)
+    }
     expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
   }
+})
+
+test("a column too narrow for three letters shows a count instead of a fragment", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    const install = () => {
+      if (document.getElementById("chip-test-size")) return
+      const style = document.createElement("style")
+      style.id = "chip-test-size"
+      style.textContent = ".month-chip { font-size: 28px !important; letter-spacing: 0.3em !important; }"
+      ;(document.head ?? document.documentElement).appendChild(style)
+    }
+    if (document.head) install()
+    document.addEventListener("DOMContentLoaded", install)
+  })
+  await openMonth(page)
+  const column = page.locator('.month-day__chips[data-date="2026-11-18"]')
+  await expect(column.locator(".month-squeeze")).toBeVisible()
+  await expect(column.locator(".month-chip:visible")).toHaveCount(0)
+  await expect(column.locator(".month-squeeze__count")).toHaveText("3")
+  const bars = column.locator(".month-squeeze__bar")
+  await expect(bars).toHaveCount(2)
+  const day = page.getByRole("gridcell", { name: /Wednesday November 18/ })
+  await expect(day).toHaveAccessibleName(/Flight SFO to LIS/)
+  await expect(day).toHaveAccessibleName(/Activity Dinner/)
+  await expect(day).toHaveAccessibleName(/Activity Tram 28/)
+  const rail = await bars.first().evaluate((element) => {
+    const bar = getComputedStyle(element)
+    const plate = getComputedStyle(element.parentElement ?? element)
+    return { bar: bar.backgroundColor, plate: plate.backgroundColor, height: element.getBoundingClientRect().height }
+  })
+  expect(rail.bar).not.toBe(rail.plate)
+  expect(rail.height).toBeGreaterThanOrEqual(3)
+  await expect(page.locator(".month-bar", { hasText: "Alfama apartment" }).first()).toBeVisible()
+  expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
 })
 
 test("add something stays above the composer", async ({ page }, testInfo) => {
