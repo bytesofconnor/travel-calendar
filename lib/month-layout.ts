@@ -23,6 +23,67 @@ export interface StayBar {
   continuesAfter: boolean
 }
 
+const PLACE_CODE = /^[A-Za-z]{2,4}$/
+
+function placeCode(value: string | undefined): string | null {
+  const token = value?.trim().split(/[\s,/]+/)[0] ?? ""
+  if (!PLACE_CODE.test(token)) return null
+  return token.toUpperCase()
+}
+
+function routeEnds(item: TripItem): { from: string; to: string } | null {
+  const titled = item.title.split(/\s+to\s+/i)
+  const from = placeCode(item.location) ?? placeCode(titled[0])
+  const to = placeCode(item.locationTo) ?? placeCode(titled[1])
+  if (!from || !to || from === to) return null
+  return { from, to }
+}
+
+function leadingWords(title: string): string {
+  const words = title.trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return title.trim()
+  if (words.length === 1) return words[0]
+  const pair = `${words[0]} ${words[1]}`
+  if (pair.length <= 10) return pair
+  return words[0]
+}
+
+export function phonePlanLabel(item: TripItem): string {
+  const travel = planKind(item) === "flight" || Boolean(item.locationTo?.trim())
+  if (travel) {
+    const route = routeEnds(item)
+    if (route) return `${route.from}→${route.to}`
+  }
+  return leadingWords(item.title)
+}
+
+function letterCount(value: string) {
+  return value.match(/[A-Za-z0-9]/g)?.length ?? 0
+}
+
+export function phoneDayFace(
+  labels: string[],
+  available: number,
+  measure: (text: string) => number,
+): "label" | "count" {
+  if (labels.length === 0) return "label"
+  if (!(available > 0)) return "count"
+  const ellipsis = measure("…")
+  for (const label of labels) {
+    if (!label || measure(label) <= available) continue
+    const room = available - ellipsis
+    if (!(room > 0)) return "count"
+    let fitted = ""
+    for (const char of label) {
+      const next = fitted + char
+      if (measure(next) > room) break
+      fitted = next
+    }
+    if (letterCount(fitted) <= 2) return "count"
+  }
+  return "label"
+}
+
 export function itemsOnDay(items: TripItem[], iso: string) {
   return orderDay(
     items.filter((item) => item.startDate <= iso && item.endDate >= iso),

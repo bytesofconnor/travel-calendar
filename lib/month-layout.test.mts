@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import type { TripItem } from "./kanban-store.ts"
-import { stayBarsForWeek, tripEdges } from "./month-layout.ts"
+import { phoneDayFace, phonePlanLabel, stayBarsForWeek, tripEdges } from "./month-layout.ts"
 
 function item(partial: Pick<TripItem, "id" | "title" | "startDate" | "endDate"> & Partial<TripItem>): TripItem {
   return {
@@ -53,6 +53,93 @@ test("overlapping stays stack in lanes and a flight is not a bar", () => {
   assert.equal(bars.length, 2)
   assert.equal(new Set(bars.map((bar) => bar.lane)).size, 2)
   assert.equal(bars.some((bar) => bar.title === "HAN to DAD"), false)
+})
+
+test("a phone chip prefers a route code or the first words of the plan", () => {
+  assert.equal(
+    phonePlanLabel(
+      item({
+        id: "han",
+        title: "SFO to HAN",
+        startDate: "2027-06-11",
+        endDate: "2027-06-11",
+        location: "SFO",
+        locationTo: "HAN",
+      }),
+    ),
+    "SFO→HAN",
+  )
+  assert.equal(
+    phonePlanLabel(
+      item({
+        id: "tap",
+        title: "TAP to Lisbon",
+        startDate: "2026-11-18",
+        endDate: "2026-11-18",
+        location: "SFO",
+        locationTo: "LIS",
+      }),
+    ),
+    "SFO→LIS",
+  )
+  assert.equal(
+    phonePlanLabel(
+      item({
+        id: "dc",
+        title: "MN to DC",
+        startDate: "2027-06-11",
+        endDate: "2027-06-11",
+        location: "MSP",
+        locationTo: "DC",
+        planType: "flight",
+      }),
+    ),
+    "MSP→DC",
+  )
+  assert.equal(
+    phonePlanLabel(
+      item({ id: "lantern", title: "Lantern walk", startDate: "2027-06-20", endDate: "2027-06-20", location: "Hội An" }),
+    ),
+    "Lantern",
+  )
+  assert.equal(
+    phonePlanLabel(
+      item({
+        id: "market",
+        title: "Ben Thanh Market",
+        startDate: "2027-06-26",
+        endDate: "2027-06-26",
+        location: "Ho Chi Minh City",
+      }),
+    ),
+    "Ben Thanh",
+  )
+  assert.equal(
+    phonePlanLabel(
+      item({ id: "train", title: "Train Street", startDate: "2027-06-12", endDate: "2027-06-12", location: "Hanoi" }),
+    ),
+    "Train",
+  )
+  assert.equal(
+    phonePlanLabel(item({ id: "dinner", title: "Dinner", startDate: "2026-11-18", endDate: "2026-11-18", location: "Lisbon" })),
+    "Dinner",
+  )
+  assert.equal(
+    phonePlanLabel(item({ id: "tram", title: "Tram 28", startDate: "2026-11-18", endDate: "2026-11-18", location: "Lisbon" })),
+    "Tram 28",
+  )
+})
+
+test("a two-letter fragment is a count and three letters stay a label", () => {
+  const measure = (text: string) => text.length * 10
+  assert.equal(phoneDayFace(["SFO→HAN"], 70, measure), "label")
+  assert.equal(phoneDayFace(["SFO→HAN"], 40, measure), "label")
+  assert.equal(phoneDayFace(["SFO→HAN"], 25, measure), "count")
+  assert.equal(phoneDayFace(["Ben Thanh"], 90, measure), "label")
+  assert.equal(phoneDayFace(["Ben Thanh"], 40, measure), "label")
+  assert.equal(phoneDayFace(["Ben Thanh"], 20, measure), "count")
+  assert.equal(phoneDayFace(["Dinner"], 60, measure), "label")
+  assert.equal(phoneDayFace([], 10, measure), "label")
 })
 
 test("trip edges mark the outside of a run and join the inside", () => {
