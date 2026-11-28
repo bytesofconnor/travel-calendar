@@ -1866,28 +1866,15 @@
     padding-block: 0.45rem;
   }
 
-  .story-chrome__people {
-    display: flex;
-    flex: 1 0 100%;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.15rem 0.35rem;
-    min-width: 0;
-  }
-
   .story-chrome__travelers {
-    position: relative;
-    flex: 0 1 auto;
+    flex: 1 0 100%;
     min-width: 0;
   }
 
   .story-chrome__tools {
     display: flex;
-    flex: 0 0 auto;
     align-items: center;
-    justify-content: flex-end;
-    gap: 0.15rem;
-    margin-left: auto;
+    gap: 0.1rem;
     min-width: 0;
   }
 
@@ -1914,27 +1901,18 @@
   }
 
   @media (max-width: 767px) {
-    .story-chrome__people .traveler-label {
-      position: absolute;
-      inset: 0;
+    .story-chrome__travelers .traveler-label {
       min-width: 0;
-      min-height: 44px;
-      margin: 0;
-      padding: 0;
       overflow: hidden;
-      color: transparent;
-      background: transparent;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
 
   @media (min-width: 768px) {
-    .story-chrome__people {
-      order: 3;
-      flex: 1 1 auto;
-      flex-wrap: nowrap;
-    }
-
     .story-chrome__travelers {
+      order: 3;
+      flex: 0 1 auto;
       max-width: min(100%, 22rem);
     }
 
@@ -1944,17 +1922,13 @@
   }
 
   @media (max-width: 430px) {
-    .story-chrome__people {
-      gap: 0 0.15rem;
-    }
-
     .story-chrome__tools {
       gap: 0;
     }
 
     .trip-tool-link {
-      padding-inline: 0.2rem;
-      font-size: 0.8125rem;
+      padding-inline: 0.1rem;
+      font-size: 0.75rem;
     }
 
     .story-chrome {

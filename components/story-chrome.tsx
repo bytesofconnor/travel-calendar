@@ -47,6 +47,7 @@ export function StoryChrome({
         ]}
       />
       <div className="story-chrome__cluster ml-auto flex shrink-0 items-center gap-1.5 max-[430px]:gap-1">
+        {tools ? <div className="story-chrome__tools">{tools}</div> : null}
         <button
           type="button"
           className="story-chrome__invite btn-together inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full text-[13px] font-bold tracking-tight min-[375px]:px-2.5 min-[431px]:min-w-[4.75rem] min-[431px]:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--together)]"
@@ -58,17 +59,14 @@ export function StoryChrome({
         </button>
         {menu}
       </div>
-      <div className="story-chrome__people">
-        <TravelerStack
-          travelers={travelers}
-          currentUserId={currentUserId}
-          onOpen={onOpenMembers}
-          selectedUserId={selectedUserId}
-          onSelectPerson={onSelectPerson}
-          className="story-chrome__travelers"
-        />
-        {tools ? <div className="story-chrome__tools">{tools}</div> : null}
-      </div>
+      <TravelerStack
+        travelers={travelers}
+        currentUserId={currentUserId}
+        onOpen={onOpenMembers}
+        selectedUserId={selectedUserId}
+        onSelectPerson={onSelectPerson}
+        className="story-chrome__travelers"
+      />
     </div>
   )
 }
