@@ -88,7 +88,7 @@ test("freeform text guesses a type", () => {
   assert.equal(guessPlanType("Fly DC to Hanoi"), "flight")
   assert.equal(guessPlanType("MN to DC"), "flight")
   assert.equal(guessPlanType("Airbnb in Hanoi"), "stay")
-  assert.equal(guessPlanType("Note: pack raincoats"), "note")
+  assert.equal(guessPlanType("Note: pack raincoats"), "place")
   assert.equal(guessPlanType("Train street coffee"), "place")
 })
 

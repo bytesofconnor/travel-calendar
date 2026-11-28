@@ -90,6 +90,10 @@ const indexFields: Record<string, Record<string, readonly string[]>> = {
   tripNotes: {
     by_trip: ["tripId"],
   },
+  tripIdeas: {
+    by_trip: ["tripId"],
+    by_source: ["sourceItemId"],
+  },
   tripPackingItems: {
     by_trip: ["tripId"],
     by_trip_checked_sort: ["tripId", "isChecked", "sortOrder"],

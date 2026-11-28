@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, type ReactNode } from "react"
+import { useMemo, useRef, useState, type ReactNode } from "react"
 import { Calendar, Ellipsis } from "lucide-react"
 
 import type { Id } from "@/convex/_generated/dataModel"
@@ -24,6 +24,7 @@ import { AddToCalendarSheet } from "@/components/add-to-calendar-sheet"
 import { SaveErrorBanner } from "@/components/save-error-banner"
 import { Button } from "@/components/ui/button"
 import { PersonFilter } from "@/components/person-filter"
+import { IdeasLink, IdeasSheet } from "@/components/ideas-sheet"
 import { StoryChrome } from "@/components/story-chrome"
 import { filterItems, writeWho } from "@/lib/person-filter"
 import { firstName, travelerLabel } from "@/lib/travelers"
@@ -35,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { Trip, TripItem, TripItemInput, TripMember } from "@/lib/kanban-store"
+import { goIdsForDay, openIdeas, plansWithoutNotes, type IdeaRecord } from "@/lib/ideas"
 import { defaultPlanDate } from "@/lib/plan-form"
 import type { PlanType } from "@/lib/plan-types"
 import { buildTripHome, type GapAction } from "@/lib/trip-home/detect"
@@ -435,6 +437,7 @@ function TripFrame({
   onAdd,
   onOpenTrips,
   tripsOpen,
+  tools,
   children,
 }: {
   screen: string
@@ -452,6 +455,7 @@ function TripFrame({
   onAdd: () => void
   onOpenTrips: () => void
   tripsOpen: boolean
+  tools?: ReactNode
   children: ReactNode
 }) {
   const [menuOpen, setMenuOpen] = useState(screen === "theme")
@@ -477,6 +481,7 @@ function TripFrame({
                     onOpenMembers={onOpenMembers}
                     selectedUserId={selectedUserId}
                     onSelectPerson={onSelectPerson}
+                    tools={tools}
                     menu={
                       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
                         <DropdownMenuTrigger asChild>
@@ -574,12 +579,14 @@ export function ReviewGallery({
   party = null,
   who = null,
   today: todayProp = null,
+  actorSwitch = false,
 }: {
   screen: string
   theme: string | null
   party?: number | null
   who?: string | null
   today?: string | null
+  actorSwitch?: boolean
 }) {
   const themePack = parseThemePack(theme)
   useTripThemePack(themePack)
@@ -590,6 +597,12 @@ export function ReviewGallery({
   const [joinInput, setJoinInput] = useState("ab12cd34ef56")
   const [createName, setCreateName] = useState("")
   const [plans, setPlans] = useState(items)
+  const [ideas, setIdeas] = useState<IdeaRecord[]>([])
+  const [ideasOpen, setIdeasOpen] = useState(false)
+  const [actorId, setActorId] = useState(USER_ID)
+  const [placing, setPlacing] = useState<IdeaRecord | null>(null)
+  const ideasLinkRef = useRef<HTMLButtonElement>(null)
+  const skipIdeasFocus = useRef(false)
   const vietnam = screen === "vietnam"
   const timing = screen === "timing"
   const showHome = screen === "trip" || screen === "covered" || vietnam || timing
@@ -602,7 +615,7 @@ export function ReviewGallery({
     () =>
       buildTripHome({
         trip: { startDate: tripStartDate, endDate: tripEndDate },
-        plans: homePlans,
+        plans: plansWithoutNotes(homePlans),
         now: homeNow,
       }),
     [homePlans, homeNow, tripEndDate, tripStartDate],
@@ -620,7 +633,74 @@ export function ReviewGallery({
   const [shareOpen, setShareOpen] = useState(screen === "invite")
   const roster = partyMembers(vietnam ? 5 : timing ? 2 : party)
   const activePerson = roster.find((member) => member.userId === personId) ?? null
-  const visibleItems = filterItems(catalog, activePerson?.userId ?? null, roster.map((member) => member.userId))
+  const visibleItems = plansWithoutNotes(
+    filterItems(catalog, activePerson?.userId ?? null, roster.map((member) => member.userId)),
+  )
+  const shownIdeas = openIdeas(
+    ideas,
+    catalog.map((item) => ({
+      id: item.id,
+      title: item.title,
+      linkUrl: item.link?.url,
+      createdBy: item.createdBy,
+      startDate: item.startDate,
+      planType: item.planType,
+    })),
+  )
+  function addLocalIdea(text: string, linkUrl?: string) {
+    setIdeas((current) => [
+      ...current,
+      {
+        id: `idea_${Date.now()}`,
+        text,
+        ...(linkUrl ? { linkUrl } : {}),
+        suggestedBy: actorId,
+        goUserIds: [],
+        status: "open",
+      },
+    ])
+  }
+  function toggleLocalIdea(idea: IdeaRecord) {
+    setIdeas((current) =>
+      current.map((entry) => {
+        if (entry.id !== idea.id || entry.status !== "open") return entry
+        const going = entry.goUserIds.includes(actorId)
+        return {
+          ...entry,
+          goUserIds: going ? entry.goUserIds.filter((id) => id !== actorId) : [...entry.goUserIds, actorId],
+        }
+      }),
+    )
+  }
+  function beginPlace(idea: IdeaRecord) {
+    const fixtureToday = vietnam ? "2027-06-18" : timing ? "2027-06-11" : "2026-11-18"
+    const fallback = defaultPlanDate({
+      tripStart: tripStartDate,
+      tripEnd: tripEndDate,
+      plans: plansWithoutNotes(catalog),
+      today: todayProp && /^\d{4}-\d{2}-\d{2}$/.test(todayProp) ? todayProp : fixtureToday,
+    })
+    const date = idea.suggestedDate ?? fallback
+    setPlacing(idea)
+    setPlanEdit(null)
+    setInitialType("place")
+    setPlanSeed({
+      title: idea.text,
+      startDate: date,
+      endDate: date,
+      location: "",
+      planType: "place",
+      attendeeIds: goIdsForDay(
+        idea.goUserIds,
+        actorId,
+        roster.map((member) => member.userId),
+      ),
+      ...(idea.linkUrl ? { link: { label: "Link", url: idea.linkUrl } } : {}),
+    })
+    skipIdeasFocus.current = true
+    setIdeasOpen(false)
+    setPlanOpen(true)
+  }
   const pickedTrip = trips.find((trip) => trip.id === pickedTripId)
   const tripTitle = pickedTrip
     ? pickedTrip.name
@@ -676,6 +756,7 @@ export function ReviewGallery({
   const today = todayProp && /^\d{4}-\d{2}-\d{2}$/.test(todayProp) ? todayProp : fixtureToday
 
   function openAdd() {
+    setPlacing(null)
     setPlanEdit(null)
     setInitialType(null)
     setPlanSeed(null)
@@ -683,6 +764,7 @@ export function ReviewGallery({
   }
 
   function openPlan(item: TripItem | null, date?: string) {
+    setPlacing(null)
     if (item) {
       setPlanSeed(null)
       setPlanEdit(item)
@@ -697,6 +779,7 @@ export function ReviewGallery({
   }
 
   function openAction(action: GapAction) {
+    setPlacing(null)
     if (action.itemId) {
       const item = homePlans.find((entry) => entry.id === action.itemId)
       if (item) {
@@ -743,6 +826,13 @@ export function ReviewGallery({
         onAdd={openAdd}
         onOpenTrips={() => setTripsOpen(true)}
         tripsOpen={tripsOpen}
+        tools={
+          <IdeasLink
+            ref={ideasLinkRef}
+            count={shownIdeas.length}
+            onClick={() => setIdeasOpen(true)}
+          />
+        }
       >
         {activePerson ? (
           <PersonFilter
@@ -802,15 +892,12 @@ export function ReviewGallery({
             members={roster}
             packingChecked={2}
             packingTotal={6}
-            notesCount={1}
             onEditItem={(item) => openPlan(item)}
             onStartFlight={() => {}}
             onStartStay={() => {}}
             onStartPlace={() => {}}
             onInvite={() => setShareOpen(true)}
             onOpenPacking={() => {}}
-            onOpenNotes={() => {}}
-            onOpenAsk={() => {}}
             weather={weather}
           />
         )}
@@ -826,13 +913,16 @@ export function ReviewGallery({
       />
       <ItemDialog
         open={planOpen}
-        onOpenChange={setPlanOpen}
+        onOpenChange={(open) => {
+          setPlanOpen(open)
+          if (!open) setPlacing(null)
+        }}
         defaultDate={
           planSeed?.startDate ??
           defaultPlanDate({
             tripStart: tripStartDate,
             tripEnd: tripEndDate,
-            plans: homePlans,
+            plans: plansWithoutNotes(homePlans),
             today: "2026-11-18",
           })
         }
@@ -841,9 +931,40 @@ export function ReviewGallery({
         initialType={initialType}
         placeHint={party === 5 ? "Vietnam" : "Lisbon"}
         units={weather.units}
-        currentUserName="Connor"
+        currentUserName={roster.find((member) => member.userId === actorId)?.displayName ?? "Connor"}
         members={roster}
         onSave={(input, existing) => {
+          if (placing && !existing) {
+            const id = `plan_${placing.id}`
+            const planType = input.planType === "stay" || input.planType === "flight" ? input.planType : "place"
+            setPlans((current) => [
+              ...current,
+              {
+                id,
+                tripId: TRIP_ID,
+                title: input.title,
+                startDate: input.startDate,
+                endDate: input.endDate,
+                location: input.location,
+                ...(input.locationTo ? { locationTo: input.locationTo } : {}),
+                ...(input.startTime ? { startTime: input.startTime } : {}),
+                planType,
+                createdBy: actorId,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                ...(input.attendeeIds && input.attendeeIds.length > 0 ? { attendeeIds: input.attendeeIds } : {}),
+              },
+            ])
+            setIdeas((current) => {
+              const placed = { ...placing, status: "placed" as const, derived: false }
+              return current.some((idea) => idea.id === placing.id)
+                ? current.map((idea) => (idea.id === placing.id ? { ...idea, status: "placed" } : idea))
+                : [...current, placed]
+            })
+            setPlacing(null)
+            setIdeasOpen(false)
+            return
+          }
           if (!existing) return
           const nextIds = input.attendeeIds && input.attendeeIds.length > 0 ? input.attendeeIds : undefined
           setPlans((current) =>
@@ -878,6 +999,22 @@ export function ReviewGallery({
         onSave={() => {}}
         saveDisabled={false}
         isSaving={false}
+      />
+      <IdeasSheet
+        open={ideasOpen}
+        onOpenChange={setIdeasOpen}
+        ideas={shownIdeas}
+        members={roster}
+        currentUserId={actorId}
+        reviewActorSwitch={actorSwitch}
+        actors={roster.map((member) => ({ userId: member.userId, displayName: member.displayName }))}
+        actorId={actorId}
+        onActor={setActorId}
+        onAdd={addLocalIdea}
+        onToggle={toggleLocalIdea}
+        onPlace={beginPlace}
+        returnFocusRef={ideasLinkRef}
+        skipReturnFocusRef={skipIdeasFocus}
       />
     </>
   )

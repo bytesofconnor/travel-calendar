@@ -205,7 +205,6 @@ export function PairTripScreen({ roomId, member }: { roomId: string; member: "ow
             tripEnd={view.trip.endDate}
             packingChecked={0}
             packingTotal={0}
-            notesCount={savedNote.trim() ? 1 : 0}
             onEditItem={(item) => {
               setEditItem(item)
               setInitialInput(null)
@@ -217,8 +216,6 @@ export function PairTripScreen({ roomId, member }: { roomId: string; member: "ow
             onStartPlace={() => openCapture("place")}
             onInvite={() => undefined}
             onOpenPacking={() => undefined}
-            onOpenNotes={() => document.getElementById("shared-note-draft")?.focus()}
-            onOpenAsk={() => undefined}
           />
           <div className="mt-6 space-y-2">
             <Label htmlFor="shared-note-draft">Shared planning notes</Label>

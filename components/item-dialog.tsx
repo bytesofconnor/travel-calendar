@@ -42,7 +42,6 @@ const TYPES: { id: PlanType; label: string }[] = [
   { id: "stay", label: "Stay" },
   { id: "flight", label: "Travel" },
   { id: "place", label: "Activity" },
-  { id: "note", label: "Note" },
 ]
 
 interface ItemDialogProps {
@@ -96,7 +95,7 @@ export function ItemDialog({
   useLayoutEffect(() => {
     if (!open) return
     const current = document.activeElement
-    if (current instanceof HTMLElement && !current.closest("[role=dialog]")) {
+    if (current instanceof HTMLElement && !current.closest("[data-slot=dialog-content]")) {
       returnFocus.current = current
     }
   }, [open])

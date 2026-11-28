@@ -185,7 +185,8 @@ test("the add button is a 56px target on a phone and a desktop window", async ({
     const chip = document.querySelector("#plan-type-stay")
     return chip != null && chip.getBoundingClientRect().height >= 44
   })
-  for (const name of ["Stay", "Travel", "Activity", "Note"]) {
+  await expect(dialog.getByRole("radio", { name: "Note" })).toHaveCount(0)
+  for (const name of ["Stay", "Travel", "Activity"]) {
     const chip = dialog.getByRole("radio", { name })
     const chipBox = await chip.boundingBox()
     expect(chipBox!.height).toBeGreaterThanOrEqual(44)

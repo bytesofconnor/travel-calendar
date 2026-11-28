@@ -24,6 +24,20 @@ export const tripValidator = v.object({
   confirmedBy: v.optional(v.id("users")),
 })
 
+export const bundleIdeaValidator = v.object({
+  _id: v.id("tripIdeas"),
+  tripId: v.id("trips"),
+  text: v.string(),
+  linkUrl: v.optional(v.string()),
+  suggestedBy: v.id("users"),
+  goUserIds: v.array(v.id("users")),
+  status: v.union(v.literal("open"), v.literal("placed")),
+  suggestedDate: v.optional(v.string()),
+  placedItemId: v.optional(v.id("tripItems")),
+  sourceItemId: v.optional(v.id("tripItems")),
+  createdAt: v.number(),
+})
+
 export const bundleItemValidator = v.object({
   _id: v.id("tripItems"),
   tripId: v.id("trips"),
@@ -165,6 +179,11 @@ export async function getTripBundleForUser(
     .withIndex("by_trip", (q) => q.eq("tripId", tripId))
     .collect()
 
+  const ideas = await ctx.db
+    .query("tripIdeas")
+    .withIndex("by_trip", (q) => q.eq("tripId", tripId))
+    .collect()
+
   const claims = await ctx.db
     .query("tripGapClaims")
     .withIndex("by_trip", (q) => q.eq("tripId", tripId))
@@ -197,6 +216,21 @@ export async function getTripBundleForUser(
           _creationTime: note._creationTime,
         }
       : null,
+    ideas: ideas
+      .map((idea) => ({
+        _id: idea._id,
+        tripId: idea.tripId,
+        text: idea.text,
+        ...(idea.linkUrl ? { linkUrl: idea.linkUrl } : {}),
+        suggestedBy: idea.suggestedBy,
+        goUserIds: idea.goUserIds,
+        status: idea.status,
+        ...(idea.suggestedDate ? { suggestedDate: idea.suggestedDate } : {}),
+        ...(idea.placedItemId ? { placedItemId: idea.placedItemId } : {}),
+        ...(idea.sourceItemId ? { sourceItemId: idea.sourceItemId } : {}),
+        createdAt: idea.createdAt,
+      }))
+      .sort((a, b) => a.createdAt - b.createdAt),
     packingItems: packingItems.map((item) => ({
       _id: item._id,
       tripId: item.tripId,

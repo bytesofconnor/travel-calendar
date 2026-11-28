@@ -1871,6 +1871,35 @@
     min-width: 0;
   }
 
+  .story-chrome__tools {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+
+  .trip-tool-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 0.35rem;
+    border: 0;
+    background: transparent;
+    color: var(--foreground);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    white-space: nowrap;
+  }
+
+  .trip-tool-link:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--together);
+  }
+
   @media (max-width: 767px) {
     .story-chrome__travelers .traveler-label {
       min-width: 0;
@@ -1893,6 +1922,15 @@
   }
 
   @media (max-width: 430px) {
+    .story-chrome__tools {
+      gap: 0;
+    }
+
+    .trip-tool-link {
+      padding-inline: 0.1rem;
+      font-size: 0.75rem;
+    }
+
     .story-chrome {
       gap: 0.25rem;
       padding-block: 0.35rem;

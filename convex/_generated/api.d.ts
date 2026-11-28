@@ -18,6 +18,7 @@ import type * as gapClaims from "../gapClaims.js";
 import type * as geoCache from "../geoCache.js";
 import type * as health from "../health.js";
 import type * as http from "../http.js";
+import type * as ideas from "../ideas.js";
 import type * as items from "../items.js";
 import type * as lib_apiKeys from "../lib/apiKeys.js";
 import type * as lib_auth from "../lib/auth.js";
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   geoCache: typeof geoCache;
   health: typeof health;
   http: typeof http;
+  ideas: typeof ideas;
   items: typeof items;
   "lib/apiKeys": typeof lib_apiKeys;
   "lib/auth": typeof lib_auth;

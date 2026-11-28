@@ -38,6 +38,7 @@ const feedSource = v.object({
     }),
     v.null(),
   ),
+  ideaSourceIds: v.array(v.string()),
 })
 
 function defined<T extends Record<string, unknown>>(value: T): T {
@@ -131,6 +132,12 @@ export const readByToken = query({
       .query("tripItems")
       .withIndex("by_trip_and_start", (q) => q.eq("tripId", row.tripId))
       .collect()
+    const ideas = await ctx.db
+      .query("tripIdeas")
+      .withIndex("by_trip", (q) => q.eq("tripId", row.tripId))
+      .collect()
+    const copied = new Set(ideas.flatMap((idea) => (idea.sourceItemId ? [idea.sourceItemId] : [])))
+    const feedItems = items.filter((item) => !(item.planType === "note" && copied.has(item._id)))
     const note = await ctx.db
       .query("tripNotes")
       .withIndex("by_trip", (q) => q.eq("tripId", row.tripId))
@@ -140,7 +147,7 @@ export const readByToken = query({
       tripId: trip._id,
       tripName: trip.name,
       tripUpdatedAt: trip.updatedAt ?? trip._creationTime,
-      items: items.map((item) =>
+      items: feedItems.map((item) =>
         defined({
           id: item._id,
           title: item.title,
@@ -166,6 +173,7 @@ export const readByToken = query({
             updatedAt: note.updatedAt ?? note._creationTime,
           }
         : null,
+      ideaSourceIds: [...copied],
     }
   },
 })

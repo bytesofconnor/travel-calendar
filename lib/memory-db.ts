@@ -17,6 +17,10 @@ const indexFields: Record<string, Record<string, readonly string[]>> = {
   tripNotes: {
     by_trip: ["tripId"],
   },
+  tripIdeas: {
+    by_trip: ["tripId"],
+    by_source: ["sourceItemId"],
+  },
   tripGapClaims: {
     by_trip: ["tripId"],
     by_trip_and_gap: ["tripId", "gapId"],
