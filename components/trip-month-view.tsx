@@ -346,7 +346,6 @@ export function TripMonthView({
                       )
                     })}
                     {weekDays.map((day, column) => {
-                      const dayItems = itemsOnDay(items, day.iso)
                       const isToday = day.iso === today
                       return (
                         <span
@@ -359,7 +358,6 @@ export function TripMonthView({
                             {dateParts(day.iso).day}
                           </span>
                           {isToday ? <span className="month-day__today">Today</span> : null}
-                          {dayItems.length > 0 ? <span className="month-badge">{dayItems.length}</span> : null}
                         </span>
                       )
                     })}
@@ -380,17 +378,25 @@ export function TripMonthView({
                     </div>
                     {weekDays.map((day, column) => {
                       const singles = itemsOnDay(items, day.iso).filter((item) => inferPlanKind(item) !== "stay")
+                      const extra = Math.max(0, singles.length - 2)
                       return (
-                        <span key={`chips-${day.iso}`} className="month-day__chips" style={{ gridColumn: column + 1 }}>
+                        <span
+                          key={`chips-${day.iso}`}
+                          className="month-day__chips"
+                          data-date={day.iso}
+                          style={{ gridColumn: column + 1 }}
+                        >
                           {singles.map((item) => {
                             const kind = inferPlanKind(item)
                             return (
                               <span key={item.id} className="month-chip" data-kind={kind}>
+                                <span className="month-chip__dot" />
                                 <span className="month-chip__kind"><KindMark item={item} /></span>
                                 <span className="month-chip__title">{item.title}</span>
                               </span>
                             )
                           })}
+                          {extra > 0 ? <span className="month-more">+{extra}</span> : null}
                         </span>
                       )
                     })}
