@@ -94,30 +94,91 @@ test("arrow keys move between days", async ({ page }) => {
   await expect(page.getByRole("gridcell", { name: /Wednesday November 18/ })).toBeFocused()
 })
 
-test("narrow phones show count badges and stay inside the screen", async ({ page }) => {
+test("phone month shows plan titles and a stay bar inside the screen", async ({ page }) => {
   for (const width of [390, 320]) {
     await page.setViewportSize({ width, height: width === 320 ? 568 : 844 })
     await openMonth(page)
     const day = page.getByRole("gridcell", { name: /Wednesday November 18, today, 4 events/ })
-    await expect(page.locator(".month-chip").first()).toBeHidden()
-    await expect(page.locator(".month-bar").first()).toBeHidden()
-    await expect(page.locator(".month-badge", { hasText: "4" }).first()).toBeVisible()
-    const box = await day.boundingBox()
-    expect(box?.width ?? 0).toBeGreaterThanOrEqual(44)
-    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
+    await expect(day).toHaveAccessibleName(/Flight SFO to LIS/)
+    await expect(day).toHaveAccessibleName(/Stay Alfama apartment/)
+    await expect(day).toHaveAccessibleName(/Activity Dinner/)
+    await expect(day).toHaveAccessibleName(/Activity Tram 28/)
+
+    const column = page.locator('.month-day__chips[data-date="2026-11-18"]')
+    await expect(column.locator(".month-chip:visible")).toHaveCount(2)
+    await expect(column.locator(".month-chip__title:visible", { hasText: "TAP to Lisbon" })).toBeVisible()
+    await expect(column.locator(".month-chip__title:visible", { hasText: "Dinner" })).toBeVisible()
+    await expect(column.locator(".month-chip__kind").first()).toBeHidden()
+    await expect(column.locator(".month-chip__dot:visible")).toHaveCount(2)
+    await expect(column.locator(".month-more")).toHaveText("+1")
+    await expect(column.locator(".month-more")).toBeVisible()
+
+    const title = column.locator(".month-chip__title", { hasText: "TAP to Lisbon" })
+    const metrics = await title.evaluate((element) => {
+      const style = getComputedStyle(element)
+      const line = Number.parseFloat(style.lineHeight)
+      return {
+        size: Number.parseFloat(style.fontSize),
+        width: element.getBoundingClientRect().width,
+        lines: element.getBoundingClientRect().height / line,
+        text: element.textContent,
+      }
+    })
+    expect(metrics.size).toBeGreaterThanOrEqual(14)
+    expect(metrics.width).toBeGreaterThan(24)
+    expect(metrics.lines).toBeGreaterThan(1.4)
+    expect(metrics.text).toBe("TAP to Lisbon")
+
+    const bar = page.locator(".month-bar", { hasText: "Alfama apartment" }).first()
+    await expect(bar).toBeVisible()
+    await expect(page.locator(".month-bar__kind").first()).toBeHidden()
+    const barBox = await bar.boundingBox()
+    const dayBox = await day.boundingBox()
+    expect(barBox?.width ?? 0).toBeGreaterThan((dayBox?.width ?? 0) * 1.5)
+    expect(dayBox?.width ?? 0).toBeGreaterThanOrEqual(44)
+    expect(dayBox?.height ?? 0).toBeGreaterThanOrEqual(44)
+    const barTitle = bar.locator(".month-bar__title")
+    const barFit = await barTitle.evaluate((element) => ({
+      size: Number.parseFloat(getComputedStyle(element).fontSize),
+      fits: element.scrollWidth <= element.clientWidth + 1,
+      text: element.textContent,
+    }))
+    expect(barFit.size).toBeGreaterThanOrEqual(14)
+    expect(barFit.text).toBe("Alfama apartment")
+    expect(barFit.fits).toBe(true)
     expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
   }
 
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openMonth(page)
+  const start = page.getByRole("gridcell", { name: /Wednesday November 18/ })
+  await start.focus()
+  const focus = await start.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return { style: style.outlineStyle, width: Number.parseFloat(style.outlineWidth) }
+  })
+  expect(focus.style).not.toBe("none")
+  expect(focus.width).toBeGreaterThan(0)
+  await page.keyboard.press("ArrowRight")
+  await expect(page.getByRole("gridcell", { name: /Thursday November 19/ })).toBeFocused()
+  await page.getByRole("gridcell", { name: /Wednesday November 18/ }).click()
+  await expect(page.getByRole("heading", { name: "Wednesday, November 18" })).toBeVisible()
+  await expect(page.getByRole("button", { name: /TAP to Lisbon/ })).toBeVisible()
+
   await page.setViewportSize({ width: 1280, height: 800 })
   await openMonth(page)
-  await expect(page.locator(".month-chip", { hasText: "TAP to Lisbon" }).first()).toBeVisible()
-  await expect(page.locator(".month-chip", { hasText: "Flight" }).first()).toBeVisible()
+  const desktopDay = page.locator('.month-day__chips[data-date="2026-11-18"]')
+  await expect(desktopDay.locator(".month-chip", { hasText: "TAP to Lisbon" })).toBeVisible()
+  await expect(desktopDay.locator(".month-chip", { hasText: "Flight" })).toBeVisible()
+  await expect(desktopDay.locator(".month-chip", { hasText: "Dinner" })).toContainText("Activity")
+  await expect(desktopDay.locator(".month-chip")).toHaveCount(3)
+  await expect(desktopDay.locator(".month-more")).toBeHidden()
   await expect(page.locator(".month-bar", { hasText: "Alfama apartment" })).toHaveCount(2)
+  await expect(page.locator(".month-bar__kind").first()).toBeVisible()
   expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
 })
 
-test("month view stays readable at large text and 200% zoom", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "chromium", "Text scaling runs once on Chromium")
+test("month view stays readable at large text and 200% zoom", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 })
   await page.goto("/review?screen=month", { waitUntil: "domcontentloaded" })
   await waitUntilInteractive(page)
@@ -141,15 +202,39 @@ test("month view stays readable at large text and 200% zoom", async ({ page }, t
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto("/review?screen=month", { waitUntil: "domcontentloaded" })
   await waitUntilInteractive(page)
+  await page.addStyleTag({ content: "html { font-size: 32px !important; }" })
+  const phoneTitle = page.locator(".month-agenda__title", { hasText: "TAP to Lisbon" }).first()
+  await expect(page.locator(".month-agenda")).toBeVisible()
+  await expect(phoneTitle).toBeVisible()
+  const phoneText = await phoneTitle.evaluate((element) => getComputedStyle(element).whiteSpace)
+  expect(phoneText).not.toBe("nowrap")
+  expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
+
+  await page.goto("/review?screen=month", { waitUntil: "domcontentloaded" })
+  await waitUntilInteractive(page)
   await page.evaluate(() => {
     document.documentElement.style.zoom = "2"
   })
   await expect(page.getByRole("heading", { name: "November 2026" })).toBeVisible()
   expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
+
+  await page.goto("/review?screen=month", { waitUntil: "domcontentloaded" })
+  await waitUntilInteractive(page)
+  await page.evaluate(() => {
+    document.documentElement.style.zoom = "4"
+  })
+  await expect(page.getByRole("heading", { name: "November 2026" })).toBeVisible()
+  const zoomedAgenda = page.locator(".month-agenda__title", { hasText: "Alfama apartment" }).first()
+  const zoomedBar = page.locator(".month-bar", { hasText: "Alfama apartment" }).first()
+  if (await page.locator(".month-agenda").isVisible()) {
+    await expect(zoomedAgenda).toBeVisible()
+  } else {
+    await expect(zoomedBar).toBeVisible()
+  }
+  expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
 })
 
 test("month view keeps contrast in light, dark, and each theme pack", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name === "firefox", "axe-core crashes Firefox 159")
   const themes = [
     { path: "/review?screen=month", scheme: "light" as const },
     { path: "/review?screen=month", scheme: "dark" as const },
@@ -160,11 +245,14 @@ test("month view keeps contrast in light, dark, and each theme pack", async ({ p
   ]
   for (const theme of themes) {
     await page.emulateMedia({ colorScheme: theme.scheme })
+    await page.setViewportSize({ width: 1280, height: 800 })
     await openMonth(page, theme.path)
     if (theme.scheme === "dark") {
       await expect(page.locator("html")).toHaveClass(/dark/, { timeout: 5000 })
     }
-    const sample = await page.evaluate(() => {
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 800 })
+      const sample = await page.evaluate(() => {
       function rgb(color: string) {
         const canvas = document.createElement("canvas")
         const context = canvas.getContext("2d")
@@ -190,34 +278,52 @@ test("month view keeps contrast in light, dark, and each theme pack", async ({ p
       const date = document.querySelector(".month-day__date")
       const chip = document.querySelector(".month-chip")
       const title = document.querySelector(".month-chip__title")
-      if (!(fill instanceof HTMLElement) || !(date instanceof HTMLElement) || !(chip instanceof HTMLElement) || !(title instanceof HTMLElement)) {
+      const bar = document.querySelector(".month-bar")
+      const dot = chip?.querySelector(".month-chip__dot")
+      const more = document.querySelector(".month-more")
+      if (!(fill instanceof HTMLElement) || !(date instanceof HTMLElement) || !(chip instanceof HTMLElement) || !(title instanceof HTMLElement) || !(bar instanceof HTMLElement)) {
         return null
       }
       const fillStyle = getComputedStyle(fill)
       const dateStyle = getComputedStyle(date)
       const chipStyle = getComputedStyle(chip)
       const titleStyle = getComputedStyle(title)
+      const barStyle = getComputedStyle(bar)
+      const dotStyle = dot instanceof HTMLElement ? getComputedStyle(dot) : null
+      const moreStyle = more instanceof HTMLElement ? getComputedStyle(more) : null
       return {
         dateOnFill: contrast(dateStyle.color, fillStyle.backgroundColor),
         chip: contrast(chipStyle.color, chipStyle.backgroundColor),
+        bar: contrast(barStyle.color, barStyle.backgroundColor),
+        dot: dotStyle && dotStyle.display !== "none" ? contrast(dotStyle.backgroundColor, chipStyle.backgroundColor) : null,
+        more: moreStyle && moreStyle.display !== "none" ? contrast(moreStyle.color, fillStyle.backgroundColor) : null,
         fillLuminance: luminance(rgb(fillStyle.backgroundColor)),
         titleSize: Number.parseFloat(titleStyle.fontSize),
         titleSpace: titleStyle.whiteSpace,
         chipWrap: chipStyle.flexWrap,
       }
     })
-    expect(sample, theme.path).not.toBeNull()
+    expect(sample, `${theme.path} ${width}`).not.toBeNull()
     expect(sample!.dateOnFill, theme.path).toBeGreaterThanOrEqual(4.5)
     expect(sample!.chip, theme.path).toBeGreaterThanOrEqual(4.5)
+    expect(sample!.bar, theme.path).toBeGreaterThanOrEqual(4.5)
+    if (sample!.dot != null) expect(sample!.dot, theme.path).toBeGreaterThanOrEqual(3)
+    if (sample!.more != null) expect(sample!.more, theme.path).toBeGreaterThanOrEqual(4.5)
     expect(sample!.titleSize, theme.path).toBeGreaterThanOrEqual(14)
-    expect(sample!.titleSpace, theme.path).toBe("nowrap")
     expect(sample!.chipWrap, theme.path).toBe("nowrap")
-    if (theme.scheme === "light") {
-      expect(sample!.fillLuminance, theme.path).toBeGreaterThan(0.75)
+    if (width === 1280) expect(sample!.titleSpace, theme.path).toBe("nowrap")
+      if (theme.scheme === "light") {
+        expect(sample!.fillLuminance, theme.path).toBeGreaterThan(0.75)
+      }
     }
+    if (testInfo.project.name === "firefox") continue
+    await page.setViewportSize({ width: 390, height: 844 })
     await page.getByRole("gridcell", { name: /Wednesday November 18/ }).click()
-    const results = await new AxeBuilder({ page }).include("[data-month-view]").analyze()
-    expect(results.violations, theme.path).toEqual([])
+    const phoneResults = await new AxeBuilder({ page }).include("[data-month-view]").analyze()
+    expect(phoneResults.violations, `${theme.path} 390`).toEqual([])
+    await page.setViewportSize({ width: 1280, height: 800 })
+    const desktopResults = await new AxeBuilder({ page }).include("[data-month-view]").analyze()
+    expect(desktopResults.violations, `${theme.path} 1280`).toEqual([])
   }
 })
 
@@ -270,19 +376,21 @@ test("the month grid fills the width without horizontal overflow", async ({ page
 })
 
 test("a multi-day stay is one bar that wraps at the week", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 })
-  await page.goto("/review?screen=vietnam", { waitUntil: "domcontentloaded" })
-  await waitUntilInteractive(page)
-  await expect(page.getByRole("heading", { name: "June 2027" })).toBeVisible()
-  const bars = page.locator(".month-bar", { hasText: "Old Quarter apartment" })
-  await expect(bars).toHaveCount(2)
-  const first = await bars.nth(0).boundingBox()
-  const friday = await page.getByRole("gridcell", { name: /Friday June 11/ }).boundingBox()
-  expect(first?.width ?? 0).toBeGreaterThan((friday?.width ?? 0) * 1.5)
-  const flight = page.locator(".month-chip", { hasText: "SFO to HAN" })
-  await expect(flight).toBeVisible()
-  await expect(flight).toContainText("Flight")
-  expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+    await page.goto("/review?screen=vietnam", { waitUntil: "domcontentloaded" })
+    await waitUntilInteractive(page)
+    await expect(page.getByRole("heading", { name: "June 2027" })).toBeVisible()
+    const bars = page.locator(".month-bar", { hasText: "Old Quarter apartment" })
+    await expect(bars).toHaveCount(2)
+    const first = await bars.nth(0).boundingBox()
+    const friday = await page.getByRole("gridcell", { name: /Friday June 11/ }).boundingBox()
+    expect(first?.width ?? 0).toBeGreaterThan((friday?.width ?? 0) * 1.5)
+    const flight = page.locator(".month-chip:visible", { hasText: "SFO to HAN" })
+    await expect(flight).toBeVisible()
+    if (width === 1440) await expect(flight).toContainText("Flight")
+    expect(await pageOverflow(page)).toBeLessThanOrEqual(1)
+  }
 })
 
 test("add something stays above the composer", async ({ page }, testInfo) => {
@@ -386,18 +494,6 @@ test("tapping a day on a phone reveals its plans and moves focus", async ({ page
   })
   expect(covered.inView).toBe(true)
   expect(covered.overlap).toBeLessThan(1)
-})
-
-test("phone month count badges are large enough to read", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
-  await openMonth(page)
-  const badge = await page.locator(".month-badge").first().evaluate((element) => {
-    const style = getComputedStyle(element)
-    const box = element.getBoundingClientRect()
-    return { size: Number.parseFloat(style.fontSize), height: box.height }
-  })
-  expect(badge.size).toBeGreaterThanOrEqual(14)
-  expect(badge.height).toBeGreaterThanOrEqual(28)
 })
 
 test("month view does not animate when motion is reduced", async ({ page }) => {
