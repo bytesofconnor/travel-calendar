@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, type ReactNode } from "react"
-import { ChevronDown, UserPlus } from "lucide-react"
+import { UserPlus } from "lucide-react"
 
 import { SegmentedControl } from "@/components/ds"
 import { TravelerStack } from "@/components/traveler-stack"
@@ -10,7 +10,6 @@ import type { TravelerName } from "@/lib/travelers"
 export function StoryChrome({
   mode,
   onModeChange,
-  onOpenTrips,
   onInvite,
   travelers,
   currentUserId,
@@ -21,7 +20,6 @@ export function StoryChrome({
 }: {
   mode: "list" | "month"
   onModeChange: (mode: "list" | "month") => void
-  onOpenTrips: () => void
   onInvite: () => void
   travelers: readonly TravelerName[]
   currentUserId?: string
@@ -46,14 +44,6 @@ export function StoryChrome({
           { value: "month", label: "Month" },
         ]}
       />
-      <button
-        type="button"
-        className="story-chrome__hit shrink-0 rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label="All trips"
-        onClick={onOpenTrips}
-      >
-        <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
-      </button>
       <div className="story-chrome__cluster ml-auto flex shrink-0 items-center gap-1.5 max-[430px]:gap-1">
         <button
           type="button"

@@ -29,7 +29,7 @@ export function shownLabel(item: TripItem): string {
 export function kindLabel(kind: PlanKind): string {
   if (kind === "flight") return "Flight"
   if (kind === "stay") return "Stay"
-  if (kind === "place") return "Place"
+  if (kind === "place") return "Activity"
   if (kind === "note") return "Note"
   if (kind === "ask") return "Ask"
   return "Now"

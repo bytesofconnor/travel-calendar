@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 
-import { CaptureDock, type CaptureKind } from "@/components/capture-dock"
+import { AddTripButton, type CaptureKind } from "@/components/capture-dock"
 import { PageInset, PageShell } from "@/components/page-shell"
 import { EditTripDialog } from "@/components/edit-trip-dialog"
 import { ItemDialog } from "@/components/item-dialog"
@@ -118,7 +118,7 @@ export function PairTripScreen({ roomId, member }: { roomId: string; member: "ow
 
   function openCapture(kind?: CaptureKind, text?: string) {
     const baseDate = trip.startDate
-    const typed = kind ?? (text?.trim() ? guessPlanType(text) : "place")
+    const typed = kind ?? (text?.trim() ? guessPlanType(text) : null)
     setEditItem(null)
     setInitialType(typed)
     setInitialInput({
@@ -169,6 +169,7 @@ export function PairTripScreen({ roomId, member }: { roomId: string; member: "ow
 
   return (
     <PageShell className="page-frame">
+      <div className="page-frame__column page-frame__column--add">
       <div className="story-scroll">
         <PageInset className="pb-8 pt-6">
           <header className="flex items-start justify-between gap-3">
@@ -233,7 +234,8 @@ export function PairTripScreen({ roomId, member }: { roomId: string; member: "ow
           </div>
         </PageInset>
       </div>
-      <CaptureDock hint="Add to the trip…" onCapture={openCapture} />
+      <AddTripButton onAdd={() => openCapture()} />
+      </div>
       <ItemDialog
         open={itemOpen}
         onOpenChange={(open) => {

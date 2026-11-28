@@ -12,7 +12,6 @@ import {
   LogOut,
   Pencil,
   Plane,
-  PlusCircle,
   X,
 } from "lucide-react"
 
@@ -61,7 +60,7 @@ import { StatusBanner } from "@/components/ds"
 import { ThemePackPickerMenuItems } from "@/components/theme-pack-menu"
 import { useTripThemePack } from "@/components/use-trip-theme-pack"
 import { AddToCalendarSheet } from "./add-to-calendar-sheet"
-import { CaptureDock, type CaptureKind } from "./capture-dock"
+import { AddTripButton, type CaptureKind } from "./capture-dock"
 import { useDayWeather } from "./day-weather"
 import { PageShell } from "./page-shell"
 import { TemperatureMenuItems } from "./weather-chip"
@@ -835,7 +834,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
       plans: items,
       today,
     })
-    const typed = kind ?? (text?.trim() ? guessPlanType(text) : "place")
+    const typed = kind ?? (text?.trim() ? guessPlanType(text) : null)
     setEditItem(null)
     setDefaultItemDate(baseDate)
     setInitialType(typed)
@@ -1307,7 +1306,6 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
     .join(" · ")
   const packingChecked = packingItems.filter((item) => item.isChecked).length
   const notesCount = noteDraft.trim() ? 1 : 0
-  const captureHint = "Add to the trip…"
   const activePerson = members.find((member) => member.userId === personId) ?? null
   const visibleItems = filterItems(
     items,
@@ -1329,12 +1327,12 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
         tripName={trip.name}
         meta={coverMeta}
         coverImageUrl={trip.coverImageUrl}
-        onBrandClick={() => setTripsOpen(true)}
+        onOpenTrips={() => setTripsOpen(true)}
+        tripsOpen={tripsOpen}
         toolbar={
                     <StoryChrome
                       mode={storyMode}
                       onModeChange={setStoryMode}
-                      onOpenTrips={() => setTripsOpen(true)}
                       onInvite={() => setShareOpen(true)}
                       travelers={members}
                       currentUserId={userId}
@@ -1355,19 +1353,6 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" collisionPadding={8} className="w-60">
-                          <DropdownMenuItem onSelect={() => setTripsOpen(true)}>
-                            All trips
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              setCreateJoinMode("create")
-                              setShowCreateJoin(true)
-                            }}
-                          >
-                            <PlusCircle className="h-4 w-4" />
-                            New or join
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onSelect={() => {
                               setCalendarError("")
@@ -1403,7 +1388,6 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
                               Refresh cover
                             </DropdownMenuItem>
                           ) : null}
-                          {(currentMember?.role === "owner") ? <DropdownMenuSeparator /> : null}
                           <DropdownMenuSeparator />
                           <TemperatureMenuItems units={weather.units} onChange={weather.choose} />
                           <DropdownMenuSeparator />
@@ -1426,12 +1410,7 @@ export function ConvexTripCalendarApp({ joinCode, confirmId, tripId, planId, who
             ) : null}
           </>
         }
-        composer={
-          <CaptureDock
-            hint={captureHint}
-            onCapture={(kind, text) => openCapture(kind, undefined, text)}
-          />
-        }
+        composer={<AddTripButton onAdd={() => openCapture()} />}
         aside={
           <aside
             className={`hidden min-h-0 shrink-0 overflow-hidden border-l border-border bg-card transition-[width,opacity] duration-300 ease-out xl:flex ${

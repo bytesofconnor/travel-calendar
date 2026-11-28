@@ -83,8 +83,9 @@ test("a new flight starts on the trip's first day", async ({ page }) => {
 
 test("each type shows its own fields and the flight toggle is gone", async ({ page }) => {
   await page.goto("/review?screen=trip", { waitUntil: "domcontentloaded" })
-  await page.getByRole("button", { name: "Add Stay" }).click()
+  await page.getByRole("button", { name: "Add to the trip" }).click()
   const dialog = page.getByRole("dialog")
+  await dialog.getByRole("radio", { name: "Stay" }).click()
   await expect(dialog.getByRole("heading", { name: "Add a stay" })).toBeVisible()
   await expect(dialog.getByLabel("Where are you staying?")).toBeVisible()
   await expect(dialog.getByLabel("Check-in")).toBeVisible()
@@ -107,10 +108,12 @@ test("each type shows its own fields and the flight toggle is gone", async ({ pa
 
 test("a typed route becomes a flight and a legacy flight opens as a flight", async ({ page }) => {
   await page.goto("/review?screen=trip", { waitUntil: "domcontentloaded" })
-  const capture = page.getByRole("textbox", { name: "Add to the trip…" })
+  await page.getByRole("button", { name: "Add to the trip" }).click()
+  const dialog = page.getByRole("dialog")
+  const capture = dialog.getByRole("textbox", { name: "Add to the trip…" })
+  await expect(capture).toBeFocused()
   await capture.fill("Fly DC to Hanoi")
   await capture.press("Enter")
-  const dialog = page.getByRole("dialog")
   await expect(dialog.getByRole("radio", { name: "Travel" })).toHaveAttribute("aria-checked", "true")
   await expect(dialog.getByRole("radio", { name: "Flight" })).toHaveAttribute("aria-checked", "true")
   await expect(dialog.getByLabel("From")).toHaveValue("DC")
@@ -149,11 +152,14 @@ test("a stay title fills in from the place and can be overridden", async ({ page
 
 test("the type control is a keyboard radiogroup and escape returns focus", async ({ page }) => {
   await page.goto("/review?screen=trip", { waitUntil: "domcontentloaded" })
-  const opener = page.getByRole("button", { name: "Add Stay" })
+  await page.waitForFunction(() => document.documentElement.dataset.uiReady === "true")
+  const opener = page.getByRole("button", { name: "Add to the trip" })
   await opener.focus()
   await opener.press("Enter")
   const dialog = page.getByRole("dialog")
+  await expect(dialog.getByRole("textbox", { name: "Add to the trip…" })).toBeFocused()
   const stay = dialog.getByRole("radio", { name: "Stay" })
+  await stay.focus()
   await expect(stay).toBeFocused()
   await page.keyboard.press("ArrowRight")
   await expect(dialog.getByRole("radio", { name: "Travel" })).toBeFocused()

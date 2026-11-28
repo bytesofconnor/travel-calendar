@@ -59,7 +59,7 @@ test("a header face filters list and month without moving the toolbar", async ({
   await expect(page.getByText("Showing Mom's plans")).toBeVisible()
   await expect(page.getByText("2 of 3")).toBeVisible()
   await expect(page).toHaveURL(/who=user_mom/)
-  await expect(page.getByRole("button", { name: /Place: Time Out Market/ })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: /Activity: Time Out Market/ })).toHaveCount(0)
   await expect(page.getByRole("button", { name: /Stay: Alfama apartment/ }).first()).toBeVisible()
   expect(await toolbarBox(page)).toEqual(before)
 
@@ -91,6 +91,7 @@ test("the fifth traveler is a filter behind the extra faces", async ({ page }) =
 
 test("Jun 11 sleeps in DC after the flight, and later days say wake up", async ({ page }) => {
   await page.goto("/review?screen=timing", { waitUntil: "domcontentloaded" })
+  await page.waitForFunction(() => document.documentElement.dataset.uiReady === "true")
   await expect(page.getByRole("heading", { name: "DC weekend" })).toBeVisible()
   await page.getByRole("button", { name: "Full trip", exact: true }).click()
 

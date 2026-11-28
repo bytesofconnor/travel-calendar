@@ -4,7 +4,7 @@ import { useMemo, useState, type ReactNode } from "react"
 import { Calendar, Ellipsis } from "lucide-react"
 
 import type { Id } from "@/convex/_generated/dataModel"
-import { CaptureDock, type CaptureKind } from "@/components/capture-dock"
+import { AddTripButton } from "@/components/capture-dock"
 import { useDayWeather } from "@/components/day-weather"
 import { TripWorkspace } from "@/components/trip-workspace"
 import { TemperatureMenuItems } from "@/components/weather-chip"
@@ -35,7 +35,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { Trip, TripItem, TripItemInput, TripMember } from "@/lib/kanban-store"
-import { defaultPlanDate, guessPlanType } from "@/lib/plan-form"
+import { defaultPlanDate } from "@/lib/plan-form"
 import type { PlanType } from "@/lib/plan-types"
 import { buildTripHome, type GapAction } from "@/lib/trip-home/detect"
 import type { WeatherReading, WeatherUnits } from "@/lib/weather"
@@ -423,7 +423,6 @@ function TripFrame({
   screen,
   view,
   onViewChange,
-  captureHint,
   themePack,
   travelers,
   meta,
@@ -433,13 +432,14 @@ function TripFrame({
   onOpenMembers,
   selectedUserId,
   onSelectPerson,
-  onCapture,
+  onAdd,
+  onOpenTrips,
+  tripsOpen,
   children,
 }: {
   screen: string
   view: "list" | "month"
   onViewChange: (view: "list" | "month") => void
-  captureHint: string
   themePack: ThemePackId | null
   travelers: TripMember[]
   meta: string
@@ -449,7 +449,9 @@ function TripFrame({
   onOpenMembers: () => void
   selectedUserId?: string | null
   onSelectPerson?: (userId: string) => void
-  onCapture?: (kind?: CaptureKind, text?: string) => void
+  onAdd: () => void
+  onOpenTrips: () => void
+  tripsOpen: boolean
   children: ReactNode
 }) {
   const [menuOpen, setMenuOpen] = useState(screen === "theme")
@@ -463,11 +465,12 @@ function TripFrame({
       mode={view}
       tripName={tripName}
       meta={meta}
+      onOpenTrips={onOpenTrips}
+      tripsOpen={tripsOpen}
       toolbar={
                   <StoryChrome
                     mode={view}
                     onModeChange={onViewChange}
-                    onOpenTrips={() => {}}
                     onInvite={onOpenMembers}
                     travelers={travelers}
                     currentUserId={USER_ID}
@@ -488,9 +491,6 @@ function TripFrame({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" collisionPadding={8} className="w-60">
-                          <DropdownMenuItem>All trips</DropdownMenuItem>
-                          <DropdownMenuItem>New or join</DropdownMenuItem>
-                          <DropdownMenuSeparator />
                           <ThemePackPickerMenuItems
                             tripId={REVIEW_TRIP_ID}
                             themePack={themePack}
@@ -511,7 +511,7 @@ function TripFrame({
                     }
                   />
       }
-      composer={<CaptureDock hint={captureHint} onCapture={onCapture ?? (() => {})} />}
+      composer={<AddTripButton onAdd={onAdd} />}
       banners={
         saveFailed ? (
           <SaveErrorBanner onRetry={() => setSaveFailed(false)} />
@@ -612,6 +612,8 @@ export function ReviewGallery({
   const [planSeed, setPlanSeed] = useState<Partial<TripItemInput> | null>(null)
   const [planEdit, setPlanEdit] = useState<TripItem | null>(screen === "edit" ? editItem : null)
   const [initialType, setInitialType] = useState<PlanType | null>(screen === "add" ? "place" : null)
+  const [tripsOpen, setTripsOpen] = useState(screen === "trips")
+  const [pickedTripId, setPickedTripId] = useState<string | null>(null)
   const [personId, setPersonId] = useState<string | null>(who)
   const weather = useDayWeather(homePlans, { start: tripStartDate, end: tripEndDate }, REVIEW_WEATHER)
   const [view, setView] = useState<"list" | "month">(screen === "month" || vietnam ? "month" : "list")
@@ -619,7 +621,14 @@ export function ReviewGallery({
   const roster = partyMembers(vietnam ? 5 : timing ? 2 : party)
   const activePerson = roster.find((member) => member.userId === personId) ?? null
   const visibleItems = filterItems(catalog, activePerson?.userId ?? null, roster.map((member) => member.userId))
-  const tripTitle = timing ? "DC weekend" : vietnam || party === 5 ? "Vietnam '27" : "Lisbon with you"
+  const pickedTrip = trips.find((trip) => trip.id === pickedTripId)
+  const tripTitle = pickedTrip
+    ? pickedTrip.name
+    : timing
+      ? "DC weekend"
+      : vietnam || party === 5
+        ? "Vietnam '27"
+        : "Lisbon with you"
   const coverMeta = vietnam
     ? `Jun 11 – Jul 2 · 22 days · ${travelerLabel(roster, USER_ID)}`
     : timing
@@ -665,7 +674,13 @@ export function ReviewGallery({
 
   const fixtureToday = vietnam ? "2027-06-18" : timing ? "2027-06-11" : "2026-11-18"
   const today = todayProp && /^\d{4}-\d{2}-\d{2}$/.test(todayProp) ? todayProp : fixtureToday
-  const captureHint = screen === "today" && view === "list" ? "What’s happening today?" : "Add to the trip…"
+
+  function openAdd() {
+    setPlanEdit(null)
+    setInitialType(null)
+    setPlanSeed(null)
+    setPlanOpen(true)
+  }
 
   function openPlan(item: TripItem | null, date?: string) {
     if (item) {
@@ -676,7 +691,7 @@ export function ReviewGallery({
       return
     }
     setPlanEdit(null)
-    setInitialType("place")
+    setInitialType(null)
     setPlanSeed(date ? { startDate: date, endDate: date } : null)
     setPlanOpen(true)
   }
@@ -710,7 +725,6 @@ export function ReviewGallery({
         screen={screen}
         view={view}
         onViewChange={setView}
-        captureHint={captureHint}
         themePack={themePack}
         travelers={roster}
         meta={coverMeta}
@@ -726,16 +740,9 @@ export function ReviewGallery({
             return next
           })
         }}
-        onCapture={(kind, text) => {
-          setPlanEdit(null)
-          setInitialType(kind ?? (text?.trim() ? guessPlanType(text) : "place"))
-          setPlanSeed({
-            title: text?.trim() ?? "",
-            startDate: tripStartDate,
-            endDate: tripStartDate,
-          })
-          setPlanOpen(true)
-        }}
+        onAdd={openAdd}
+        onOpenTrips={() => setTripsOpen(true)}
+        tripsOpen={tripsOpen}
       >
         {activePerson ? (
           <PersonFilter
@@ -809,13 +816,13 @@ export function ReviewGallery({
         )}
       </TripFrame>
       <TripsSheet
-        open={screen === "trips"}
-        onOpenChange={() => {}}
+        open={tripsOpen}
+        onOpenChange={setTripsOpen}
         trips={trips}
-        activeTripId={TRIP_ID}
-        onSelectTrip={() => {}}
-        onCreateTrip={() => {}}
-        onJoinTrip={() => {}}
+        activeTripId={pickedTripId ?? TRIP_ID}
+        onSelectTrip={setPickedTripId}
+        onCreateTrip={() => setTripsOpen(false)}
+        onJoinTrip={() => setTripsOpen(false)}
       />
       <ItemDialog
         open={planOpen}

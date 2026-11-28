@@ -321,6 +321,8 @@ test("travel modes title themselves and a ground mode is a ride", () => {
 test("headings and trip hints stay short", () => {
   assert.equal(headingFor("stay", false), "Add a stay")
   assert.equal(headingFor("flight", true), "Edit flight")
+  assert.equal(headingFor("place", false), "Add an activity")
+  assert.equal(headingFor("place", true), "Edit activity")
   assert.equal(tripPlaceHint("Vietnam '27"), "Vietnam")
   assert.equal(tripPlaceHint("Lisbon with you"), "Lisbon")
 })

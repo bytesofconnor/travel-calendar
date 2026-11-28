@@ -1,5 +1,7 @@
 "use client"
 
+import { ChevronDown } from "lucide-react"
+
 import { cn } from "@/lib/utils"
 
 interface TripCoverProps {
@@ -7,7 +9,8 @@ interface TripCoverProps {
   meta: string
   coverImageUrl?: string
   showHairline?: boolean
-  onBrandClick?: () => void
+  onOpenTrips?: () => void
+  tripsOpen?: boolean
   className?: string
 }
 
@@ -30,7 +33,8 @@ export function TripCover({
   meta,
   coverImageUrl,
   showHairline = true,
-  onBrandClick,
+  onOpenTrips,
+  tripsOpen = false,
   className,
 }: TripCoverProps) {
   return (
@@ -45,19 +49,24 @@ export function TripCover({
             />
           ) : null}
           <div className="trip-cover__content">
-            {onBrandClick ? (
-              <button
-                type="button"
-                onClick={onBrandClick}
-                aria-label="All trips"
-                className="trip-cover__brand trip-cover__brand--button focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-              >
-                Travel Calendar
-              </button>
+            <div className="trip-cover__brand">Travel Calendar</div>
+            {onOpenTrips ? (
+              <h1 className="m-0">
+                <button
+                  type="button"
+                  className="trip-cover__switch"
+                  aria-haspopup="dialog"
+                  aria-expanded={tripsOpen}
+                  onClick={onOpenTrips}
+                >
+                  <span className="trip-cover__title">{tripName}</span>
+                  <ChevronDown className="trip-cover__chevron" aria-hidden="true" />
+                  <span className="sr-only">Switch trip</span>
+                </button>
+              </h1>
             ) : (
-              <div className="trip-cover__brand">Travel Calendar</div>
+              <h1 className="trip-cover__title">{tripName}</h1>
             )}
-            <h1 className="trip-cover__title">{tripName}</h1>
             <p className="trip-cover__meta tabular-nums">{meta}</p>
           </div>
         </div>

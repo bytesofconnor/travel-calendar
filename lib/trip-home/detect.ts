@@ -398,7 +398,7 @@ function travelMark(mode: TravelMode | undefined, role: Role, title: string): st
     const guessed = guessTravelMode(title)
     return guessed === "flight" ? "Ride" : travelLabel(guessed)
   }
-  return "Place"
+  return "Activity"
 }
 
 function toSpan(plan: HomePlan, fallbackZone: string): Span | null {

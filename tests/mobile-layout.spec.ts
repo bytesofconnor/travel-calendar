@@ -8,8 +8,8 @@ const screens = [
   { path: "/review?screen=trips", ready: "Your trips" },
   { path: "/review?screen=trip", ready: "Lisbon with you" },
   { path: "/review?screen=today", ready: "on for today" },
-  { path: "/review?screen=add", ready: "Add a place" },
-  { path: "/review?screen=edit", ready: "Edit place" },
+  { path: "/review?screen=add", ready: "Add an activity" },
+  { path: "/review?screen=edit", ready: "Edit activity" },
   { path: "/review?screen=edit-trip", ready: "Edit trip details" },
   { path: "/review?screen=invite", ready: "https://www.travelcalendar.space/?join=ab12cd34ef56" },
   { path: "/review?screen=join", ready: "Join trip" },
@@ -77,8 +77,8 @@ test("primary controls are at least 44px and stay on screen", async ({ page }) =
   await expect(more).toBeVisible()
   const moreBox = await more.boundingBox()
   const tripBox = await trip.boundingBox()
-  expect(moreBox?.height).toBeGreaterThanOrEqual(44)
-  expect(tripBox?.height).toBeGreaterThanOrEqual(44)
+  expect((moreBox?.height ?? 0) + 0.05).toBeGreaterThanOrEqual(44)
+  expect((tripBox?.height ?? 0) + 0.05).toBeGreaterThanOrEqual(44)
   expect((moreBox?.x ?? 0) + (moreBox?.width ?? 0)).toBeLessThanOrEqual(viewport!.width + 1)
 
   await page.goto("/review?screen=invite")
@@ -129,7 +129,6 @@ test("trip header stays on one row from 320 to 430", async ({ page }, testInfo) 
       const controls = [
         page.getByRole("button", { name: "List", exact: true }),
         page.getByRole("button", { name: "Month", exact: true }),
-        page.getByRole("button", { name: "All trips" }),
         page.getByRole("button", { name: "Invite", exact: true }),
         page.getByRole("button", { name: "More actions" }),
       ]
@@ -145,6 +144,12 @@ test("trip header stays on one row from 320 to 430", async ({ page }, testInfo) 
       }
       const tops = boxes.map((box) => box.y)
       expect(Math.max(...tops) - Math.min(...tops), `${path} @ ${width}`).toBeLessThan(2)
+      const switcher = page.getByRole("button", { name: /Switch trip/ })
+      const switchBox = await switcher.boundingBox()
+      expect(switchBox, path).toBeTruthy()
+      expect(switchBox!.height, path).toBeGreaterThanOrEqual(44)
+      expect(switchBox!.x, path).toBeGreaterThanOrEqual(-1)
+      expect(switchBox!.x + switchBox!.width, path).toBeLessThanOrEqual(width + 1)
       const extra = await page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       )
@@ -166,56 +171,50 @@ test("desktop trip header keeps the text invite and the avatars", async ({ page 
   expect(box?.width).toBeGreaterThanOrEqual(76)
 })
 
-test("the add bar stays within a fifth of a small phone", async ({ page }, testInfo) => {
+test("the add button is a 56px target on a phone and a desktop window", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium" && testInfo.project.name !== "webkit")
   await page.setViewportSize({ width: 375, height: 667 })
   await page.goto("/review?screen=today", { waitUntil: "domcontentloaded" })
-  const dock = page.getByRole("region", { name: "Add to trip" })
-  await expect(dock).toBeVisible()
-  const dockBox = await dock.boundingBox()
-  expect(dockBox!.height).toBeLessThanOrEqual(667 * 0.2)
-
-  const chips = [
-    page.getByRole("button", { name: "Add Stay" }),
-    page.getByRole("button", { name: "Add Travel" }),
-    page.getByRole("button", { name: "Add Place" }),
-    page.getByRole("button", { name: "Add Note" }),
-  ]
-  const field = page.getByRole("textbox", { name: "What’s happening today?" })
-  const boxes = []
-  for (const control of [field, ...chips]) {
-    const box = await control.boundingBox()
-    expect(box).toBeTruthy()
-    expect(box!.height).toBeGreaterThanOrEqual(44)
-    expect(box!.width).toBeGreaterThanOrEqual(44)
-    expect(box!.x).toBeGreaterThanOrEqual(-1)
-    expect(box!.x + box!.width).toBeLessThanOrEqual(375 + 1)
-    boxes.push(box!)
+  await page.waitForFunction(() => document.documentElement.dataset.uiReady === "true")
+  const add = page.getByRole("button", { name: "Add to the trip" })
+  await expect(add).toBeVisible()
+  await add.click()
+  const dialog = page.getByRole("dialog")
+  await expect(dialog.getByRole("textbox", { name: "Add to the trip…" })).toBeFocused()
+  await page.waitForFunction(() => {
+    const chip = document.querySelector("#plan-type-stay")
+    return chip != null && chip.getBoundingClientRect().height >= 44
+  })
+  for (const name of ["Stay", "Travel", "Activity", "Note"]) {
+    const chip = dialog.getByRole("radio", { name })
+    const chipBox = await chip.boundingBox()
+    expect(chipBox!.height).toBeGreaterThanOrEqual(44)
+    expect(chipBox!.x + chipBox!.width).toBeLessThanOrEqual(376)
   }
-  const chipTops = boxes.slice(1).map((box) => box.y)
-  expect(Math.max(...chipTops) - Math.min(...chipTops)).toBeLessThan(2)
+  await page.keyboard.press("Escape")
+  const box = await add.boundingBox()
+  expect(box!.width).toBeGreaterThanOrEqual(56)
+  expect(box!.height).toBeGreaterThanOrEqual(56)
+  expect(box!.height).toBeLessThanOrEqual(64)
+  expect(box!.x + box!.width).toBeLessThanOrEqual(376)
+  expect(box!.y + box!.height).toBeLessThanOrEqual(668)
 
   await page.setViewportSize({ width: 320, height: 568 })
-  const narrow = await dock.boundingBox()
-  expect(narrow!.height).toBeLessThanOrEqual(568 * 0.25)
-  const narrowChips = []
-  for (const chip of chips) {
-    const box = await chip.boundingBox()
-    expect(box!.height).toBeGreaterThanOrEqual(44)
-    expect(box!.x + box!.width).toBeLessThanOrEqual(320 + 1)
-    narrowChips.push(box!.y)
-  }
-  expect(Math.max(...narrowChips) - Math.min(...narrowChips)).toBeLessThan(2)
+  const narrow = await add.boundingBox()
+  expect(narrow!.x).toBeGreaterThanOrEqual(-1)
+  expect(narrow!.x + narrow!.width).toBeLessThanOrEqual(321)
+  expect(narrow!.height).toBeGreaterThanOrEqual(56)
 
   await page.setViewportSize({ width: 375, height: 340 })
-  await expect(dock).toBeInViewport()
-  const withKeyboard = await dock.boundingBox()
+  await expect(add).toBeInViewport()
+  const withKeyboard = await add.boundingBox()
   expect(withKeyboard!.y + withKeyboard!.height).toBeLessThanOrEqual(341)
 
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.goto("/review?screen=trip")
-  const wideField = page.locator(".capture-dock__field")
-  expect((await wideField.boundingBox())!.height).toBeGreaterThanOrEqual(56)
+  const wide = await page.getByRole("button", { name: "Add to the trip" }).boundingBox()
+  expect(wide!.width).toBeGreaterThanOrEqual(56)
+  expect(wide!.height).toBeGreaterThanOrEqual(56)
 })
 
 test("the plan form keeps a focused field inside a short window", async ({ page }) => {

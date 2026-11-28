@@ -96,11 +96,11 @@ test("outside the trip dates the full list stays, with the nights still in the b
 test("today respects the person filter", async ({ page }) => {
   await page.goto("/review?screen=trip&today=2026-11-19", { waitUntil: "domcontentloaded" })
   const today = page.locator("[data-today-screen]")
-  await expect(today.getByRole("button", { name: /Place: Time Out Market/ })).toBeVisible()
+  await expect(today.getByRole("button", { name: /Activity: Time Out Market/ })).toBeVisible()
   await expect(today.locator(".plan-when__tag", { hasText: "All day" })).toBeVisible()
   await page.getByRole("button", { name: "Mom, show their plans" }).click()
   await expect(page.getByText("Showing Mom's plans")).toBeVisible()
-  await expect(today.getByRole("button", { name: /Place: Time Out Market/ })).toHaveCount(0)
+  await expect(today.getByRole("button", { name: /Activity: Time Out Market/ })).toHaveCount(0)
   await expect(today.getByRole("button", { name: /Stay: Alfama apartment/ })).toBeVisible()
   await expect(today.getByText(/Sleep here tonight · Alfama, Lisbon · Alfama apartment/)).toBeVisible()
   await expect(page.locator("[data-trip-toolbar]")).toBeVisible()

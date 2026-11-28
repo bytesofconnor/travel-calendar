@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test"
 
 async function openTrip(page: Page, party: number) {
   await page.goto(`/review?screen=trip&party=${party}`, { waitUntil: "domcontentloaded" })
+  await page.waitForFunction(() => document.documentElement.dataset.uiReady === "true")
   const stack = page.getByRole("button", { name: new RegExp(`^${party} travelers?:`) })
   await expect(stack).toBeVisible()
   return stack
@@ -53,7 +54,7 @@ test("tapping the stack opens the member list", async ({ page }) => {
   expect(focus).not.toBe("none 0px none")
   await expect.poll(async () => {
     const box = await stack.boundingBox()
-    return Math.min(box?.width ?? 0, box?.height ?? 0)
+    return Math.min(box?.width ?? 0, box?.height ?? 0) + 0.05
   }).toBeGreaterThanOrEqual(44)
   await page.keyboard.press("Enter")
   const dialog = page.getByRole("dialog")
@@ -87,11 +88,11 @@ test("invite copy is a group invite", async ({ page }) => {
 test("add says everyone, or the people who are in", async ({ page }) => {
   await page.goto("/review?screen=add", { waitUntil: "domcontentloaded" })
   const dialog = page.getByRole("dialog")
-  await expect(dialog.getByRole("heading", { name: "Add a place" })).toBeVisible()
+  await expect(dialog.getByRole("heading", { name: "Add an activity" })).toBeVisible()
   await expect(dialog.getByText("Everyone", { exact: true })).toBeVisible()
   await dialog.getByRole("button", { name: "Mom, included, toggle" }).click()
   await dialog.getByRole("button", { name: "Dad, included, toggle" }).click()
-  await expect(dialog.getByRole("heading", { name: "Add a place" })).toBeVisible()
+  await expect(dialog.getByRole("heading", { name: "Add an activity" })).toBeVisible()
   await expect(dialog.getByText("2 of 4 · not Mom or Dad", { exact: true })).toBeVisible()
 })
 

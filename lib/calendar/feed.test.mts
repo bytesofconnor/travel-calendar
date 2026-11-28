@@ -118,7 +118,7 @@ describe("calendar feed", () => {
     assert.equal(stay.component.getFirstProperty("dtstart")?.getParameter("tzid"), undefined)
 
     const place = byUid(ics, "item_place")
-    assert.equal(place.summary, "Place: Time Out Market")
+    assert.equal(place.summary, "Activity: Time Out Market")
     assert.equal(place.startDate.toICALString(), "20261119")
     assert.equal(place.endDate.toICALString(), "20261120")
 
@@ -138,7 +138,7 @@ describe("calendar feed", () => {
     place.updatedAt = WHEN + 9000
     const second = buildCalendar(edited, ORIGIN)
     assert.equal(byUid(first, "item_place").uid, byUid(second, "item_place").uid)
-    assert.equal(byUid(second, "item_place").summary, "Place: Time Out Market lunch")
+    assert.equal(byUid(second, "item_place").summary, "Activity: Time Out Market lunch")
     assert.equal(byUid(second, "item_place").component.getFirstPropertyValue("sequence"), 4)
     assert.notEqual(
       byUid(first, "item_place").component.getFirstPropertyValue("last-modified"),

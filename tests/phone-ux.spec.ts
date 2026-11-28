@@ -112,7 +112,7 @@ test("plan essentials fit in the phone dialog without scrolling", async ({ page 
         title: inside("#plan-title"),
         date: inside(label),
         who: inside("Who's in"),
-        save: inside("Add place") || inside("Add flight") || [...root.querySelectorAll("button")].some((button) => {
+        save: inside("Add activity") || inside("Add flight") || [...root.querySelectorAll("button")].some((button) => {
           const rect = button.getBoundingClientRect()
           return button.getAttribute("type") === "submit" && rect.bottom <= box.bottom + 1 && rect.top >= box.top
         }),

@@ -25,6 +25,7 @@ import {
   fieldsFromItem,
   fieldsFromNew,
   flightWhen,
+  guessPlanType,
   headingFor,
   seedPlanType,
   saveLabel,
@@ -40,7 +41,7 @@ import type { WeatherUnits } from "@/lib/weather"
 const TYPES: { id: PlanType; label: string }[] = [
   { id: "stay", label: "Stay" },
   { id: "flight", label: "Travel" },
-  { id: "place", label: "Place" },
+  { id: "place", label: "Activity" },
   { id: "note", label: "Note" },
 ]
 
@@ -86,6 +87,9 @@ export function ItemDialog({
   const [attendeeIds, setAttendeeIds] = useState<string[] | undefined>(undefined)
   const errorSummary = useId()
   const returnFocus = useRef<HTMLElement | null>(null)
+  const captureRef = useRef<HTMLInputElement>(null)
+  const [capture, setCapture] = useState("")
+  const [typeLocked, setTypeLocked] = useState(false)
   const { units: weatherUnits } = useWeatherUnits(units)
   const hint = stayPlaceholder(placeHint)
 
@@ -103,6 +107,8 @@ export function ItemDialog({
       ? fieldsFromItem(editItem)
       : fieldsFromNew(initialType ?? seedPlanType(initialInput), initialInput ?? null, fallbackDate)
     setDraft(next)
+    setCapture(editItem ? "" : (initialInput?.title ?? ""))
+    setTypeLocked(Boolean(editItem) || initialType != null)
     setErrors({})
     setShowLink(Boolean(next.linkUrl))
     setShowDetails(Boolean(next.notes || next.address || next.confirmation || next.linkUrl))
@@ -114,8 +120,37 @@ export function ItemDialog({
     setDraft((current) => ({ ...current, ...partial }))
   }
 
+  function applyCapture(text: string, type: PlanType, current: PlanDraft): PlanDraft {
+    const next = fieldsFromNew(
+      type,
+      {
+        title: text,
+        startDate: current.startDate,
+        endDate: current.endDate,
+        planType: type,
+      },
+      current.startDate || fallbackDate,
+    )
+    return { ...next, startDate: current.startDate, endDate: current.endDate }
+  }
+
+  function onCaptureChange(text: string) {
+    setCapture(text)
+    setDraft((current) => {
+      const type = typeLocked ? current.type : guessPlanType(text)
+      if (!text.trim()) return applyCapture("", typeLocked ? current.type : "place", current)
+      return applyCapture(text, type, current)
+    })
+  }
+
+  function chooseType(type: PlanType) {
+    setTypeLocked(true)
+    setDraft((current) => (capture.trim() ? applyCapture(capture, type, current) : { ...current, type }))
+  }
+
   function onTypeKey(event: KeyboardEvent<HTMLButtonElement>) {
-    const index = TYPES.findIndex((type) => type.id === draft.type)
+    const current = event.currentTarget.id.replace("plan-type-", "")
+    const index = TYPES.findIndex((type) => type.id === current)
     let next = index
     if (event.key === "ArrowRight" || event.key === "ArrowDown") next = (index + 1) % TYPES.length
     else if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = (index - 1 + TYPES.length) % TYPES.length
@@ -123,7 +158,7 @@ export function ItemDialog({
     event.preventDefault()
     const type = TYPES[next]?.id
     if (!type) return
-    patch({ type })
+    chooseType(type)
     document.getElementById(`plan-type-${type}`)?.focus()
   }
 
@@ -170,10 +205,52 @@ export function ItemDialog({
           event.preventDefault()
           target.focus()
         }}
+        onOpenAutoFocus={(event) => {
+          if (editItem) return
+          event.preventDefault()
+          captureRef.current?.focus()
+        }}
       >
         <PlacePopoverProvider>
         <form onSubmit={(event) => void onSubmit(event)} className="flex min-h-0 flex-1 flex-col">
           <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-4 py-3">
+            {editing ? null : (
+              <input
+                ref={captureRef}
+                id="plan-capture"
+                className="h-11 min-h-11 w-[calc(100%-2.75rem)] shrink-0 rounded-md border border-foreground bg-background px-3 text-base font-medium text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Add to the trip…"
+                placeholder="Add to the trip…"
+                value={capture}
+                autoComplete="off"
+                onChange={(event) => onCaptureChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") event.preventDefault()
+                }}
+              />
+            )}
+            <div role="radiogroup" aria-label="Plan type" className="flex shrink-0 flex-wrap gap-1.5 pr-10">
+              {TYPES.map((type) => {
+                const selected = draft.type === type.id
+                return (
+                  <button
+                    key={type.id}
+                    id={`plan-type-${type.id}`}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    tabIndex={selected ? 0 : -1}
+                    onClick={() => chooseType(type.id)}
+                    onKeyDown={onTypeKey}
+                    className={`h-11 min-h-11 min-w-[4.5rem] flex-1 rounded-md border border-foreground px-2 text-sm font-semibold leading-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                      selected ? "bg-foreground text-background" : "bg-background text-foreground"
+                    }`}
+                  >
+                    {type.label}
+                  </button>
+                )
+              })}
+            </div>
             <DialogHeader className="border-b border-border px-0 pb-3 pr-10 text-left">
               <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
                 {headingFor(draft.type, editing, draft.mode)}
@@ -188,29 +265,6 @@ export function ItemDialog({
               className={Object.keys(errors).length > 0 ? "text-sm font-medium text-destructive" : "sr-only"}
             >
               {Object.values(errors).join(" ")}
-            </div>
-
-            <div role="radiogroup" aria-label="Plan type" className="flex flex-wrap gap-1.5">
-              {TYPES.map((type) => {
-                const selected = draft.type === type.id
-                return (
-                  <button
-                    key={type.id}
-                    id={`plan-type-${type.id}`}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    tabIndex={selected ? 0 : -1}
-                    onClick={() => patch({ type: type.id })}
-                    onKeyDown={onTypeKey}
-                    className={`min-h-11 min-w-[4.5rem] flex-1 rounded-md border border-foreground px-2 text-sm font-semibold leading-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                      selected ? "bg-foreground text-background" : "bg-background text-foreground"
-                    }`}
-                  >
-                    {type.label}
-                  </button>
-                )
-              })}
             </div>
 
             {draft.type === "flight" ? (

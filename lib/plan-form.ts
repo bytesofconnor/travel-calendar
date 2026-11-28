@@ -14,7 +14,7 @@ export type { GeoPlace, PlanType } from "./plan-types.ts"
 
 export type HomeRole = "flight" | "stay" | "transport" | "place"
 
-const BARE = /^(stay|stays|flight|flights|travel|place|places|note|notes|plan|idea|train|bus|shuttle|taxi|walk)$/i
+const BARE = /^(stay|stays|flight|flights|travel|place|places|activity|activities|note|notes|plan|idea|train|bus|shuttle|taxi|walk)$/i
 const FLIGHT_WORD = /\b(fly|flight|flying|airline)\b/i
 const GROUND_WORD =
   /\b(taxi|uber|lyft|cab|shuttle|transfer|train|metro|subway|rental|pickup|pick-up|drop-off|dropoff|car service|bus|ride|rides|drive|driving)\b/i
@@ -499,7 +499,8 @@ export function fieldsFromNew(type: PlanType, input: Partial<TripItemInput> | nu
 }
 
 export function headingFor(type: PlanType, editing: boolean, mode: TravelMode = "flight"): string {
-  const noun = type === "stay" ? "stay" : type === "flight" ? mode : type === "place" ? "place" : "note"
+  if (type === "place") return editing ? "Edit activity" : "Add an activity"
+  const noun = type === "stay" ? "stay" : type === "flight" ? mode : "note"
   return editing ? `Edit ${noun}` : `Add a ${noun}`
 }
 
@@ -507,7 +508,7 @@ export function saveLabel(type: PlanType, editing: boolean, mode: TravelMode = "
   if (editing) return "Save"
   if (type === "stay") return "Add stay"
   if (type === "flight") return `Add ${mode}`
-  if (type === "place") return "Add place"
+  if (type === "place") return "Add activity"
   return "Add note"
 }
 

@@ -65,10 +65,8 @@ test("content lines up with the toolbar on every page", async ({ page }, testInf
       await ready(page)
       const toolbar = await contentEdges(page, "[data-trip-toolbar] .page-inset")
       const story = await contentEdges(page, "[data-trip-scroll] > .trip-stage-inset")
-      const dock = await contentEdges(page, ".capture-dock .page-inset")
       const cover = await contentEdges(page, ".trip-cover__content")
       expect(story, `${path} story at ${width}`).toEqual(toolbar)
-      expect(dock, `${path} composer at ${width}`).toEqual(toolbar)
       expect(cover, `${path} cover at ${width}`).toEqual(toolbar)
       expect(await overflow(page), `${path} overflow at ${width}`).toBeLessThanOrEqual(1)
     }
