@@ -42,5 +42,5 @@ export default async function ReviewPage({
     return <PairTripScreen roomId={room} member={member} />
   }
 
-  return <ReviewGallery screen={screen} theme={theme} party={party} who={who} today={today} />
+  return <ReviewGallery screen={screen} theme={theme} party={party} who={who} today={today} actorSwitch />
 }

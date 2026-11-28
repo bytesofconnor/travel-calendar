@@ -579,12 +579,14 @@ export function ReviewGallery({
   party = null,
   who = null,
   today: todayProp = null,
+  actorSwitch = false,
 }: {
   screen: string
   theme: string | null
   party?: number | null
   who?: string | null
   today?: string | null
+  actorSwitch?: boolean
 }) {
   const themePack = parseThemePack(theme)
   useTripThemePack(themePack)
@@ -1004,6 +1006,7 @@ export function ReviewGallery({
         ideas={shownIdeas}
         members={roster}
         currentUserId={actorId}
+        reviewActorSwitch={actorSwitch}
         actors={roster.map((member) => ({ userId: member.userId, displayName: member.displayName }))}
         actorId={actorId}
         onActor={setActorId}

@@ -58,6 +58,7 @@ export function IdeasSheet({
   ideas,
   members,
   currentUserId,
+  reviewActorSwitch = false,
   actors,
   actorId,
   onActor,
@@ -72,6 +73,7 @@ export function IdeasSheet({
   ideas: readonly IdeaRecord[]
   members: readonly IdeaMember[]
   currentUserId: string
+  reviewActorSwitch?: boolean
   actors?: readonly IdeaMember[]
   actorId?: string
   onActor?: (userId: string) => void
@@ -121,7 +123,7 @@ export function IdeasSheet({
     >
       <div className="flex h-full min-h-0 flex-col">
         <form className="shrink-0 space-y-2 border-b border-border px-5 py-3" onSubmit={submit}>
-          {actors && actors.length > 0 && onActor ? (
+          {reviewActorSwitch && actors && actors.length > 0 && onActor ? (
             <label className="flex items-center gap-2 text-sm font-medium text-foreground">
               Acting as
               <select
